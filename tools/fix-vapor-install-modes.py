@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Restore release file modes after a PS5 file manager/FTP copy loses them.
 
-Standard-library-only helper for the cs2-runtime-v1 release. Default is a
+Standard-library-only helper for the cs2-runtime-v1/v1.1 releases. Default is a
 read-only plan. --apply changes modes of manifest-listed app/base-kit files
 and their parent directories only; no game, account or save paths are used.
 """
