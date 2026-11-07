@@ -1,0 +1,82 @@
+--- a/dlls/win32u/ps5drv.c
++++ b/dlls/win32u/ps5drv.c
+@@ -120,6 +120,9 @@
+ static HWND vulkan_window;
+ static RECT vulkan_client;
+ static ULONG vulkan_tick;
++#ifdef SONAME_LIBVULKAN
++static int (*vulkan_cursor_show)( const UINT32 *, UINT, UINT, INT, INT, INT, INT, UINT, UINT );
++#endif
+ static BOOL display_published;
+ static DWORD input_threads[PS5_MAX_WINDOWS];
+ static UINT input_thread_count;
+@@ -224,6 +227,24 @@
+ static void present_screen_for_change(void)
+ {
+     if (!vulkan_presenting()) present_screen();
++}
++
++/* screen_lock held: move the hardware cursor even when an event-driven
++ * Vulkan application does not present another frame. */
++static void present_pointer_change(void)
++{
++#ifdef SONAME_LIBVULKAN
++    if (vulkan_cursor_show && vulkan_window &&
++        vulkan_client.right > vulkan_client.left && vulkan_client.bottom > vulkan_client.top)
++    {
++        vulkan_cursor_show( cursor_width && cursor_height ? cursor_image : NULL, cursor_width, cursor_height,
++                            cursor_hotspot.x, cursor_hotspot.y,
++                            cursor.x - vulkan_client.left, cursor.y - vulkan_client.top,
++                            vulkan_client.right - vulkan_client.left, vulkan_client.bottom - vulkan_client.top );
++        return;
++    }
++#endif
++    present_screen_for_change();
+ }
+ 
+ /***********************************************************************
+@@ -668,7 +689,7 @@
+     if (cursor.x != pos.x || cursor.y != pos.y)
+     {
+         cursor = pos;
+-        if (cursor_image) present_screen_for_change();     /* the pointer moved on screen */
++        if (cursor_image) present_pointer_change();     /* the pointer moved on screen */
+     }
+     pthread_mutex_unlock( &screen_lock );
+ }
+@@ -905,7 +926,7 @@
+     cursor_height = height;
+     cursor_box = box;
+     if (image) cursor_hotspot = (POINT){info.xHotspot, info.yHotspot};
+-    if (old || image) present_screen_for_change();
++    if (old || image) present_pointer_change();
+     pthread_mutex_unlock( &screen_lock );
+     free( old );
+     TRACE( "cursor %p: %ux%u\n", handle, width, height );
+@@ -936,14 +957,15 @@
+         show = dlsym( vulkan_handle, "pw_videoout_cursor_point" );
+     }
+     pthread_mutex_lock( &screen_lock );
++    vulkan_cursor_show = show;
+     if (placed)
+     {
+         vulkan_window = hwnd;
+         vulkan_client = rects.client;
+         vulkan_tick = NtGetTickCount();
+     }
+-    if (show && placed)
+-        show( cursor_width && cursor_height ? cursor_image : NULL, cursor_width, cursor_height,
++    if (vulkan_cursor_show && placed)
++        vulkan_cursor_show( cursor_width && cursor_height ? cursor_image : NULL, cursor_width, cursor_height,
+               cursor_hotspot.x, cursor_hotspot.y, cursor.x - rects.client.left, cursor.y - rects.client.top,
+               rects.client.right - rects.client.left, rects.client.bottom - rects.client.top );
+     pthread_mutex_unlock( &screen_lock );
+@@ -961,7 +983,7 @@
+     pthread_mutex_lock( &screen_lock );
+     cursor.x = x;
+     cursor.y = y;
+-    if (cursor_image) present_screen_for_change();
++    if (cursor_image) present_pointer_change();
+     pthread_mutex_unlock( &screen_lock );
+     return TRUE;
+ }

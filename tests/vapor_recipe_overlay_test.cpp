@@ -17,6 +17,7 @@ int main(int argc, char** argv) {
       {489830, "steam-489830-vapor-skyrimse-v1.json", "SkyrimSE.exe", "dxvk"},
       {105600, "steam-105600-vapor-terraria-v1.json", "Terraria.exe", "opengl"},
       {1942280, "steam-1942280-vapor-brotato-v1.json", "Brotato.exe", "opengl"},
+      {365670, "steam-365670-vapor-blender-v1.json", "blender.exe", "opengl"},
       {240, "steam-240-vapor-cstrike-source-v1.json", "cstrike_win64.exe", "dxvk"}};
   KitCapabilities kit;
   kit.opengl_zink = kit.wine_mono = kit.environment = kit.profile_version_2 = true;
@@ -35,6 +36,10 @@ int main(int argc, char** argv) {
     CHECK(values.graphics == test.graphics);
     CHECK(values.values.at("steam_features").value == "emulate");
     if (test.app == 1942280) CHECK(values.arguments == "--rendering-driver opengl3");
+    if (test.app == 365670) {
+      CHECK(values.arguments == "--gpu-backend vulkan");
+      CHECK(values.dll_overrides == "d3d8,d3d9,d3d10core,d3d11,dxgi=n");
+    }
     ProsperoProfile profile;
     CHECK(RenderProsperoProfile(recipe, values, {"vapor-test", "/data/wine11/wine11-games/test"}, &profile, &reason));
     CHECK(profile.text.find(test.executable) != std::string::npos);

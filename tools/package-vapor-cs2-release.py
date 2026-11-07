@@ -3,6 +3,7 @@
 import argparse, hashlib, json, zipfile
 from pathlib import Path
 import prepare_cs2_runtime as cs2
+import prepare_blender_runtime as blender
 
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 def package(app, output):
@@ -18,7 +19,11 @@ def package(app, output):
     cs2.check_header()
     for name, expected in cs2.expected_hashes().items():
         if manifest['files'].get(name) != expected: raise ValueError('Pinned runtime or notices differ: ' + name)
+    blender.check_header()
+    for name, expected in blender.expected_hashes().items():
+        if manifest['files'].get(name) != expected: raise ValueError('Pinned Blender runtime or notices differ: ' + name)
     modes = {cs2.PREFIX+f['path']: int(f['mode'],8) for f in cs2.entries()}
+    modes.update({blender.PREFIX+f['path']: int(f['mode'],8) for f in blender.entries()})
     modes.update({name:0o755 for name in ['eboot.bin','lapy.elf','vapor-title-remover.elf']})
     with zipfile.ZipFile(output,'x',zipfile.ZIP_DEFLATED,compresslevel=6) as bundle:
         paths=[app]+sorted(app.rglob('*'))
@@ -30,6 +35,8 @@ def package(app, output):
             info.compress_type=zipfile.ZIP_DEFLATED
             bundle.writestr(info,b'' if path.is_dir() else path.read_bytes())
         bundle.writestr('INSTALL.txt',(cs2.ROOT/'docs/cs2-runtime.md').read_bytes())
+        bundle.writestr('BLENDER.txt',(cs2.ROOT/'docs/blender-runtime.md').read_bytes())
+        bundle.writestr('RELEASE-NOTES.txt',(cs2.ROOT/'docs/release-notes-next.md').read_bytes())
     print('PASS:',len(manifest['files']),'verified app files; ZIP SHA256',sha(output))
 
 if __name__=='__main__':

@@ -27,6 +27,8 @@ struct GameRuntimeOverride {
   std::string revision;
   std::string manifest_sha256;
   std::vector<KitFile> files;
+  // Pinned replacements under root/title; no descriptors, bottle or save files.
+  std::vector<KitFile> title_files{};
 };
 
 // The variant a title uses:""")
@@ -43,6 +45,12 @@ struct GameRuntimeOverride {
 
 
 POLICY = r'''
+static bool CompatibilityTitlePath(const std::string& path) {
+  return path == "title/eboot.bin" || path == "title/native-title-build.json" ||
+         path == "title/vapor-compatibility.json" || path == "title/win/mesa-zink-manifest.json" ||
+         (path.rfind("title/win/mesa-zink/", 0) == 0 && IsSafeRelative(path));
+}
+
 void FilesystemPackageInstaller::SetGameRuntimeOverride(GameRuntimeOverride runtime) {
   // Retain an invalid rule too: a missing/corrupt required runtime must never
   // silently fall back to a version known to fail for the selected game.
@@ -79,7 +87,17 @@ bool FilesystemPackageInstaller::RuntimeOverrideValid(const GameRuntimeOverride&
     inventory |= file.path == "runtime-inventory.json";
     native |= file.path == "lib/wine/x86_64-unix/ntdll.prx";
   }
-  return inventory && native;
+  bool launcher = false, receipt = false;
+  for (const auto& file : runtime.title_files) {
+    if (!CompatibilityTitlePath(file.path) || !IsSafeRelative(file.path) || !IsHexDigest(file.sha256) ||
+        (file.mode != 0644 && file.mode != 0755) || !paths.insert(file.path).second) return false;
+    launcher |= file.path == "title/eboot.bin";
+    if (file.path == "title/vapor-compatibility.json") {
+      if (file.sha256 != runtime.manifest_sha256) return false;
+      receipt = true;
+    }
+  }
+  return inventory && native && (runtime.title_files.empty() || (launcher && receipt));
 }
 
 std::vector<KitArtifact> FilesystemPackageInstaller::EffectiveArtifacts(const RuntimeInstall& record) const {
@@ -95,6 +113,9 @@ std::vector<KitArtifact> FilesystemPackageInstaller::EffectiveArtifacts(const Ru
     artifact->sha256 = inventory->sha256;
     artifact->location = ImmutableArtifactLocation::kStagedTitle;
     artifact->path = "win/wine/runtime-inventory.json";
+    if (!runtime->title_files.empty())
+      artifacts.push_back({"compatibility-title", runtime->revision + "-title", runtime->manifest_sha256,
+                           ImmutableArtifactLocation::kStagedTitle, "vapor-compatibility.json"});
   }
   return artifacts;
 }
@@ -139,10 +160,16 @@ def package_source(text: str) -> str:
     text = once(text, '    } else if (HasPrefix(file.path, kit_.runtime.path, &relative)) {\n      destination = "win/wine/" + relative;', '''    } else if (HasPrefix(file.path, kit_.runtime.path, &relative)) {
       if (replacement) continue;
       destination = "win/wine/" + relative;''')
+    text = once(text, '    if (!IsSafeRelative(relative) || !IsSafeRelative(destination) ||', '    if (replacement && std::any_of(replacement->title_files.begin(), replacement->title_files.end(),\n        [&](const KitFile& replacement_file) { return replacement_file.path.substr(6) == destination; })) continue;\n    if (!IsSafeRelative(relative) || !IsSafeRelative(destination) ||')
     needle = "  return mappings;\n}\n\nstd::filesystem::path FilesystemPackageInstaller::TitleMetadataPath"
     text = once(text, needle, """  if (replacement) for (const auto& file : replacement->files) {
     const auto destination = "win/wine/" + file.path;
     if (!IsSafeRelative(file.path) || !destinations.insert(destination).second) return {};
+    mappings.push_back({&file, file.path, destination, replacement->root / file.path, nullptr, replacement->root});
+  }
+  if (replacement) for (const auto& file : replacement->title_files) {
+    const auto destination = file.path.substr(6);
+    if (!IsSafeRelative(destination) || !destinations.insert(destination).second) return {};
     mappings.push_back({&file, file.path, destination, replacement->root / file.path, nullptr, replacement->root});
   }
   return mappings;
@@ -195,9 +222,9 @@ std::filesystem::path FilesystemPackageInstaller::TitleMetadataPath""")
 
 
 def runtime_host(text: str) -> str:
-    text = once(text, '#include "homebrew/runtime_host.hpp"', '#include "homebrew/runtime_host.hpp"\n#include "cs2_runtime_files.hpp"')
+    text = once(text, '#include "homebrew/runtime_host.hpp"', '#include "homebrew/runtime_host.hpp"\n#include "cs2_runtime_files.hpp"\n#include "blender_runtime_files.hpp"')
     text = once(text, '      installer->AcceptShippedRecipes(std::move(shipped));',
-                '      ww::steam_integration::ConfigureCs2Runtime(*installer, config_.runtime_dir);\n      installer->AcceptShippedRecipes(std::move(shipped));')
+                '      ww::steam_integration::ConfigureCs2Runtime(*installer, config_.runtime_dir);\n      ww::steam_integration::ConfigureBlenderRuntime(*installer, config_.runtime_dir);\n      installer->AcceptShippedRecipes(std::move(shipped));')
     replacements = {
         'ArtifactsBound(composition.kit->view.artifacts, record)': 'ArtifactsBound(composition.installer->ExpectedArtifacts(record), record)',
         'ArtifactsBound(c.kit->view.artifacts, record)': 'ArtifactsBound(c.installer->ExpectedArtifacts(record), record)',

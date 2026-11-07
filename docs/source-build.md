@@ -57,10 +57,12 @@ Check a prepared network snapshot with `python3 tools/verify-steam-tested-inputs
 
 For the Windows preview, the current `tools/build-preview.cmd` calls Visual Studio 2022 Professional's `vcvars64.bat` at a fixed path. If you use another edition/location, adjust that local toolchain path first. The preview cannot verify PS5 installation, console payloads, or game compatibility.
 
+For the prepared combined update, also obtain the matching `blender-runtime-019.1.zip` release asset (or the local preparation output) and verify/unpack it with `python3 tools/prepare-blender-runtime.py --archive /path/to/blender-runtime-019.1.zip`. The payload has not been uploaded by this preparation task; its source and output pins are documented in [Blender runtime details](blender-runtime.md).
+
 Once prerequisites exist:
 
 ```bash
-bash tools/build-vapor-cs2.sh my-current-vapor
+bash tools/build-vapor.sh my-current-vapor
 python3 tools/package-vapor-cs2-release.py build/my-current-vapor-isolated/PPSA77382 my-current-vapor.zip
 ```
 

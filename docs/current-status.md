@@ -6,9 +6,21 @@ The combined WinBrew 11 / Vapor application is installed on the owner's PS5 as *
 
 - **Schedule I:** working, reported by the owner. This report does not establish a particular game build, performance figure, or co-op result.
 - **Counter-Strike 2 / Steam app 730:** offline gameplay with bots confirmed by the owner using the fixed runtime. In-game Steam authentication and official online matchmaking remain unsupported. LAN/local play may work but has not been tested; Internet tunneling has not been tested. Legacy CS:GO was not separately tested.
+- **The Elder Scrolls V: Skyrim Special Edition:** working, owner-reported; online unavailable and co-op untested.
+- **Blackjack 21: The Blackjackiest:** working, owner-reported; online unavailable and co-op untested.
+- **Golf With Your Friends:** working, owner-reported; online unavailable and co-op untested.
+- **Quake II RTX:** working, owner-reported; online unavailable and co-op untested.
 - The owner confirmed **“Smooth now”** after the Vapor window-shadow fix. Further combined optimizations are installed; startup verification is separate from hands-on acceptance of every feature.
 
 See [compatibility](compatibility.md) for limits and research links.
+
+## Prepared Blender and game-status update
+
+The next combined release adds the [Blender compatibility bundle](blender-runtime.md) to normal installation and reinstallation. The owner's repaired copy confirmed stable workspace visibility, smooth pointer/menus and responsive wheel zoom. The owner confirms the earlier automatic exit was resolved by the cursor repair; large-scene/render/export coverage remains separate. Release delivery verification is recorded separately from console acceptance of the owner's per-title fixes.
+
+Kane's Wrath currently reaches only the first splash screen. Splitgate reaches login but cannot proceed through server authentication. Neither is listed as working gameplay. Counter-Strike remains confirmed for offline play; official online play is unsupported and is not being pursued. Online is unavailable for the listed games. Co-op may be researched later with other GitHub projects, but co-op/multiplayer work is deferred while the priority is making games function locally.
+
+See the [prepared release notes](release-notes-next.md). No later package has been published or installed by this release-preparation task.
 
 ## Cache behavior
 

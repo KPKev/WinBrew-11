@@ -10,11 +10,13 @@ import shutil
 from prepare_steam_registration_reconcile import RECONCILE
 from prepare_vapor_title_trash import transform as title_trash
 import prepare_cs2_runtime_installer as cs2
+import prepare_cs2_runtime_installer_v1 as previous_installer
 from prepare_vapor_title_permissions import transform as title_permissions
 from prepare_vapor_publication_permissions import transform as publication_permissions, transform_coordinator
 
 root = Path(__file__).resolve().parents[1]
 shutil.copy2(root/'src/steam_integration/cs2_runtime_files.hpp', root/'build/steam-host-dedicated-source/src/cs2_runtime_files.hpp')
+shutil.copy2(root/'src/steam_integration/blender_runtime_files.hpp', root/'build/steam-host-dedicated-source/src/blender_runtime_files.hpp')
 subprocess.run([sys.executable, str(root / 'tools/prepare-steam-runtime-host-experiment.py')], check=True)
 generated = (root / 'build/steam-native-experiment/runtime-host/runtime_host.cpp').read_text()
 old_cache = 'const auto cache = HostPath(config_.package_paths.console_data_root + "/playden/redist").string();'
@@ -25,7 +27,7 @@ target = root / 'build/steam-host-dedicated-source/src/homebrew/runtime_host.cpp
 previous = generated.replace(old_cache, new_cache)
 expected = cs2.runtime_host(title_trash(previous))
 actual = target.read_text()
-if actual not in (expected, title_trash(previous), previous, previous.replace(RECONCILE, '', 1)):
+if actual not in (expected, previous_installer.runtime_host(title_trash(previous)), title_trash(previous), previous, previous.replace(RECONCILE, '', 1)):
     raise SystemExit('Preserved dedicated host has independent edits; refusing overwrite')
 if actual != expected:
     target.write_text(expected)
@@ -37,7 +39,8 @@ for name, transform in [('package_installer.h', cs2.package_header), ('install_s
         original = original.replace('/data/playden/title-rule/allow-list', '/data/wine11/title-rule/allow-list')
     if name == 'package_installer.cpp': original = title_permissions(original)
     updated = transform(original)
-    if path.read_text() not in (original, updated):
+    legacy = getattr(previous_installer, transform.__name__)(original)
+    if path.read_text() not in (original, legacy, updated):
         raise SystemExit('Independent installer edits: ' + name)
     path.write_text(updated)
 publication = root / 'build/steam-host-dedicated-source/src/runtime/settings_publication.cpp'

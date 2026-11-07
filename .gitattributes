@@ -13,3 +13,7 @@
 
 # Preserve the pinned native admission/provider source bytes.
 src/owner_admission/** text eol=lf
+
+# Preserve exact upstream notice hashes and patch context.
+runtime-patches/blender/upstream-notices/** -text
+runtime-patches/blender/*.patch -text

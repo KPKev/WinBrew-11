@@ -99,3 +99,9 @@ Open [WinBrew-11 Issues](https://github.com/KPKev/WinBrew-11/issues) and include
 - Whether checksums matched, the destination paths, and permission-helper output.
 - Last working step: Home tile, desktop, input, Vapor sign-in, library, download/preparation, or game launch.
 - Exact error text, a screenshot with private information hidden, and what you tried. For a game issue, include its name and Steam app ID.
+
+## Prepared Blender repair
+
+The next combined update supplies the pinned Blender launcher and runtime during normal installation/reinstallation. It includes Vulkan defaults, independent cursor updates, wheel forwarding and relaunch-folder discovery. Confirmed scope is interactive workspace/pointer/menus/zoom, not large-scene or render/export stability. The owner confirms the earlier unexpected exit was resolved by the cursor repair. See [Blender runtime details](blender-runtime.md).
+
+Counter-Strike's working result is offline play. Splitgate currently stops at server authentication; Kane's Wrath reaches only its first splash screen. Official online work is outside the scope, and co-op testing is deferred.

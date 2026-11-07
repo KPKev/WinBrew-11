@@ -1,5 +1,12 @@
 # Changelog
 
+## Prepared combined update
+
+- Blender: pinned installer/reinstall bundle, Vulkan defaults, independent cursor updates, mouse-wheel forwarding, loading-indicator fix and numbered sandbox discovery.
+- Preserve CS2 offline compatibility; official online unsupported and not pursued.
+- Kane's Wrath: first splash only. Splitgate: blocked at server authentication. Co-op/multiplayer testing deferred.
+- Owner confirms the prior Blender unexpected exit was resolved by the cursor repair; large-scene/render/export coverage remains unverified.
+
 ## November 7, 2026 — combined desktop, Vapor, and CS2 update
 
 - Persistent per-game artwork, store details, and news cache with a **Refresh game cache** action; automatic library detection remains enabled.

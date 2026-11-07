@@ -39,6 +39,15 @@
       "tested_kit_upstream": "H r8",
       "local_status": "untested",
       "note": "Upstream reports offline USB mouse/keyboard gameplay only; controller untested and online unavailable. Resolution arguments follow pinned Source detection defaults. This is Counter-Strike: Source, not Counter-Strike 2 (730). Local Vapor play unverified."
+    },
+    {
+      "file": "steam-365670-vapor-blender-v1.json",
+      "app_id": 365670,
+      "sha256": "1fc04f36767f7a98f2003ec361c46a3ed0bd30d86429925ea97f2f50e9d76d65",
+      "source": "docs/blender-runtime.md",
+      "tested_kit_upstream": null,
+      "local_status": "owner-confirmed-workspace-pointer-menus-wheel",
+      "note": "Derived019 runtime/cursor module and launcher are required. Larger-scene stability/rendering/export unverified; one earlier automaticexit cause remains unknown."
     }
   ]
 }

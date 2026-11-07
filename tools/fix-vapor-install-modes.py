@@ -11,10 +11,13 @@ from pathlib import PurePosixPath
 APP = '/data/homebrew/PPSA77382'
 KIT = '/data/wine11/kits/playden-kit'
 APP_PIN = ('933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be',
-           'a712a3d69ad0eae2829415486053790ce38361156f4bab6442d2838e4a9b4c4c')
+           'a712a3d69ad0eae2829415486053790ce38361156f4bab6442d2838e4a9b4c4c',
+           'e245bfab1cc296be9e586bac86bd61160073b6ba99c22faf84da71c2ea203f12')
 KIT_PIN = '1cd63397e5c560fddbc0f3b8baea3bf87ace1e0ba997a46ee0ed4acf4dac8dfc'
 RUNTIME_PIN = 'd7cf3ed3221f8e8a7eb571522363efc21a5540699b6b20b3226cf30012732259'
 PREFIX = 'runtime/compatibility/steam-730-cs2-v1/'
+BLENDER_PREFIX = 'runtime/compatibility/steam-365670-blender-v1/'
+BLENDER_PIN = '2191c6d66d0964fb3916cc797d992204729e3bcf3ac0db73f57a4630ef1f2644'
 
 class Client:
     def __init__(self, host, port): self.base = f'http://{host}:{port}'
@@ -64,6 +67,12 @@ def plan(client, include_kit=False):
         name=PREFIX+entry['path']
         if app['files'].get(name)!=entry['sha256']: raise ValueError('Runtime binding differs')
         modes[name]=int(entry['mode'],8)
+    if BLENDER_PREFIX+'vapor-runtime.json' in app['files']:
+        blender=document(client.read(APP+'/'+BLENDER_PREFIX+'vapor-runtime.json'),BLENDER_PIN)
+        for entry in blender['files']+blender['title_files']:
+            name=BLENDER_PREFIX+entry['path']
+            if app['files'].get(name)!=entry['sha256']: raise ValueError('Blender runtime binding differs')
+            modes[name]=int(entry['mode'],8)
     result=paths_and_directories(APP,modes)
     if include_kit:
         kit=document(client.read(KIT+'/manifest.json'),KIT_PIN)

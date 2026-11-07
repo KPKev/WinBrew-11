@@ -4,3 +4,4 @@ vendor/
 .codex-remote-attachments/
 __pycache__/
 *.ppm
+/evidence/

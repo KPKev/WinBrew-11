@@ -94,21 +94,23 @@ int main() {
   recovery_host.snapshot->installs[0].state = runtime::PreparationState::kReady;
   recovery_host.snapshot->installs[0].admission = "ok";
   assert(recovery.Request(request, 42, 3) && recovery_host.calls == 2);
-  // CS2's older Ready/publication record can remain valid while its newly
+  // Older CS2/Blender Ready records can remain valid while their newly
   // selected runtime still needs refreshing. It must reach the real host.
-  Host cs2; cs2.expected_app = 730;
-  cs2.snapshot->status = RuntimeHostStatus::kReady;
-  cs2.snapshot->kit_available = true; cs2.snapshot->installs_known = true;
-  auto cs2_request = request; cs2_request.runtime_number = 730; cs2_request.game = GameId::Steam(730);
-  auto legacy = installed; legacy.game = cs2_request.game; legacy.runtime_number = 730;
-  legacy.state = runtime::PreparationState::kReady; legacy.admission = "ok";
-  legacy.awaiting_registration = false; legacy.recovery_pending = false; legacy.runtime_current = false;
-  cs2.snapshot->installs = {legacy}; Preparation migration(cs2);
-  assert(migration.Request(cs2_request, 42, 3) && migration.Busy() && cs2.calls == 1);
-  cs2.snapshot->queued_prepares.clear(); ++cs2.snapshot->prepares_handled;
-  migration.Tick(42, 3); assert(migration.Busy()); // stale Ready must not advance to launch
-  cs2.snapshot->installs[0].runtime_current = true;
-  migration.Tick(42, 3); assert(migration.view().state == PreparationState::ready);
-  assert(migration.Request(cs2_request, 42, 3) && migration.view().state == PreparationState::ready && cs2.calls == 1);
+  for (const auto app : {730u, 365670u}) {
+    Host cs2; cs2.expected_app = app;
+    cs2.snapshot->status = RuntimeHostStatus::kReady;
+    cs2.snapshot->kit_available = true; cs2.snapshot->installs_known = true;
+    auto cs2_request = request; cs2_request.runtime_number = app; cs2_request.game = GameId::Steam(app);
+    auto legacy = installed; legacy.game = cs2_request.game; legacy.runtime_number = app;
+    legacy.state = runtime::PreparationState::kReady; legacy.admission = "ok";
+    legacy.awaiting_registration = false; legacy.recovery_pending = false; legacy.runtime_current = false;
+    cs2.snapshot->installs = {legacy}; Preparation migration(cs2);
+    assert(migration.Request(cs2_request, 42, 3) && migration.Busy() && cs2.calls == 1);
+    cs2.snapshot->queued_prepares.clear(); ++cs2.snapshot->prepares_handled;
+    migration.Tick(42, 3); assert(migration.Busy()); // stale Ready must not advance to launch
+    cs2.snapshot->installs[0].runtime_current = true;
+    migration.Tick(42, 3); assert(migration.view().state == PreparationState::ready);
+    assert(migration.Request(cs2_request, 42, 3) && migration.view().state == PreparationState::ready && cs2.calls == 1);
+  }
   std::puts("PASS: game preparation tracks identity, completion, refusal and account changes");
 }

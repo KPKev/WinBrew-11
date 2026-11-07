@@ -12,6 +12,7 @@ import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import prepare_cs2_runtime as cs2
+import prepare_blender_runtime as blender
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO = ROOT / "vendor/playden-source"
@@ -25,7 +26,7 @@ ASSET_LOCK = ROOT / "tools/playden-runtime-assets-lock.json"
 ASSET_LOCK_SHA256 = "96d3abab04da354a3b9984cfb540a2b72265533cb3d15d0455eac580352a1ecd"
 CA_SHA256 = "a41b5d356aea97a529fe27e0f7316d2f9d946d75927476cf9cf1b90637d00505"
 VAPOR_RECIPES = ROOT / "assets/vapor-recipes"
-VAPOR_RECIPE_MANIFEST_SHA256 = "558296c8c4126a208f535e8a81fd80465111caf3969b42170c8e3b24808d0c62"
+VAPOR_RECIPE_MANIFEST_SHA256 = "5e1275da22dad9d91d635c7c9c7bfb345a5e3c8100d342bfac75860b7cfd4df4"
 RECIPE_LIST = "runtime/recipes/recipes.lst"
 
 def git(*args: str) -> bytes:
@@ -107,6 +108,8 @@ def expected_runtime_asset_hashes() -> dict[str, str]:
     pinned.update({name: hashlib.sha256(data).hexdigest() for name, data in vapor_recipe_overlay(original).items()})
     cs2.check_header()
     pinned.update(cs2.expected_hashes())
+    blender.check_header()
+    pinned.update(blender.expected_hashes())
     return pinned
 
 
@@ -151,6 +154,13 @@ def stage(destination: Path, ca_bundle: Path | None = None) -> None:
         name = cs2.PREFIX + entry['path']
         items.append((name, (cs2.DEFAULT / entry['path']).read_bytes(), entry['sha256']))
     for name, path in cs2.notice_files().items():
+        data = path.read_bytes()
+        items.append((name, data, hashlib.sha256(data).hexdigest()))
+    blender.check_header()
+    for entry in blender.prepare():
+        name = blender.PREFIX + entry['path']
+        items.append((name, (blender.DEFAULT / entry['path']).read_bytes(), entry['sha256']))
+    for name, path in blender.notice_files().items():
         data = path.read_bytes()
         items.append((name, data, hashlib.sha256(data).hexdigest()))
     destination.mkdir(mode=0o700)

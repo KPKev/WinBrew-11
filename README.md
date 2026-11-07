@@ -10,8 +10,18 @@ A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created b
 | --- | --- | --- |
 | **Schedule I** | Working, owner-reported. | Multiplayer/co-op has not been established by this report. |
 | **Counter-Strike 2 (Steam app 730, called “CSGO” in owner reports)** | Offline gameplay with bots works. The complete fixed runtime is selected automatically during normal CS2 installation/reinstallation. | LAN/local multiplayer **may work but is untested**. Internet tunneling is also untested. In-game Steam authentication and official online matchmaking remain unsupported. |
+| **The Elder Scrolls V: Skyrim Special Edition** | Working, owner-reported. | Offline report; co-op untested. |
+| **Blackjack 21: The Blackjackiest** | Working, owner-reported. | Offline report; co-op untested. |
+| **Golf With Your Friends** | Working, owner-reported. | Offline report; co-op untested. |
+| **Quake II RTX** | Working, owner-reported. | Offline report; co-op untested. |
 
-The tested Counter-Strike installation is CS2/app 730, not a separately tested legacy CS:GO executable. See the [compatibility matrix and LAN research notes](docs/compatibility.md).
+The tested Counter-Strike installation is CS2/app 730, not a separately tested legacy CS:GO executable. See the [compatibility matrix](docs/compatibility.md).
+
+## Prepared for the next combined release
+
+The Blender compatibility changes are integrated into normal installation/reinstallation. The owner confirmed workspace visibility, smooth pointer/menus and responsive wheel zoom; the owner confirms the earlier unexpected exit was resolved by the cursor repair. Kane's Wrath currently reaches only its first splash screen. Splitgate reaches login and is blocked by server authentication. See [compatibility](docs/compatibility.md), [Blender runtime details](docs/blender-runtime.md), and the [prepared release notes](docs/release-notes-next.md).
+
+Counter-Strike's confirmed result is offline play. Online play does not work for the listed games and official online support is not being pursued. Co-op may be investigated later using other GitHub projects, but it remains unimplemented and untested. That work is deferred; the current priority is making the games function locally. The prepared update has not replaced the published downloads below.
 
 ## Get the latest runnable version
 

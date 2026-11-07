@@ -38,3 +38,7 @@ For the runtime change, start with the corresponding-source archive and `runtime
 ## Verification
 
 The real filesystem installer suite covers first installation, removal/reinstallation, migration with a saved file preserved, other Steam apps, local imports and missing/corrupt/symlink rejection. Runtime assets and compiled pins are checked again by package assembly. The PS5-native host and complete app are separately compiled and linked. Offline gameplay acceptance applies to the tested runtime, rather than claiming a fresh 75 GB game download was repeated on the owner's console.
+
+## Prepared combined update
+
+The later combined update also selects a separate [Blender compatibility bundle](blender-runtime.md). CS2 retains its existing runtime and confirmed offline behavior. Official online play remains unsupported and is not being pursued. Co-op and multiplayer testing are deferred while game functionality is the priority. The published CS2 assets described above remain unchanged until the combined update is published.

@@ -1,0 +1,51 @@
+{
+  "date": "2026-11-07",
+  "status": "prepared locally for later combined publication",
+  "console_deployment_performed": false,
+  "github_publication_performed": false,
+  "runtime_revision": "blender-019.1",
+  "steam_app_id": 365670,
+  "payload_archive_sha256": "e26970ea6270afcf16a5bad8b3ed05fbadbbf338cb995c106773c1e41911ee84",
+  "corresponding_source_sha256": "a8d2cc9aff8d3e24e0b827da73a859a4bfbdfe44d1d4d8b17a85c2a0ecd6649e",
+  "portable_launcher_sha256": "2ebb762ab3170a10905540ebc5e2c3dfe7922341ae286feb162fb554e432aaf4",
+  "cursor_module_sha256": "3f942103da2f100fdb68abe4fee91e0716a050e97a6c83acd26fcd90787f5af4",
+  "owner_acceptance": [
+    "workspace stays visible",
+    "smooth pointer and menus",
+    "wheel zoom works and stays responsive",
+    "owner confirms earlier unexpected exit resolved by cursor repair"
+  ],
+  "passed_checks": [
+    "native host compile/link and PIE checks",
+    "portable launcher argument/identity contract",
+    "byte-identical launcher rebuild from archived source",
+    "six independent-cursor/GDI fallback checks",
+    "six signed wheel queue/ABI checks",
+    "1768-file Blender first-install/reinstall/migration and project/settings preservation fixtures",
+    "1760-file CS2 installer regression fixtures",
+    "corrupt/missing/linked input and forbidden title destination refusal",
+    "730 and 365670 preparation refresh checks",
+    "recipe parser and player override preservation",
+    "5 Blender payload pin tests",
+    "3 recipe asset tests",
+    "4 asset assembly tests",
+    "authored documentation links and JSON validation",
+    "final ZIP complete file hashes, CRCs and Unix modes",
+    "permission helper read-only plan against final package fixture"
+  ],
+  "limits": [
+    "larger-scene, long-session, rendering, save and export stability unverified",
+    "combined package not console-tested",
+    "fixture reinstall is separate from owner console acceptance"
+  ],
+  "network_scope": {
+    "official_online": "unavailable and not pursued",
+    "coop": "deferred, unimplemented and untested"
+  },
+  "private_data_included": false,
+  "earlier_exit_status": "resolved, owner-confirmed; credited to cursor repair",
+  "combined_app_file_count": 3674,
+  "combined_app_manifest_sha256": "e245bfab1cc296be9e586bac86bd61160073b6ba99c22faf84da71c2ea203f12",
+  "combined_app_archive_sha256": "8a60c9055dd67694da1e0f7edc7bfa489a78915a05ffd20952d98b9bd33b72e0",
+  "combined_app_eboot_sha256": "d73723ad561a6d0a89765d235c2e58ec5f2ff47c735a0ddca0640d95b3a43fbf"
+}

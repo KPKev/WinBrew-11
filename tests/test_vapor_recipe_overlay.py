@@ -6,6 +6,7 @@ from pathlib import Path
 import tempfile
 import unittest
 from unittest import mock
+from contextlib import ExitStack, contextmanager
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -20,6 +21,23 @@ def load(name, path):
 stage = load("vapor_recipe_stage", "tools/stage-steam-runtime-assets.py")
 review = load("vapor_recipe_review", "tools/assemble-steam-review.py")
 
+@contextmanager
+def compatibility_fixture(root):
+    # Recipe delivery does not need gigabytes of unrelated runtime payloads.
+    # The real copier and complete release files have their own installer tests.
+    with ExitStack() as stack:
+        for index, module in enumerate((stage.cs2, stage.blender)):
+            folder=root/('compatibility-'+str(index));folder.mkdir()
+            data=b'fixture-runtime';name='runtime-inventory.json'
+            (folder/name).write_bytes(data)
+            digest=hashlib.sha256(data).hexdigest()
+            stack.enter_context(mock.patch.object(module,'DEFAULT',folder))
+            stack.enter_context(mock.patch.object(module,'check_header',return_value=None))
+            stack.enter_context(mock.patch.object(module,'prepare',return_value=[dict(path=name,sha256=digest)]))
+            stack.enter_context(mock.patch.object(module,'expected_hashes',return_value={module.PREFIX+name:digest}))
+            stack.enter_context(mock.patch.object(module,'notice_files',return_value={}))
+        yield
+
 
 class Recipes(unittest.TestCase):
     def test_delivery_uses_recipe_list_and_current_asset_verifier(self):
@@ -28,15 +46,20 @@ class Recipes(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             repo = root / "source"
+            upstream_lock = {}
             for name in stage.read_runtime_asset_lock():
                 path = repo / name
                 path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_bytes((stage.REPO / name).read_bytes())
+                data = b"# fixture upstream recipes\n" if name == stage.RECIPE_LIST else b"fixture upstream asset\n"
+                path.write_bytes(data)
+                upstream_lock[name] = hashlib.sha256(data).hexdigest()
             ca = b"x" * 188900
             bundle = root / "cacert.pem"
             bundle.write_bytes(ca)
             dest = root / "staged"
-            with mock.patch.object(stage, "REPO", repo), mock.patch.object(
+            with compatibility_fixture(root), mock.patch.object(stage, "REPO", repo), mock.patch.object(
+                    stage, "read_runtime_asset_lock", return_value=upstream_lock), mock.patch.object(
+                    stage, "STEAMWORKS", {name: upstream_lock['runtime/steamworks/' + name] for name in stage.STEAMWORKS}), mock.patch.object(
                     stage, "CA_SHA256", hashlib.sha256(ca).hexdigest()), mock.patch.object(
                     stage, "git", side_effect=AssertionError("test must not invoke git")), mock.patch.object(
                     review, "ASSETS", dest):
@@ -56,7 +79,7 @@ class Recipes(unittest.TestCase):
                     self.assertEqual(recipe["locked"], [])
                     self.assertEqual(recipe["defaults"]["steam_features"], "emulate")
                     apps.add(recipe["app_id"])
-                self.assertEqual(apps, {240, 105600, 489830, 1942280})
+                self.assertEqual(apps, {240, 105600, 365670, 489830, 1942280})
                 # A changed payload and forged receipt cannot authorize it.
                 name = "runtime/recipes/" + entry["file"]
                 (dest / name).write_bytes(b"{}")

@@ -1,0 +1,25 @@
+{
+  "recipe_id": "steam-365670-vapor-blender-v1",
+  "recipe_version": 1,
+  "app_id": 365670,
+  "name": "Blender",
+  "launch_entries": [
+    {
+      "id": "game",
+      "label": "Blender",
+      "executable": "blender.exe"
+    }
+  ],
+  "arguments": "",
+  "resolution_arguments": "",
+  "dll_overrides": "d3d8,d3d9,d3d10core,d3d11,dxgi=n",
+  "architecture": "pe64",
+  "runtime": "wine-wow64",
+  "prefix": "game",
+  "graphics": "opengl",
+  "defaults": {
+    "steam_features": "emulate",
+    "extra_arguments": "--gpu-backend vulkan"
+  },
+  "locked": []
+}

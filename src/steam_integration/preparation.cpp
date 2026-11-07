@@ -5,11 +5,11 @@ namespace ww::steam_integration {
 using namespace playden;
 using namespace playden::homebrew;
 namespace {
-// CS2 now selects a different immutable runtime. An old Ready publication is
+// CS2 and Blender select scoped immutable runtimes. An old Ready publication is
 // still admissible, but must pass through the host's owned-title refresh before
 // launch. Other games retain their existing preparation behavior.
 bool SelectedRuntimeReady(const RuntimeInstallView& installed) {
-  return installed.runtime_number != 730 || installed.runtime_current;
+  return (installed.runtime_number != 730 && installed.runtime_number != 365670) || installed.runtime_current;
 }
 }
 Preparation::Preparation(PreparationHost& host) : host_(host), thread_(std::this_thread::get_id()) {}

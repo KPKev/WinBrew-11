@@ -7,6 +7,7 @@ name="${1:?Usage: bash tools/build-vapor-cs2.sh NEW_BUILD_NAME}"
 [[ "$name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || { echo 'Invalid build name' >&2; exit 1; }
 [[ ! -e "build/$name-review" && ! -e "build/$name-isolated" && ! -e "build/$name-assets" ]] || { echo 'Build output already exists' >&2; exit 1; }
 python3 tools/prepare-cs2-runtime.py
+python3 tools/prepare-blender-runtime.py
 python3 tools/refresh-steam-runtime-host.py
 cmake --build build/steam-host-dedicated-cmake -j "${BUILD_JOBS:-4}"
 export WINE11_EXPERIMENT_GAME_HOST=1 WINE11_EXPERIMENT_UNINSTALL=1 WINE11_PAYLOAD_GAME_CLEANUP=1

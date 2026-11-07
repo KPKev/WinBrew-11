@@ -51,3 +51,7 @@ LGPL helper, build scripts and exact file manifest are in runtime-patches/cs2
 and assets/cs2-runtime in the repository. See docs/cs2-runtime.md for scope and
 rebuilding. Other games retain the base runtime.
 
+
+## Prepared Blender compatibility bundle
+
+The scoped Blender runtime derives from Playden kit0.19 and retains its component licenses. The modified Wine `win32u.prx` and complete modified launcher source are supplied with the cursor patch, pinned source receipt and corresponding-source release archive. Runtime code remains under its upstream licenses (including LGPL Wine/launcher components and the driver's notices); Blender itself is not distributed. See `runtime-patches/blender/upstream-notices/` and `docs/blender-runtime.md`.

@@ -1,0 +1,50 @@
+{
+  "base_runtime": "Playden kit019 / prospero-win7537eb0113b438e8dc0730e594fa0743203bc7c9 / Wine490f6d5dcbb2a5047345b8af88d114bbcaad69a8",
+  "contains_games_accounts_projects": false,
+  "cursor_module_sha256": "3f942103da2f100fdb68abe4fee91e0716a050e97a6c83acd26fcd90787f5af4",
+  "files": {
+    "archives/cs2-prospero7537-source.tar.gz": {
+      "sha256": "d65c459759f1c4757ef6ab82ce74235c7d1b8f295afc2af35c5db2920f7db569",
+      "size": 3508635
+    },
+    "archives/cs2-wine490-source.tar.gz": {
+      "sha256": "c40c03637f90ede4fe60ffc4162473870038dc2324cd1d67d186ad72212a70d5",
+      "size": 75633669
+    },
+    "archives/foundation-305975-source.tar": {
+      "sha256": "9212c6c8768311e1ec45a1c744eaaec811ae50e4f28e7f026351df0ee46809ef",
+      "size": 24985600
+    },
+    "archives/freetype-2.13.3.tar.xz": {
+      "sha256": "0550350666d427c74daeb85d5ac7bb353acba5f76956395995311a9c6f063289",
+      "size": 2617564
+    },
+    "blender/build-win32u.sh": {
+      "sha256": "d410a58960265addb56c0d196f21c96667b35814fa3ee305ca1f789d5b7ca4b6",
+      "size": 5190
+    },
+    "blender/launcher-source.tar.gz": {
+      "sha256": "a8bb7a419359d444de8420ecf6aa1777f5f5332dc3b589fcd9084ff0ec49a686",
+      "size": 700079
+    },
+    "blender/link-win32u.sh": {
+      "sha256": "e5e4259abfe4de4f1669a7276304451ab2e2484fe93f061b9b6f991a1fd8011f",
+      "size": 2404
+    },
+    "blender/test-independent-cursor.c": {
+      "sha256": "c006174c5f8562f1e7047bef6084d0ae59142e30a71153889deb36fec420f453",
+      "size": 2407
+    },
+    "blender/win32u-independent-cursor.patch": {
+      "sha256": "2dfa0b89b7305e3aed7cffc9ac1996a1961f7cd99feb67e6e7366a9fc761e693",
+      "size": 3198
+    }
+  },
+  "launcher_archive_sha256": "a8bb7a419359d444de8420ecf6aa1777f5f5332dc3b589fcd9084ff0ec49a686",
+  "launcher_rebuild_in_second_directory": "byte-identical executable and ELF",
+  "launcher_sha256": "2ebb762ab3170a10905540ebc5e2c3dfe7922341ae286feb162fb554e432aaf4",
+  "rebuild_instructions": "docs/blender-runtime.md",
+  "schema": "vapor-blender-source/1",
+  "shared_cs2_sources_modified": false,
+  "source_archive": "blender-runtime-corresponding-source.zip"
+}
