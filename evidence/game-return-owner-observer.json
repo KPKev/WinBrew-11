@@ -1,0 +1,64 @@
+{
+  "status": "Isolated owner-context read-only observer prepared and tested. Not integrated into Wine11, deployed, or executed on a console.",
+  "source_revision": "ce289425bb34acbcc98f77b4e00ac98b3c16e4bc",
+  "exact_native_reader_sha256": "9a3841bf42b7e70f87f180630f9ccb48d2b4e64b98185c895b0e168b4e4f6e7c",
+  "code": [
+    "research/game_return/admission_observer.c",
+    "research/game_return/admission_observer.h"
+  ],
+  "tests": [
+    "research/game_return/admission_observer_test.c",
+    "research/game_return/test_admission.sh"
+  ],
+  "native_archive": "build/admission-observer-native/libwine11-readonly-admission.a",
+  "native_archive_sha256": "28ea1e563885665324429cf5ccded305485d61731dc2bcc2caee6576cba5746b",
+  "checks": {
+    "exact_native_reader_host_fixture_tests": "passed",
+    "existing_read_only_shared_lock": "passed; O_RDONLY|O_NOFOLLOW; LOCK_SH|LOCK_NB only",
+    "missing_lock_never_created": "passed",
+    "mutation_api_interception": "passed; no write, permission, ownership, mkdir, rename, unlink, truncate or fsync attempts",
+    "before_after_content_mode_uid_gid_inode_link_size_snapshots": "identical on success and refusal",
+    "fd_closure": "passed on success, busy lock, invalid publication, owner mismatch, wrong owner UID, mode and hardlink refusal",
+    "no_filesystem_grant": "returns unavailable before IO",
+    "private_output": "fixed enum, bit flags and fixed summary only; exact upstream error text is suppressed with NULL output buffers",
+    "ps5_toolchain_object_and_archive_compilation": "passed",
+    "console_execution": "not performed",
+    "complete_Wine11_link_and_runtime_test": "not performed"
+  },
+  "production_context": {
+    "title": "FAKE78003",
+    "app_id": 1089130,
+    "filesystem_grant": "must already be authorized by existing Wine11 startup; observer never grants or elevates",
+    "expected_owner": "current effective UID only; no owner guessing or impersonation",
+    "namespace": "native canonical paths only; test namespace override is absent from native build",
+    "qualified_lock": "exact installed-version PS5 shared-lock adapter; runtime gateway availability in Wine11 remains unverified",
+    "lease_lifetime": "retained through private owner marker and committed receipt checks, then closed",
+    "no_writers": [
+      "RepairBottle",
+      "SettleBottleModes",
+      "RunPrepare",
+      "RefreshTitle",
+      "InstallService workers",
+      "SettingsPublicationOwner writes",
+      "pw_title_ps5_umask"
+    ]
+  },
+  "observation_scope": [
+    "Exact native committed publication admission",
+    "Owner marker identity and file inventory agreement",
+    "Owner identity binds descriptor and committed receipt kit ID"
+  ],
+  "remaining_requirements": [
+    "Integrate observer objects into a reviewed ordinary Wine11 build without changing Playden/game state.",
+    "Invoke only inside the already-authorized owner context; verify qualified lock and UID behavior on hardware.",
+    "Read actual sanitized status without exposing private fields.",
+    "Separately admit the full proposed kit/runtime/recipe artifacts, native stopped state and supported exclusive publisher refresh before installation."
+  ],
+  "safe_to_install": false,
+  "preservation": {
+    "original_Playden_or_prospero_checkout_changes": false,
+    "Wine11_production_source_changes": false,
+    "console_launches": false,
+    "console_file_permission_ownership_or_game_state_changes": false
+  }
+}

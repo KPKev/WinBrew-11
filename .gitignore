@@ -1,0 +1,6 @@
+build/
+dist/
+vendor/
+.codex-remote-attachments/
+__pycache__/
+*.ppm

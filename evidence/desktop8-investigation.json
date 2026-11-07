@@ -1,0 +1,18 @@
+{
+  "version": "01.008.000",
+  "installed": true,
+  "hardware_click_fix_verified": false,
+  "scope": "Wine 11 desktop mouse report consumption only; native library bindings and browser preserved.",
+  "candidate_cause": "Discarding reports based on repeated/older timestamps loses valid queued button transitions. Hardware timestamp reuse not separately captured.",
+  "checks": [
+    "focused regression reproduces dropped stationary click in update7 code and opens Settings in repaired code",
+    "stationary same-timestamp press and release",
+    "equal-timestamp and timestamp-zero down/up batches",
+    "drag release and held-button no-retrigger",
+    "full portable and native mock suite passes",
+    "ASan/UBSan input suite passes",
+    "PS5 package built and integrity validated"
+  ],
+  "installed_at": "20261028T214252Z",
+  "console_file_readback_verified": true
+}

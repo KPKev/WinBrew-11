@@ -1,0 +1,92 @@
+{
+  "status": "Isolated user-invoked Wine11 owner observer integration built and tested; not deployed or executed on console.",
+  "snapshot_revision": "7adac703ee6d9f3cd64c51bb2a4d6a887c117855",
+  "integration_revision": "7b7ffaa6065d6a85d7a9f65ecbefb5e738391e10",
+  "snapshot_inventory_sha256": "6e7edc4e7bd884ba738fdcd40f9ecc2f6b080d790c501f4fef20175511ff62f0",
+  "native_eboot_sha256": "a910e752b6987b32c4d4b3ffdfdea5133830f6ee4273e04e42e93b50ab3647b8",
+  "checks": {
+    "stock_native_baseline": "passed",
+    "integrated_native_build_link": "passed",
+    "fself_integrity": "valid",
+    "portable_full_tools_test_sh_suite": "passed, exit0",
+    "owner_ui_dispatch_test": "passed",
+    "offline_updater_rollback_test": "passed; no live service used",
+    "self_contained_exact_reader_side_effect_tests": "passed",
+    "UI_visual_review": "passed; fixed status text/card fits; simulated result only",
+    "source_guard_provenance": "exact installed revision ce289425, reader SHA9a3841bf42b7e70f87f180630f9ccb48d2b4e64b98185c895b0e168b4e4f6e7c"
+  },
+  "entry_point": "Settings > About > Game return > Run check",
+  "dispatch": "Separate one-shot request flag; no startup, drawing, background or automatic observer call. Browser/game launch intents take priority and are left untouched.",
+  "output_privacy": "Only fixed status text is rendered; no private owner/descriptor/profile contents, IDs, hashes or upstream error messages are displayed or logged.",
+  "added_dynamic_imports": [
+    "lstat",
+    "strcpy"
+  ],
+  "removed_dynamic_imports": [],
+  "new_import_catalog_providers": {
+    "lstat": "libkernel.so",
+    "strcpy": "libSceLibcInternal.so"
+  },
+  "new_needed_provider_libraries": [],
+  "unchanged_protected_files": {
+    "tools/update_desktop.py": true,
+    "src/title_launch.hpp": true,
+    "src/ps5_browser.cpp": true,
+    "src/preferences.cpp": true,
+    "src/native_imports.json": true,
+    "sce_sys/param.json": true,
+    "sce_sys/icon0.png": true
+  },
+  "shared_snapshot_files_changed_since_capture": [
+    "dependencies.json",
+    "README.md",
+    "src/explorer.cpp",
+    "src/host.cpp",
+    "tests/explorer_test.cpp",
+    "tools/archive_source.py",
+    "tools/bootstrap.py",
+    "tools/test.sh"
+  ],
+  "self_contained_source": "Source archive includes the exact native reader/provider sources and provenance, build/staging changes, fixed-status UI/dispatch tests, and exact fixture plus mutation-intercepting side-effect tests. Original dependency pins and bundled licenses remain present.",
+  "outputs": {
+    "eboot.bin": {
+      "bytes": 857692,
+      "sha256": "a910e752b6987b32c4d4b3ffdfdea5133830f6ee4273e04e42e93b50ab3647b8"
+    },
+    "imports.txt": {
+      "bytes": 1738,
+      "sha256": "0cfedd44a400c6d07d40e703628ea1078564f5c2db6852880d252473a6fca056"
+    },
+    "provider-libraries.json": {
+      "bytes": 845,
+      "sha256": "7a3b18850af6decbe24fc1f7e6365d0f4315a2f6f317f7916792cf084df17f27"
+    },
+    "ui-preview-simulated-pass.png": {
+      "bytes": 1031498,
+      "sha256": "73067090c229b39a9dd52b7817da48f13579f9a0143c7addcc68a6d7bc2aa883"
+    },
+    "wine11-owner-observer-source.zip": {
+      "bytes": 26136606,
+      "sha256": "f9fc2385ee172016a2faac8632a7bd72001a3169f6934fecf115a5088fedab01"
+    },
+    "wine11-owner-observer.patch": {
+      "bytes": 623138,
+      "sha256": "6b76ace6aff48d1b0f25c92578f269f9bb057eb402cb0c071585ab846efcde9f"
+    }
+  },
+  "remaining_requirements": [
+    "Human review of isolated patch/source and native import providers.",
+    "A separate authorized ordinary Wine11 installation would be needed to exercise the control; no installation performed here.",
+    "Verify current effective UID, qualified shared-lock gateway and actual game publication on hardware using only sanitized status.",
+    "This observation never authorizes game-wrapper installation. Full kit/runtime/recipe/stopped-state admission and owned publisher refresh remain required."
+  ],
+  "preservation": {
+    "shared_production_source_or_existing_build_outputs_modified_by_this_task": false,
+    "console_launch_or_deploy": false,
+    "permissions_or_ownership_changes": false,
+    "game_descriptor_registry_profile_save_changes": false
+  },
+  "build_entry_point": "bash tools/build-ps5.sh; observer include paths/config/staging are contained in the isolated source archive",
+  "test_entry_point": "bash tools/test.sh; also includes the separately passed owner UI and side-effect observer tests",
+  "shared_changes_note": "The shared main chat advanced several source files during the isolated build. These are parallel changes, not mutations by this integration; rebase/review the patch before adoption."
+}

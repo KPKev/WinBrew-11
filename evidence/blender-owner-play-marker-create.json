@@ -1,0 +1,8 @@
+{
+  "sha256": "cb6be9aa87fe29ddfd0ef4b77dcc421238d4c757562444c513c8b43c458415d1",
+  "status": "created",
+  "automatic_retry": false,
+  "target_app": 365670,
+  "target_title": "FAKE78008",
+  "output": "OWNER_MARKER created inode=97035 size=59\nOWNER_MARKER done\n"
+}

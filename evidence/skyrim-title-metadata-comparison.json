@@ -1,0 +1,8 @@
+{
+  "sha256": "ef9d1a245f74d58713e2ca03d9ebd98871ff2a486fd33692d7c749202eca82d1",
+  "output": "COMPARE title=FAKE78003 item=parent first=1 second=1 type=directory uid=1 gid=0 mode=0755 links=2 dev=687931143 ino=55400 stable=1\nCOMPARE title=FAKE78003 item=descriptor first=1 second=1 type=regular uid=1 gid=0 mode=0600 links=1 dev=687931143 ino=59328 stable=1\nCOMPARE title=FAKE78004 item=parent first=1 second=1 type=directory uid=0 gid=0 mode=0755 links=2 dev=687931143 ino=67175 stable=1\nCOMPARE title=FAKE78004 item=descriptor first=1 second=1 type=regular uid=0 gid=0 mode=0600 links=1 dev=687931143 ino=71087 stable=1\nCOMPARE title=FAKE78005 item=parent first=1 second=1 type=directory uid=0 gid=0 mode=0755 links=2 dev=687931143 ino=71211 stable=1\nCOMPARE title=FAKE78005 item=descriptor first=1 second=1 type=regular uid=0 gid=0 mode=0600 links=1 dev=687931143 ino=75103 stable=1\n",
+  "elapsed_s": 0.297,
+  "eof_observed": true,
+  "error": "",
+  "no_automatic_retry": true
+}

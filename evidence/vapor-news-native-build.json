@@ -1,0 +1,23 @@
+{
+  "scope": "Local isolated Vapor PS5 test candidate PPSA77382; no staging or deployment",
+  "eboot_sha256": "8c1ae9ca44613aa280628a9e780f22346193889c81fae6daed4254ec1e876329",
+  "pie_sha256": "5b6781b939be16626783ea4de1e2d4975f519ea2dbfa8456ac4d7ca89cb17b1f",
+  "source_snapshot_receipt_sha256": "fc3bd60387f05f12e90e1cbbe2e717fea4f0dcc1c91b3aff207de77157a91093",
+  "guarded_uid_object_sha256": "e98048d171bce7a08fdd4a06b1b7d39f2c41087e2c5ad9b7744f52a02a5adf5a",
+  "validation": [
+    "Current UI, owner and Steam integration sources and headers match snapshot",
+    "Native UI, Steam backend and combined PIE links passed",
+    "Guarded UID source/object receipt verified",
+    "Signed container integrity valid",
+    "All 41 package files match manifest",
+    "Host news and artwork service test passed; renderer agent reports UI tests passed"
+  ],
+  "inputs": "Verified console-probed experimental network archives and pinned compiler runtime; dedicated game host; generated service overlays",
+  "limits": "Local experimental package not installed or console-tested; link and integrity do not establish runtime behavior",
+  "logs": [
+    "build/vapor-news-ui.log",
+    "build/vapor-news-link.log",
+    "build/vapor-news-package.log",
+    "build/vapor-news-isolated.log"
+  ]
+}

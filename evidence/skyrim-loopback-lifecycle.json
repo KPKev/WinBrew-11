@@ -1,0 +1,8 @@
+{
+  "sha256": "c8305cc5317c4ec04b20f8be6dbd6821c1c3652a4aed7d0f097fd2bef6d1681a",
+  "output": "OBS ready=1\nOBS reason=timeout connections=0 bytes=0\n",
+  "eof_observed": true,
+  "error": "",
+  "no_automatic_retry": true,
+  "game_data_changed": false
+}

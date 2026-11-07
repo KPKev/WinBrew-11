@@ -1,0 +1,20 @@
+{
+  "label": "Wine 11",
+  "four_pane_symbol_unchanged": true,
+  "source_and_cached_icons_verified": true,
+  "sha256": "48fef0f0feab237a01c0cf702ce8519c0ee3182e8356b9de61537d1d9b0a4cba",
+  "updated": [
+    {
+      "path": "/data/homebrew/PPSA77381/sce_sys/icon0.png",
+      "sha256": "48fef0f0feab237a01c0cf702ce8519c0ee3182e8356b9de61537d1d9b0a4cba"
+    },
+    {
+      "path": "/user/appmeta/PPSA77381/icon0.png",
+      "sha256": "48fef0f0feab237a01c0cf702ce8519c0ee3182e8356b9de61537d1d9b0a4cba"
+    },
+    {
+      "path": "/data/homebrew/PPSA77381/manifest.json",
+      "sha256": "7986f6ab0d21d72e23a6958cd36214d38a3432465c83e33bfc8d669da64f0815"
+    }
+  ]
+}

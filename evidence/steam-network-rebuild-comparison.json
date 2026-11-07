@@ -1,0 +1,42 @@
+{
+  "status": "matched",
+  "archives": {
+    "libcurl.a": {
+      "tested_sha256": "6e23d1e67a533d5fe88b984b6b69374418e4ba162882b1b34de8fedde7715034",
+      "rebuilt_sha256": "6e23d1e67a533d5fe88b984b6b69374418e4ba162882b1b34de8fedde7715034",
+      "matches_tested": true,
+      "saved_matches_evidence": true
+    },
+    "libeverest.a": {
+      "tested_sha256": "225e920110b8bfe37fb3c3db495b933132861be91360ed2bc629a968d7a7d783",
+      "rebuilt_sha256": "225e920110b8bfe37fb3c3db495b933132861be91360ed2bc629a968d7a7d783",
+      "matches_tested": true,
+      "saved_matches_evidence": true
+    },
+    "libmbedcrypto.a": {
+      "tested_sha256": "c88a32784e3cf03f954d6424414603e0b22444abaedbaec10a671f413feb6c73",
+      "rebuilt_sha256": "c88a32784e3cf03f954d6424414603e0b22444abaedbaec10a671f413feb6c73",
+      "matches_tested": true,
+      "saved_matches_evidence": true
+    },
+    "libmbedtls.a": {
+      "tested_sha256": "5a1399cf805250d9330ffc16e82960729a74bfd2df894288438fece38d1e147f",
+      "rebuilt_sha256": "5a1399cf805250d9330ffc16e82960729a74bfd2df894288438fece38d1e147f",
+      "matches_tested": true,
+      "saved_matches_evidence": true
+    },
+    "libmbedx509.a": {
+      "tested_sha256": "e96fd24af3a514d053f79220fc6e14039627db890f18c524fdf89b39f5ba1da0",
+      "rebuilt_sha256": "e96fd24af3a514d053f79220fc6e14039627db890f18c524fdf89b39f5ba1da0",
+      "matches_tested": true,
+      "saved_matches_evidence": true
+    },
+    "libp256m.a": {
+      "tested_sha256": "3db966a0b8361004bb90e5e2fe694975cd5f853762def8a0dbb5fed5537e4331",
+      "rebuilt_sha256": "3db966a0b8361004bb90e5e2fe694975cd5f853762def8a0dbb5fed5537e4331",
+      "matches_tested": true,
+      "saved_matches_evidence": true
+    }
+  },
+  "scope": "Reproducibility only; no assertion of Playden pin equivalence or release readiness."
+}

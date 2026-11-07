@@ -1,0 +1,50 @@
+{
+  "feature": "Read-only installed-game inventory adapter",
+  "runtime_source": "Playden registry and completed installation markers; no account/session state",
+  "reference": {
+    "repository": "https://github.com/leolobato/playden-ps5",
+    "revision": "9f5a7cbebeaf07fa3ea5324dce5ad8f374ca0aec",
+    "license": "GPL-3.0-or-later",
+    "files": [
+      "src/installs/install_service.cpp",
+      "src/library/store.cpp",
+      "src/steam/install_volumes.cpp",
+      "src/steam/backend/depot_installer.cpp",
+      "src/stores/local/copy_runner.cpp"
+    ]
+  },
+  "native_reads": [
+    "<primary games root>/.playden-games",
+    "<known volume games root>/<validated game key>/.playden-install.json"
+  ],
+  "maximum_games": 64,
+  "maximum_registry_bytes_including_terminator": 32768,
+  "maximum_marker_bytes_including_terminator": 8192,
+  "checks": {
+    "portable_inventory_tests": "passed",
+    "native_read_boundary_mock_tests": "passed",
+    "portable_address_and_undefined_behavior_sanitizers": "passed",
+    "ps5_toolchain_compilation": "passed",
+    "console_native_inventory_test": "not performed",
+    "console_writes_or_launches": "none"
+  },
+  "read_only_console_observation": {
+    "registry_entries": [
+      { "steam_app": 431240, "volume": "internal", "recorded_bytes": 6018004668 },
+      { "steam_app": 1089130, "volume": "internal", "recorded_bytes": 1251498163 }
+    ],
+    "completed_markers_read": true,
+    "title_labels_verified_at": [
+      "https://store.steampowered.com/app/431240/Golf_With_Your_Friends/",
+      "https://store.steampowered.com/app/1089130/Quake_II_RTX/"
+    ]
+  },
+  "limitations": [
+    "An installed marker is not proof that a runtime is prepared, entitled, compatible, registered or safe to launch.",
+    "Title names, artwork and native title routing must come from independently verified metadata or runtime services.",
+    "Existing Playden static services are not linked or instantiated by this adapter.",
+    "Missing, inaccessible, malformed and oversized metadata are reported explicitly.",
+    "No writes, probes, migrations, account reads, network requests, installations, uninstalls or launches occur in the adapter.",
+    "Imported external games outside the managed registry await the separate source/location service adapter."
+  ]
+}

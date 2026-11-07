@@ -1,0 +1,6 @@
+{
+  "sha256": "9a5cce210c0b1faf45f906d02ab94899eb62f21f9348ded87df77da414cb309d",
+  "status": "inspect",
+  "automatic_retry": false,
+  "output": "fixture preflight failed\n"
+}

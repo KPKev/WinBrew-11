@@ -1,0 +1,10 @@
+{
+  "source": "PS5 read-only title folder inspection",
+  "steam_app_id": 3594780,
+  "prepared_title_id": "FAKE78004",
+  "title_folder_present": true,
+  "executable_present": true,
+  "helper_present": true,
+  "gameplay_verified": false,
+  "note": "Folder and console metadata exist; user-visible launch and gameplay are not established."
+}

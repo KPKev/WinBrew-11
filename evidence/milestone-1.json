@@ -1,0 +1,55 @@
+{
+  "date": "2026-10-28",
+  "project": "WrappedWine",
+  "milestone": 1,
+  "title": "PPSA77380",
+  "console_tested": true,
+  "console_changed": true,
+  "console_state_last_reported_by_owner": "PS5 homebrew; Wi-Fi 192.168.7.26; awaiting first WrappedWine opening",
+  "launch_targets": {
+    "main_full_quake_ii_rtx": "FAKE78003",
+    "playden": "FAKE77031"
+  },
+  "verified": [
+    "Windows preview compiles with MSVC C++20",
+    "Live preview F1 Start, mouse Quake selection, preview-only launch message, Escape dismissal, F2 game library",
+    "Shared renderer UI tests: search, intents, window controls/drag, calendar rollover, error handling, search bounds",
+    "Shared shell test under AddressSanitizer and UndefinedBehaviorSanitizer",
+    "Mocked native/public title handoff ABI and privilege/user/error gates",
+    "Rendered desktop, Start, library and calendar at 1920x1080; visual inspection",
+    "PS5 native compilation, ELF conversion and FSELF integrity inspection",
+    "Pinned clean-room libc SHA-256 e6ff45d16adf687855cc3b33b0c8a4132b6504360b221e0a34c7e99fb3ba0036",
+    "Exact-title Lapy helper manifest and protocol digest",
+    "15 installable-package file hashes",
+    "Corresponding source archive integrity"
+  ],
+  "app_zip_sha256": "3e7c2ad52297b5596551d2f439997658cefb81a0b5235f0e56e8ec11c83a8d31",
+  "helper_sha256": "b4d29c035a5636abe71260981daabebb9319ecc3d9a0a90228f697642af13a6d",
+  "unverified": [
+    "PS5 display",
+    "PS5 controller input",
+    "root helper on this title and console",
+    "native title handoff",
+    "full game startup from WrappedWine",
+    "return via PS5 home screen"
+  ],
+  "untouched": [
+    "existing game and PAKs",
+    "saves and configuration",
+    "controller executable",
+    "graphics modifications",
+    "Playden and runtime kit",
+    "Windows11PS5 source and diagnostics",
+    "PS5 operating system and power state"
+  ],
+  "console_installed": true,
+  "console_registered": true,
+  "native_desktop_verified": false,
+  "first_launch_result": {
+    "signal": "SIGILL",
+    "rip": "0x4001c9",
+    "return": "0x4028c4",
+    "mapped_cause": "operator new[] failure trap during second screen-buffer allocation"
+  },
+  "startup_correction": "Installed and SHA-256 verified; awaiting console retest"
+}

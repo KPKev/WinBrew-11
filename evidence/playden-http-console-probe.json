@@ -1,0 +1,15 @@
+{
+  "probe_sha256": "1ed6c20751246bec64e227a7d8397d496b56a6fa6088d58ac89b916791eeb3cb",
+  "console_host": "192.168.7.26",
+  "loader_port": 9021,
+  "completion_observed": true,
+  "socket_eof_observed": false,
+  "success_observed": true,
+  "output": "PLAYDEN_HTTP start client=playden fixed_hosts=2 credentials=none writes=none\nPLAYDEN_HTTP certificate=verified\nPLAYDEN_HTTP phase=client_init\nPLAYDEN_HTTP phase=client_ready\nPLAYDEN_HTTP phase=request host=example.com\nPLAYDEN_HTTP host=example.com error=none transport=0 http=200 bytes=577\nPLAYDEN_HTTP phase=request host=api.steampowered.com\nPLAYDEN_HTTP host=api.steampowered.com error=none transport=0 http=200 bytes=71\nPLAYDEN_HTTP done success=1\n",
+  "error": "",
+  "credentials_used": false,
+  "console_files_written": false,
+  "changes_to_installed_app": false,
+  "automatic_retry": false,
+  "note": "Isolated actual Playden HTTP-client diagnostic; does not establish Steam sign-in, game download, or release readiness."
+}

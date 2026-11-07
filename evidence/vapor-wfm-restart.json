@@ -1,0 +1,6 @@
+{
+  "status": "listening",
+  "payload": "/data/pldmgr/payloads/repo/ps5-web-file-manager@e8cce5d1/ps5-web-file-manager_v1.12.elf",
+  "automatic_retry": false,
+  "response": "OK"
+}

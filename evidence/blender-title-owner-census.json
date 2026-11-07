@@ -1,0 +1,6 @@
+{
+  "sha256": "0a594be2ad682d36ab8a52717d102c94b7e4a59def136298fb1df912cda6c768",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "CENSUS files=1777 dirs=37 links=0 foreign=0 cross=0 other=0 errors=0\nTITLE_CENSUS done\n"
+}

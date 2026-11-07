@@ -1,0 +1,50 @@
+{
+  "scope": "One isolated PS5 DNS payload execution reported by parent agent; no rerun by this agent",
+  "probe_sha256": "ed12341d318b77450c7eec024b871b5ddc308f01b6c1cac6324c6eefc58bf29c",
+  "completion_observed": true,
+  "results": [
+    {
+      "host": "accounts.google.com",
+      "family": "IPv4",
+      "code": "0x00000000",
+      "elapsed_ms": 41
+    },
+    {
+      "host": "example.com",
+      "family": "IPv4",
+      "code": "0x00000000",
+      "elapsed_ms": 41
+    },
+    {
+      "host": "accounts.google.com",
+      "family": "IPv6",
+      "code": "0x804101E1",
+      "timing": "immediate"
+    },
+    {
+      "host": "example.com",
+      "family": "IPv6",
+      "code": "0x804101E1",
+      "timing": "immediate"
+    }
+  ],
+  "code_interpretation": {
+    "name": "SCE_NET_ERROR_RESOLVER_ENODNS",
+    "meaning": "No DNS resolver/server available for the requested resolver context",
+    "primary_enum_reference": "https://raw.githubusercontent.com/vitasdk/vita-headers/master/include/psp2common/net.h",
+    "qualification": "Published shared SceNet enum; the installed PS5 SDK import stubs do not provide a PS5-specific error-name header",
+    "different_errors": {
+      "timeout": "0x804101E2",
+      "no_record": "0x804101E9"
+    }
+  },
+  "assessment": [
+    "IPv4 resolution of the previously failing Google identity hostname works promptly in this isolated PS5 process at test time",
+    "Immediate IPv6 ENODNS for both hosts is consistent with IPv6 DNS not configured/available for this resolver context",
+    "This can be expected on an IPv4-only resolver path but the current test does not establish all PS5 IPv6 interface or DNS settings",
+    "This result does not explain a five-minute browser delay: no timeout or account-host failure reproduced here",
+    "No evidence justifies changing global DNS, clearing caches or disabling IPv6; native future clients can use verified IPv4 results while system browser behavior remains separate"
+  ],
+  "configuration_changes": false,
+  "rerun_by_this_agent": false
+}

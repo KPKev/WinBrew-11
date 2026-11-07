@@ -1,0 +1,13 @@
+{
+  "observation": "The current Vapor test has paused or failed Halo, Witcher 3 and Skyrim jobs in the app-private wine11-games registry, while the main-drive registry still contains only the earlier completed Blackjack download.",
+  "console_evidence": {
+    "private_registry": "/mnt/sandbox/PPSA77382_000/download0/wine11-steam/wine11-games/.playden-games",
+    "main_drive_registry": "/data/wine11/wine11-games/.playden-games",
+    "private_game_ids": [976730, 292030, 489830],
+    "main_drive_completed_game_id": 3594780,
+    "latest_startup_has_game_host_markers": false
+  },
+  "cause": "The UI build generated the bridge-only startup because WINE11_EXPERIMENT_GAME_HOST was not set. That startup uses the private-storage default and does not start the dedicated game host. The packager did not previously verify the dedicated startup.",
+  "remediation": "Generate the dedicated startup explicitly and refuse to assemble a test title without the main-drive anchor and dedicated host. Rebuild and verify on the console. Do not automatically delete or migrate the private partial downloads.",
+  "console_fix_verified": false
+}

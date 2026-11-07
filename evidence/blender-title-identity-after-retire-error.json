@@ -1,0 +1,6 @@
+{
+  "sha256": "8b3c52b035271f7c2b4e69fcc7dc8b502d944aa3cd31764fe5179f19857a93f2",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "path0 uid=0 mode=0777 dev=687931143 inode=5841 type=dir size=65536\npath1 uid=1 mode=0777 dev=687931143 inode=99649 type=dir size=65536\npath2 uid=0 mode=0755 dev=687931143 inode=67027 type=dir size=65536\npath3 uid=1 mode=0700 dev=687931143 inode=67030 type=dir size=65536\npath4 uid=1 mode=0777 dev=687931143 inode=69664 type=dir size=65536\npath5 uid=1 mode=0600 dev=687931143 inode=103541 type=file size=375\npath6 uid=1 mode=0600 dev=687931143 inode=101469 type=file size=383\nlaunch-config-begin\n{\"schema_version\":2,\"app_id\":365670,\"settings_revision\":0,\"title_id\":\"FAKE78008\",\"install_id\":\"wine11-steam-365670\",\"data_root\":\"/data/playden/games/wine11-steam-365670\",\"default_profile_id\":\"playden-steam-365670\",\"runtime_bundle_id\":\"wine-wow64\",\"recipe_id\":\"steam-365670-auto\",\"recipe_version\":\"2\",\"exit_policy\":\"exit-title\",\"game_root\":\"/data/wine11/wine11-games/365670\"}\n\nlaunch-config-end\nTITLE_IDENTITY done\n"
+}

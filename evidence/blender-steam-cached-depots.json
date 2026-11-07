@@ -1,0 +1,24 @@
+{
+  "365671": {
+    "config": {
+      "oslist": "windows",
+      "osarch": 64
+    },
+    "public": {
+      "gid": "7989503049318461173",
+      "size": 945021611,
+      "download": 384560736
+    }
+  },
+  "365672": {
+    "config": {
+      "oslist": "windows",
+      "osarch": 32
+    },
+    "public": {
+      "gid": "7178515723770090470",
+      "size": 247223701,
+      "download": 69856864
+    }
+  }
+}

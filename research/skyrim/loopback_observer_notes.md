@@ -1,0 +1,11 @@
+# Loopback observer prototype
+
+This is an unrun diagnostic prototype, not a qualified identity check. The HELLO text is attacker-controlled: matching it does not establish sender identity, title, process, or trust. A loopback peer can impersonate a matching sender or occupy the single connection. The receiver emits only a fixed vocabulary and normalized fields, and does not retain raw input or write files.
+
+The executable checks stdout is a stream socket before binding, then uses `send` with `MSG_DONTWAIT | MSG_NOSIGNAL` on each fixed message without retry or changing descriptor flags. Output can be dropped or partial. Host tests use socket pairs, verify that a non-socket output is refused, verify descriptor flags remain unchanged, and fill an undrained socket buffer. The PS5 SDK exposes both flags and the prototype compiles, but the real loader's stdout descriptor type, SDK/runtime semantics, cross-process reachability and bounded execution have not been validated on PS5. A non-socket loader stream will make the prototype exit before listening.
+
+Host test: `bash -lc 'python3 research/skyrim/test_loopback_observer.py'`. PS5 SDK compile: `bash research/skyrim/compile_loopback_observer.sh`. The source and output hashes are printed by the compile script. Overflowing decimal sequence and timestamp fields are rejected before arithmetic overflow. The result and helper fields accept only their exact bounded syntax. A deliberately forged matching HELLO test demonstrates the authentication limitation.
+
+The current Skyrim binary does not contain the proposed direct checkpoints. The observer cannot capture a signal context or determine why no connection occurs. Cross-process loopback reachability and console behavior are unverified. No console run is authorized by this document.
+
+The final bounded status reports a fixed reason (`timeout`, `wait-error`, `accept-error`, `receive-error`, `eof`, `byte-limit`, or `setup-error`), accepted connection count (0 or 1), and bytes read. A dropped or partial nonblocking status message cannot be interpreted as a completed result. Host tests cover no-connection timeout, injected select failure, zero-byte client EOF, and byte limit. The injected select failure is a host-only compile flag and is absent from the PS5 build.

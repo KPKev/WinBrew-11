@@ -1,0 +1,8 @@
+{
+  "sha256": "a97cca17de4b41e646be2b5d0c63e2d375285a92a4a56349aebbfe720e587c8a",
+  "output": "SELF_SIZE ok=1 errno=0 in_range=1 size=1096 expected=1088\n",
+  "elapsed_s": 0.282,
+  "eof_observed": true,
+  "error": "",
+  "no_automatic_retry": true
+}

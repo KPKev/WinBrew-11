@@ -1,0 +1,24 @@
+{
+  "scope": "Local isolated Vapor PS5 test candidate PPSA77382; no staging or deployment",
+  "eboot_sha256": "83f5bc1b6c94a2b49c469476cb3598d4b3de16a4dab4ef8d37830fec7a2b1201",
+  "pie_sha256": "fd2cf975cbe5998dc52810988af4b008f31b7d9703289789764cdf649e61711b",
+  "pie_map_sha256": "7ea0201004dd812f08a4144bbd9ca4d8574dc56916f851203631baa002f4209c",
+  "source_snapshot_receipt_sha256": "226410014dd94d0f81c730148b3366fc7e8e387e1098617dee8475b7d65c0919",
+  "validation": [
+    "Current UI, owner and Steam integration sources and headers match snapshot",
+    "Generated HTTP and depot overlays byte-verified against generators",
+    "Native object list includes generated observed HTTP, tuned depot and guarded UID objects; PIE link map retains HTTP WriteBody and depot code",
+    "Unsupported __cxa_thread_atexit_impl absent from undefined PIE symbols",
+    "Native UI, Steam backend and combined PIE links and final conversion passed",
+    "Signed container integrity valid; all 41 manifest files match",
+    "Host traffic scope, actual HTTP callback and news service tests passed; runtime agent reports lifetime and exception tests passed"
+  ],
+  "inputs": "Verified console-probed experimental network archives and pinned compiler runtime; dedicated game host; generated service overlays",
+  "limits": "Local experimental package not installed or console-tested; successful links and tests do not establish runtime behavior",
+  "logs": [
+    "build/vapor-traffic2-ui.log",
+    "build/vapor-traffic2-link.log",
+    "build/vapor-traffic2-package.log",
+    "build/vapor-traffic2-isolated.log"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "sha256": "d4bb81d1896107a8672b711e46ed0daae5aed1d859c4a6dd8995946f6dcf91f1",
+  "output": "OBS ready=1\nOBS hello=matched-unverified\nOBS bye=invalid-descriptor\nOBS reason=eof connections=1 bytes=111\n",
+  "eof_observed": true,
+  "error": "",
+  "no_automatic_retry": true
+}

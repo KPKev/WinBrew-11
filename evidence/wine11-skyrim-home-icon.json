@@ -1,0 +1,9 @@
+{
+  "title_id": "FAKE78005",
+  "steam_app_id": 489830,
+  "source": "Steam app 489830 library artwork, converted with Playden's title-icon generator",
+  "icon_sha256": "89c3276c91991819d5343ff5b51a8c8d60102cdcd79c5d2d02ce7fd5cf82658f",
+  "console_readback": "All five title, metadata and registered icon copies matched the prepared icon.",
+  "hardware_observation": "User confirmed the Skyrim Home icon changed after restarting the PS5.",
+  "scope": "Existing Skyrim title only. New title preparation uses game-specific artwork; automatic refresh of all previously registered titles remains unverified."
+}

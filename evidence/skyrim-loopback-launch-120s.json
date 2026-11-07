@@ -1,0 +1,7 @@
+{
+  "sha256": "d685323e227b54772f9f5526ccc0d9c9f592cd74ff1ebf93ffa7164709c7ab1c",
+  "output": "OBS ready=1\nOBS hello=matched-unverified\nOBS reason=eof connections=1 bytes=111\n",
+  "eof_observed": true,
+  "error": "",
+  "no_automatic_retry": true
+}

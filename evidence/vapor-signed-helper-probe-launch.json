@@ -1,0 +1,9 @@
+{
+  "status": "accepted",
+  "launcher_sha256": "db642b851b23e45e0478bae667e4c5582284227cb91b8e71310c5d5df169af6b",
+  "title": "PPSA77382",
+  "automatic_retry": false,
+  "output": "[SceLncUtil] W:\\Build\\J03950016\\vsh\\common_lib\\lnc_util\\src\\lnc_util_ipc_client.cpp(382) getAppStatus: LNC_ISOK::0x80940004\nWINE11_TEST_LAUNCH start title=PPSA77382\nWINE11_TEST_LAUNCH ok=1 code=0x00002018 stage=system-service\nWINE11_TEST_LAUNCH done\n",
+  "error": "",
+  "completed": true
+}

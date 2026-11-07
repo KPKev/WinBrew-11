@@ -1,0 +1,8 @@
+[10:07:45]   [SKIP] source not stable yet: WrappedWine (/data/homebrew/PPSA77380)
+[10:07:55]   [ACTION] Installing: WrappedWine (PPSA77380)
+[10:07:55] NOTIFY: Installing: WrappedWine (PPSA77380)...
+[10:07:55]   [LINK] nullfs mounted: /data/homebrew/PPSA77380 -> /system_ex/app/PPSA77380
+[10:07:55]   [LINK] mount.lnk created: /user/app/PPSA77380/mount.lnk -> /data/homebrew/PPSA77380
+[10:07:55]   [SHELLCORE] AppInstallAll bridge consumed: PPSA77380 result=0x00000000
+[10:07:55] NOTIFY: installed game PPSA77380
+[10:07:55]   [LINK] runtime layers released: PPSA77380

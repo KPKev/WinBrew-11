@@ -1,0 +1,4 @@
+{
+  "output": "0 present uid=0 mode=0755 dev=687931143 ino=67027\n1 present uid=1 mode=0700 dev=687931143 ino=67030\n2 absent errno=2\n3 absent errno=2\n4 absent errno=2\n5 absent errno=2\n6 absent errno=2\nDONE\n",
+  "complete": true
+}

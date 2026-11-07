@@ -1,0 +1,6 @@
+{
+  "sha256": "496617505146a96491f3ca49707c26f94c3934c6edc9d528a970db2e0c56b141",
+  "output": "PATH access=-1 errno=13\nDESCRIPTOR fstatat=ok unlinkat=ok sync=ok\nCLEANUP done\nDONE\n",
+  "error": "",
+  "complete": true
+}

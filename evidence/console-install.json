@@ -1,0 +1,29 @@
+{
+  "installed": true,
+  "launched": false,
+  "destination": "/data/homebrew/PPSA77380",
+  "host": "192.168.7.26",
+  "verified_files": 16,
+  "game_directory_sizes_unchanged": true,
+  "files": {
+    "LICENSE": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809",
+    "THIRD_PARTY_NOTICES.md": "702b18625e0127600132baca2a12cd06504bdb0f510e4fe7277164eb93fcc734",
+    "assets/desktop.png": "4ef3ef1373726be8aa66e43d29b18a08dada60b87c94b3d5c482e417d112143d",
+    "assets/desktop.rgba": "4c22fb812f97d0205b017d3fbb84cfe7ae04b098a79c9dc6c9614eaf16aec265",
+    "assets/font.bin": "603bd02e80a30685856fe621bfaa73fdc1253ae6d392a3016861466019308238",
+    "eboot.bin": "2c6f32765e5941c9a4dac02417623084682f683c281a6d1ce5761fc9bd934a5e",
+    "lapy-manifest.json": "474ced720fef6e8c91c45b16a51409b6d7d83b21fa9e6574a0fda065231a33c2",
+    "lapy.elf": "b4d29c035a5636abe71260981daabebb9319ecc3d9a0a90228f697642af13a6d",
+    "licenses/Boilerplate-NOTICES.md": "33e1ad92f23513b5ab3b3f56039d455248cee276f811428a23dd7d4492a3584f",
+    "licenses/LGPL-2.1.txt": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551",
+    "licenses/Lapy-MIT.txt": "47645713c15f6b0d8389ae695ff662edf25e96804ce9190b053be87362584b7d",
+    "licenses/Selawik-OFL.txt": "e31f45705da24b2be9f8f59f43488c3ace32be7a1629eb6f2f5754f40145a74f",
+    "manifest.json": "e147775ea16f0a01457206ca51429c3ad5efb7f187585b80eef65bf19e7c112a",
+    "sce_module/libc.prx": "e6ff45d16adf687855cc3b33b0c8a4132b6504360b221e0a34c7e99fb3ba0036",
+    "sce_sys/icon0.png": "80fee2fe115e2fcefd8a8262d3175fac50f602179a2d21ddd601f0a26948343f",
+    "sce_sys/param.json": "0cd6a088f51b3cda01033654f92b9aae39e48b80c4fc6cbbd08b65ba95454e52"
+  },
+  "port": 8889,
+  "shadowmount_registered": true,
+  "registration_result": "0x00000000"
+}

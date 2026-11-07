@@ -1,0 +1,7 @@
+{
+  "sha256": "8927220d4c6a82cf6d49dbb0204368bb86ef2abc79c60165baafeb1b05c9cdb6",
+  "status": "complete",
+  "automatic_retry": false,
+  "previous_completed_probe_pid": 280,
+  "output": "path0 uid=1 mode=0700 links=2 type=dir\npath1 uid=1 mode=0666 links=1 type=file\npath2 uid=1 mode=0777 links=2 type=dir\npath3 uid=1 mode=0777 links=2 type=dir\nrow 365670\tinternal\t1077599753\nrow 489830\tinternal\t16092533099\nrow 1203620\tinternal\t51824645608\nrow 3594780\tinternal\t441796434\nrow 730\tinternal\t0\tpaused\nREGISTRY_INSPECT done\n"
+}

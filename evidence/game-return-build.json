@@ -1,0 +1,96 @@
+{
+  "status": "isolated build complete; not deployed or admitted into an installed Playden kit",
+  "installed_base_revision": "ce289425bb34acbcc98f77b4e00ac98b3c16e4bc",
+  "derived_revision": "e028c4a3ef1ebb8d350efbadc651cf67fe009451",
+  "derived_source_clean": true,
+  "foundation_revision": "9c0b994a048521af6fb84c73ded364504fe250e9",
+  "native_manifest": {
+    "any_title": true,
+    "eboot_sha256": "39e35e5cf78adba06939647529c4dbeaeaada0ebdb4069a1abb1c6d0d61dfc64",
+    "managed_descriptor_required": true,
+    "managed_publication_guard": "playden-publication-guard-v1",
+    "publication_provider_sha256": "f14d5e3ecb31951e3cf5bfdc41972181a9be1d96ed0dc7cb3aeebb8e4aab844a",
+    "schema": "prospero-win-native-title/1",
+    "source_dirty": false,
+    "source_revision": "e028c4a3ef1ebb8d350efbadc651cf67fe009451",
+    "title_id": "FAKE78000",
+    "title_rule": {
+      "allow_list": "/data/playden/title-rule/allow-list",
+      "prefix": "FAKE78"
+    },
+    "wine11_return": {
+      "argument": "wine11-return=PPSA77381",
+      "base_source_revision": "ce289425bb34acbcc98f77b4e00ac98b3c16e4bc",
+      "feature": "wine11-return-on-exit-v1",
+      "normal_exit_only": true,
+      "target": "PPSA77381"
+    }
+  },
+  "outputs": {
+    "eboot.bin": {
+      "sha256": "39e35e5cf78adba06939647529c4dbeaeaada0ebdb4069a1abb1c6d0d61dfc64",
+      "bytes": 208857
+    },
+    "LICENSE": {
+      "sha256": "20e50fe7aae3e56378ebf0417d9de904f55a0e61e4df315333e632a4d3555d95",
+      "bytes": 26419
+    },
+    "native-title-build.json": {
+      "sha256": "be8d583d5ff8b07894e17fd8903e16323d2010a84b1797a3c18daaf2726d4568",
+      "bytes": 816
+    },
+    "wine11-return-wrapper-source.zip": {
+      "sha256": "32336ee0f6afad188804c14046d79277cc632fe81f759fad0031fd62ebbda8ed",
+      "bytes": 1966123
+    },
+    "wrapper-return.patch": {
+      "sha256": "3cba47dbab5254260d7f578c0785e04ff4eea1689119c1931859a3edba5ca1ef",
+      "bytes": 19923
+    }
+  },
+  "checks": {
+    "unmodified_exact_revision_baseline_native_build": "passed",
+    "integrated_variant_native_build_and_link": "passed",
+    "fself_container_integrity": "valid",
+    "upstream_wrapper_manifest_and_publication_guard_admission": "passed",
+    "descriptor_session_publication_source_preservation": "five original sources byte-identical to installed revision",
+    "intent_and_native_provider_unit_tests": "passed",
+    "upstream_title_launch_session_publication_native_admission_tests": "passed",
+    "new_dynamic_imports": [
+      "sceSystemServiceLaunchApp"
+    ],
+    "hardware_quit_return_test": "not performed",
+    "installed_kit_or_ownership_admission": "not performed"
+  },
+  "baseline_reproducibility": {
+    "installed_eboot_sha256": "10fc130547881d917aabf63ec1f137b04e70c215e7230607fafd364b715ec187",
+    "local_baseline_sha256": "9541f31cbc73c61fc08566422d62f4d510aaa20ee673b8ee4d87a17ab6e08ba8",
+    "same_bytes": 207289,
+    "byte_identical": false,
+    "reason": "not established; do not claim a byte-identical rebuild"
+  },
+  "build_dependency_note": "The pinned foundation host utility was compiled from its unchanged 9c0b994 source with available g++; clang18 host C++ standard headers were unavailable. The pinned PS5 compiler and SDK remain unchanged.",
+  "preservation": {
+    "original_checkout_unmodified_by_this_task": true,
+    "console_writes": false,
+    "game_descriptor_writes": false,
+    "game_registry_writes": false,
+    "game_data_profile_save_writes": false,
+    "installed_owner_marker_writes": false
+  },
+  "deployment_requirements": [
+    "Review the source patch and fixed-target opt-in behavior.",
+    "Verify same-artifact kit compatibility, exact existing ownership and stopped state under the qualified publication lease.",
+    "Prepare a newly verified kit file inventory and compatible wrapper variant; do not upload only eboot behind stale owner digests.",
+    "Keep descriptor, profile and committed publication bytes unchanged.",
+    "Enable the new caller argument only after verified wrapper feature admission.",
+    "Hardware-test normal quit launched from Wine 11, direct Home quit, legacy Playden quit, invalid target, provider failure and failed handoff fallback."
+  ],
+  "limitations": [
+    "Native process faults and forced PS5 Close Game bypass normal exit callbacks.",
+    "The existing Wine exit callback has no game exit status. A Windows game failure that terminates Wine through normal exit can also trigger an opted-in return.",
+    "An accepted asynchronous launch can still fail; this candidate waits 10 seconds then invokes the existing Home fallback. Timing is not hardware-validated.",
+    "No whole-kit package or console publication has been produced.",
+    "Fresh Wine 11 launch does not restore its prior transient desktop or window state."
+  ]
+}

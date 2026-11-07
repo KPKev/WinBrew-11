@@ -1,0 +1,7 @@
+{
+  "both_old_registrations_absent_before_reinstall": true,
+  "old_source_removed": true,
+  "unregistered_wine11_source_and_icon_cache_cleared": true,
+  "new_version": "01.001.001",
+  "new_icon_sha256": "aa3ce89ea34ee3c3e53307a4ab890317aaea14fcc546ad2dc8aafa7c43703fec"
+}

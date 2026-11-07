@@ -1,0 +1,15 @@
+{
+  "probe_sha256": "92b9ee982c0603cabd3f7cff5c68b3fdfc8f7c02cb907d44810ecd309f228bb3",
+  "console_host": "192.168.7.26",
+  "loader_port": 9021,
+  "completion_observed": true,
+  "socket_eof_observed": false,
+  "success_observed": true,
+  "output": "PLAYDEN_AUTH start mode=ephemeral_qr credentials=none writes=none\nPLAYDEN_AUTH certificate=verified\nPLAYDEN_AUTH phase=request_queued\nPLAYDEN_AUTH challenge_received=1\nPLAYDEN_AUTH phase=worker_shutdown\nPLAYDEN_AUTH canceled=1 save_attempts=0\nPLAYDEN_AUTH done success=1\n",
+  "error": "",
+  "credentials_used": false,
+  "console_files_written": false,
+  "changes_to_installed_app": false,
+  "automatic_retry": false,
+  "note": "Isolated actual Playden ephemeral QR-auth diagnostic; does not establish Steam sign-in, game download, or release readiness."
+}

@@ -1,0 +1,6 @@
+{
+  "sha256": "903200ed6af63b839d5d3b8eb3f333262e84ebd6f3245317fb1768f80199e3e9",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "REPORT0 open errno=2\nREPORT1 open errno=2\nCLEANPROBE_READ done\n"
+}

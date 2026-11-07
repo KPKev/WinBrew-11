@@ -1,0 +1,15 @@
+{
+  "old_title": "PPSA77380",
+  "old_registration_absent": true,
+  "old_source_absent": true,
+  "new_title": "PPSA77381",
+  "new_name": "Wine 11",
+  "new_version": "01.001.001",
+  "polished_icon_sha256": "aa3ce89ea34ee3c3e53307a4ab890317aaea14fcc546ad2dc8aafa7c43703fec",
+  "source_and_canonical_cache_verified": true,
+  "fresh_registration_after_manual_deletion": true,
+  "game_files_changed": false,
+  "owner_confirmed_single_tile_correct_icon_and_name": true,
+  "actual_icon_metadata_path": "/user/app/PPSA77381/sce_sys/icon0.png",
+  "actual_metadata_icon_verified": true
+}

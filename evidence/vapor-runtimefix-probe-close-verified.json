@@ -1,0 +1,18 @@
+{
+  "pid_absent": true,
+  "no_game_app": true,
+  "matching_log": [
+    "[01:02:13]   [MDBG] log monitor ready: PPSA77382 buffer_size=0x20018",
+    "[01:02:13]   [MDBG] monitoring game errors: PPSA77382 pid=409 for up to 60 seconds",
+    "[01:03:13]   [MDBG] game error monitoring expired: PPSA77382 pid=409",
+    "[01:46:44]   [FAKELIB] game stopped: pid=409 title=PPSA77382 layers=5",
+    "[01:46:44]   [FAKELIB] directory unmounted: /preinst/common/font -> /mnt/sandbox/PPSA77382_000/preinst/common/font",
+    "[01:46:44]   [FAKELIB] directory unmounted: /data -> /mnt/sandbox/PPSA77382_000/data",
+    "[01:46:44]   [GAME] process exited, awaiting same-app handoff: PPSA77382 pid=409 app_id=0x0000E018",
+    "[01:46:45]   [GAME] finalizing stopped application: PPSA77382 pid=409",
+    "[01:46:45]   [SHELLCORE] runtime release awaiting sandbox removal: PPSA77382",
+    "[01:46:45]   [DB] snd0info normalized after game exit rows=0 title=PPSA77382",
+    "[01:46:45]   [SHELLCORE] runtime release start: PPSA77382",
+    "[01:46:45]   [LINK] runtime layers released: PPSA77382"
+  ]
+}

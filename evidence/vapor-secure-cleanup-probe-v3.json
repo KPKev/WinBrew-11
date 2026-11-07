@@ -1,0 +1,6 @@
+{
+  "sha256": "09559f02f6016845430d824dd80b8f944547dbcbeca5a5255d1039f178c82ef1",
+  "output": "PATH access=-1 errno=13\nDIRECTORY-WALK fdopendir=ok readdir=ok unlinkat=ok sync=ok\nCLEANUP done\nDONE\n",
+  "error": "",
+  "complete": true
+}

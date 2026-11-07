@@ -1,0 +1,24 @@
+{
+  "scope": "Local isolated Vapor PS5 test candidate PPSA77382; no staging or deployment",
+  "eboot_sha256": "dae3fda30ab763ffc24a1397bbf54ab1182c988929cd5f6ce39612db454a3a70",
+  "pie_sha256": "96d5f513811e9a51e462c421d3ef5e16ff6baf7f39b4326ab80380503d7549ad",
+  "source_snapshot_receipt_sha256": "3a21f856358eaafa06fccbb7db2c506fc121f6b4e0afd280427e5c013cf983d4",
+  "guarded_uid_source_sha256": "dbfa2c752d9c69f99b3bd0de1be47354d0222ed20619841acfd92d0787e0d5fb",
+  "guarded_uid_object_sha256": "e98048d171bce7a08fdd4a06b1b7d39f2c41087e2c5ad9b7744f52a02a5adf5a",
+  "validation": [
+    "Current UI, owner and Steam integration sources and headers match snapshot",
+    "Native backend object list includes exactly the guarded UID object; its source and object hashes match the receipt",
+    "Native UI, Steam backend and combined PIE links passed",
+    "Signed container integrity valid",
+    "All 41 package files match manifest",
+    "Host UID guard transform and exception tests and artwork service test passed"
+  ],
+  "inputs": "Verified console-probed experimental network archives and pinned compiler runtime; dedicated game host; generated service overlays",
+  "limits": "Local experimental package not installed or console-tested; link and integrity do not establish runtime behavior",
+  "logs": [
+    "build/vapor-uid-ui.log",
+    "build/vapor-uid-link.log",
+    "build/vapor-uid-package.log",
+    "build/vapor-uid-isolated.log"
+  ]
+}

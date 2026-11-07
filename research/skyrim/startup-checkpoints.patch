@@ -1,0 +1,74 @@
+--- a/native/wine64_main.c
++++ b/native/wine64_main.c
+@@ -37,6 +37,7 @@
+ #include "return_native.h"
+ #include "../src/pw_wine_launch.h"
+ #include "pw_data_mount.h"
++#include "pw_startup_checkpoints.h"
+ #include "pw_audio_ps5.h"
+ #include "pw_pad_ps5.h"
+ #include "pw_hid_ps5.h"
+@@ -64,6 +65,18 @@
+ #include <sys/socket.h>
+ #include <time.h>
+ #include <unistd.h>
++
++/* Best effort only: fixed labels and numeric fields; never alter errno. */
++static int startup_checkpoint_sink(const char *label, int result, int helper_error)
++{
++    if (!ps5log_enabled()) return -1;
++    return ps5log_printf(PS5LOG_INFO, "PW_STARTUP checkpoint=%s result=%d helper_error=%d",
++                         label, result, helper_error);
++}
++static void startup_checkpoint(PwStartupCheckpoint event, int result, int helper_error)
++{
++    pw_startup_checkpoint_emit(startup_checkpoint_sink, event, result, helper_error);
++}
+ 
+ #ifndef PW_TITLE_ID
+ #define PW_TITLE_ID "PPSA99995"
+@@ -831,7 +844,9 @@
+     int profile_path_refused = 0;
+     int status;
+ 
++    startup_checkpoint(PW_CP_DATA_ENTER, 0, 0);
+     status = pw_data_mount_request(&mount);
++    startup_checkpoint(PW_CP_DATA_RETURN, status, mount.helper_errno);
+     if (status == 0 && !per_game_mode) library_root = PW_WINE64_ROOT_DATA;
+     PS5LOG_LOG("PW_WINE64 data_mount data_before=%d elevated_before=%d helper_completed=%d "
+                "helper_errno=%d credential_errno=%d data_after=%d elevated_after=%d waited_ms=%d settled_ms=%d root=%s",
+@@ -852,7 +867,9 @@
+          * private bottle's registry as 0666, which publication admission then
+          * refuses on the next start. Everything this title creates is the app
+          * user's. The libkernel gateway resolves only after the grant. */
++        startup_checkpoint(PW_CP_UMASK_ENTER, 0, 0);
+         const int previous_mask = pw_title_ps5_umask(077);
++        startup_checkpoint(PW_CP_UMASK_RETURN, previous_mask < 0 ? -1 : 0, 0);
+         PS5LOG_LOG("PW_WINE64 umask private=%d previous=%o errno=%d", previous_mask >= 0,
+                    previous_mask >= 0 ? (unsigned)previous_mask : 0u, previous_mask >= 0 ? 0 : errno);
+         if (previous_mask < 0) return -1;
+@@ -1348,7 +1365,9 @@
+         ps5log_init(&log_config, title_id, PW_APP_NAME, now_ns());
+     PS5LOG_LOG("PW_WINE64 title id=%s source=%s compiled=%s", title_id,
+                title_from_kernel ? "kernel" : "compiled", PW_TITLE_ID);
++    startup_checkpoint(PW_CP_DESCRIPTOR_ENTER, 0, 0);
+     status = load_title_descriptor(title_error, sizeof(title_error));
++    startup_checkpoint(PW_CP_DESCRIPTOR_RETURN, status, 0);
+     if (status < 0) {
+         PS5LOG_LOG("PW_WINE64 startup blocked reason=invalid-descriptor detail=%s", title_error);
+         ps5log_close("invalid-descriptor");
+@@ -1367,8 +1386,13 @@
+         uint32_t result = wine11_return_native_preload();
+         PS5LOG_LOG("PW_WINE64 return provider preload=0x%08x", (unsigned)result);
+     }
++    startup_checkpoint(PW_CP_HID_ENTER, 0, 0);
+     pw_hid_ps5_preload(hid_log);   /* before the /data grant changes the title's credentials */
+-    if (open_library() != 0) {
++    startup_checkpoint(PW_CP_HID_RETURN, 0, 0);
++    startup_checkpoint(PW_CP_LIBRARY_ENTER, 0, 0);
++    status = open_library();
++    startup_checkpoint(PW_CP_LIBRARY_RETURN, status, 0);
++    if (status != 0) {
+         PS5LOG_LOG("PW_WINE64 startup blocked reason=%s",
+                    per_game_mode ? "per-game-bootstrap" : "data-helper-incomplete");
+         ps5log_close(per_game_mode ? "per-game-bootstrap" : "data-helper-incomplete");

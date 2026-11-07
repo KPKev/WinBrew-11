@@ -1,0 +1,37 @@
+{
+  "observed_at_utc": "2026-11-04T03:56:53.238689+00:00",
+  "title_id": "PPSA77382",
+  "steam_app": 489830,
+  "package": "build/vapor-play-flow-isolated/PPSA77382",
+  "installed_eboot_sha256": "d333ad7a7c21d729cd356f9139e7808a5dd016420ea9b6bcc911edac6e410c8f",
+  "previous_eboot_sha256": "aaec1aa02562ae8f404d5a28948bc254bdef9ad32bba880c3924bae36041ad9e",
+  "installer_phase": "updated",
+  "package_content_changes": [
+    "eboot.bin"
+  ],
+  "backup_suffix": ".before-vapor-play-flow.bak",
+  "changes": [
+    "Reconcile stopped, armed registration journals through existing OWNER Step before startup admission/settings",
+    "Publish Skyrim program selection and controller overrides in a newer settings schema revision range",
+    "Use explicit XInput default for Skyrim with no saved controller choice",
+    "Setup instructions return to Vapor and its Play button"
+  ],
+  "checks": {
+    "durable_registration_restart": "passed: pending/ready/active/unknown and no repeat registration",
+    "settings_publication_after_registration": "passed: newer XInput revision committed",
+    "controller_layout_profiles": "passed",
+    "preparation_state_transition": "passed",
+    "ready_launch_handoff": "passed",
+    "updater_refusal_cases": "passed: 5 mocked preflight mutation guards",
+    "ps5_build_and_package_hashes": "passed",
+    "installed_readback": "passed",
+    "full_host_suite": "passed: tools/test.sh exit 0; build/vapor-launch-flow-tests.log",
+    "full_host_suite_skips": "Two existing ownership/identity tests require root and reported SKIP"
+  },
+  "console_acceptance": {
+    "prior_update_user_result": "Still opens SkyrimSELauncher.exe; its Play shows the same error; Vapor repeatedly shows Finish Setup",
+    "new_update_result": "User reports Play appears; first attempt showed 'A Cloud save could not be downloaded. Try again.' Retry reached Skyrim's opening wagon sequence. Mouse layout put looking on left stick and Options did not pause; after changing to Controller layout, user confirms right stick and Options work.",
+    "gameplay_verified": "User reports opening wagon sequence; free movement and saves not yet verified",
+    "controller_hardware_verified": "User confirms right stick and Options work with Controller layout; custom crouch, melee and inventory mappings are not implemented"
+  }
+}

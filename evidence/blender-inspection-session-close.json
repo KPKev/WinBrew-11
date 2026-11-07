@@ -1,0 +1,10 @@
+{
+  "status": "closed_observed",
+  "pid": 364,
+  "automatic_retry": false,
+  "result": {
+    "ok": true,
+    "message": "Killed"
+  },
+  "observation": "Process list later omitted PID 364 and ShadowMount recorded its exit and runtime release."
+}

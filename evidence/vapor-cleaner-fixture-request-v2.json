@@ -1,0 +1,6 @@
+{
+  "sha256": "114f5a4df5ada7e0753729a023b6b755d54a470119b349526ad850623fe8b377",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "fixture request created\nFIXTURE_REQUEST done\n"
+}

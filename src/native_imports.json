@@ -1,0 +1,18 @@
+{
+  "libSceMouse": [
+    "sceMouseInit",
+    "sceMouseOpen",
+    "sceMouseClose",
+    "sceMouseRead"
+  ],
+  "libSceCommonDialog": [
+    "sceCommonDialogInitialize"
+  ],
+  "libSceWebBrowserDialog": [
+    "sceWebBrowserDialogInitialize",
+    "sceWebBrowserDialogOpen",
+    "sceWebBrowserDialogUpdateStatus",
+    "sceWebBrowserDialogClose",
+    "sceWebBrowserDialogTerminate"
+  ]
+}

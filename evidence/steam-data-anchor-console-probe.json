@@ -1,0 +1,12 @@
+{
+  "probe_sha256": "f2b6db5e1534818bf9119a53422c68be2cdd9547784a2dec9789fe24c9ea1f93",
+  "console_host": "192.168.7.26",
+  "loader_port": 9021,
+  "completed": true,
+  "output": "DATA_ANCHOR_PROBE start writes=none elevation=none\nDATA_ANCHOR_PROBE open_ok=1 errno=0 is_directory=1\nDATA_ANCHOR_PROBE done\n",
+  "error": "",
+  "writes": false,
+  "elevation": false,
+  "automatic_retry": false,
+  "note": "Payload context only; does not prove access from the Wine 11 app sandbox."
+}

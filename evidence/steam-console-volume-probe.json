@@ -1,0 +1,8 @@
+{
+  "probe_sha256": "0e21daf58947b93131b91bf3b73b41d47257ee4ee0ce7e35d7e615dbec82bf87",
+  "output": "STEAM_VOLUME_PROBE start writes=none\nSTEAM_VOLUME_PROBE volume=game-storage raw_ok=0 raw_free=0 reserved_ok=0 usable=0\nSTEAM_VOLUME_PROBE volume=data raw_ok=0 raw_free=0 reserved_ok=0 usable=0\nSTEAM_VOLUME_PROBE done\n",
+  "completed": true,
+  "error": "",
+  "writes": false,
+  "automatic_retry": false
+}

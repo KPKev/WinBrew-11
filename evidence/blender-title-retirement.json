@@ -1,0 +1,8 @@
+{
+  "sha256": "77498169e8816eeba5564427d0fb2ab0610e25e042e689d62cd8d4553dc86b69",
+  "status": "retired",
+  "automatic_retry": false,
+  "app": 365670,
+  "title": "FAKE78008",
+  "output": "BLENDER_RETIRE retired-and-receipt-created\nBLENDER_RETIRE done\n"
+}

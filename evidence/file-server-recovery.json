@@ -1,0 +1,10 @@
+{
+  "server": "zftpd.elf",
+  "pid": 96,
+  "uninstall_request_stalled": true,
+  "normal_sigkill_requested_through_payload_manager": true,
+  "process_did_not_exit": true,
+  "duplicate_server_not_started": true,
+  "web_file_manager_remains_available": true,
+  "other_payloads_unchanged": true
+}

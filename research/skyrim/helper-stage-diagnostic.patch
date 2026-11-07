@@ -1,0 +1,212 @@
+--- a/native/pw_data_mount.h
++++ b/native/pw_data_mount.h
+@@ -4,6 +4,7 @@
+ /* Ask the bundled Lapy ELF helper to make /data available to this process. */
+ #include <stddef.h>
+ #include <stdint.h>
++#include "pw_lapy_elevation.h"
+ 
+ #ifndef PW_DATA_MOUNT_PATH
+ #define PW_DATA_MOUNT_PATH "/data"          /* reachable once granted */
+@@ -43,6 +44,7 @@
+     int elevated_before; /* the title was elevated when it started: 1 also when
+                           * there is no probe, 0 when /data was only shown to it */
+     int elevated_after;  /* elevated once a helper request finished (same reading) */
++    struct pw_lapy_elevation_diagnostics helper_diagnostics; /* fixed stage/status, never paths */
+ } PwDataMountResult;   /* what one request reached, for logging */
+ 
+ /* Request /data for pid, waiting up to max_wait_ms after a successful helper
+--- a/native/pw_data_mount.c
++++ b/native/pw_data_mount.c
+@@ -7,12 +7,14 @@
+ #include <sys/stat.h>
+ #include <time.h>
+ #include <unistd.h>
++#include <string.h>
+ 
+ /* XSI; hidden by _POSIX_C_SOURCE in the PS5 SDK headers. */
+ int setreuid(uid_t ruid, uid_t euid);
+ 
+-int pw_data_mount_request_with(const PwDataMountOps *ops, int32_t pid,
+-                               int max_wait_ms, PwDataMountResult *detail)
++static int request_impl(const PwDataMountOps *ops, int32_t pid,
++                        int max_wait_ms, PwDataMountResult *detail,
++                        int (*detailed)(int32_t, struct pw_lapy_elevation_diagnostics *))
+ {
+     PwDataMountResult local;
+     uid_t original_effective_uid;
+@@ -22,6 +24,8 @@
+     detail->credential_errno = 0;
+     detail->data_after = detail->waited_ms = detail->settled_ms = 0;
+     detail->elevated_before = detail->elevated_after = 0;
++    memset(&detail->helper_diagnostics, 0, sizeof(detail->helper_diagnostics));
++    detail->helper_diagnostics.stage = "not-requested";
+     if (!ops || !ops->request || !ops->data_visible || !ops->sleep_ms ||
+         pid <= 1 || max_wait_ms < 0) return -1;
+ 
+@@ -40,7 +44,7 @@
+ 
+     original_effective_uid = geteuid();
+     errno = 0;
+-    if (ops->request(pid) == 0)
++    if ((detailed ? detailed(pid, &detail->helper_diagnostics) : ops->request(pid)) == 0)
+         detail->helper_completed = 1;
+     else
+         detail->helper_errno = errno ? errno : EIO;
+@@ -102,6 +106,34 @@
+     }
+ }
+ 
++int pw_data_mount_request_with(const PwDataMountOps *ops, int32_t pid,
++                               int max_wait_ms, PwDataMountResult *detail)
++{
++    return request_impl(ops, pid, max_wait_ms, detail, NULL);
++}
++
++#if defined(PW_DATA_MOUNT_DIAGNOSTIC_TEST)
++int pw_data_mount_request_test_detailed(const PwDataMountOps *ops, int32_t pid, int max_wait_ms,
++                                        PwDataMountResult *detail,
++                                        int (*detailed)(int32_t, struct pw_lapy_elevation_diagnostics *))
++{
++    return request_impl(ops, pid, max_wait_ms, detail, detailed);
++}
++#endif
++
++static int native_helper_request_detailed(int32_t pid, struct pw_lapy_elevation_diagnostics *diagnostics)
++{
++#if defined(PW_DATA_MOUNT_HOST_TEST)
++    (void)pid;
++    diagnostics->stage = "host-unavailable";
++    diagnostics->error = ENOENT;
++    errno = ENOENT;
++    return -1;
++#else
++    return pw_lapy_elevation_request_detailed(pid, diagnostics);
++#endif
++}
++
+ static int native_helper_request(int32_t pid)
+ {
+ #if defined(PW_DATA_MOUNT_HOST_TEST)
+@@ -137,6 +169,6 @@
+ {
+     static const PwDataMountOps ops = {
+         native_helper_request, native_data_visible, native_sleep_ms, native_elevated};
+-    return pw_data_mount_request_with(&ops, (int32_t)getpid(),
+-                                      PW_DATA_MOUNT_WAIT_MS, detail);
++    return request_impl(&ops, (int32_t)getpid(), PW_DATA_MOUNT_WAIT_MS,
++                        detail, native_helper_request_detailed);
+ }
+--- a/native/pw_lapy_elevation.h
++++ b/native/pw_lapy_elevation.h
+@@ -22,5 +22,8 @@
+ };
+ int pw_lapy_elevation_request_at_detailed(int32_t pid, const char *helper_path,
+                                         struct pw_lapy_elevation_diagnostics *diagnostics);
++/* Diagnostic variant using the same default helper path. */
++int pw_lapy_elevation_request_detailed(int32_t pid,
++                                       struct pw_lapy_elevation_diagnostics *diagnostics);
+ 
+ #endif
+--- a/native/pw_lapy_elevation.c
++++ b/native/pw_lapy_elevation.c
+@@ -268,3 +268,9 @@
+ {
+     return pw_lapy_elevation_request_at_detailed(pid, helper_path, NULL);
+ }
++
++int pw_lapy_elevation_request_detailed(int32_t pid,
++                                       struct pw_lapy_elevation_diagnostics *diagnostics)
++{
++    return pw_lapy_elevation_request_at_detailed(pid, PW_LAPY_HELPER_PATH, diagnostics);
++}
+--- a/tests/test_pw_data_mount.c
++++ b/tests/test_pw_data_mount.c
+@@ -4,6 +4,7 @@
+ #include <assert.h>
+ #include <errno.h>
+ #include <stdio.h>
++#include <string.h>
+ #include <sys/types.h>
+ 
+ static int request_calls, request_fail, visible_in, poll_calls, sleep_total;
+@@ -40,6 +41,17 @@
+     if (grant_on_request) elevated_now = 1;
+     return 0;
+ }
++
++#if defined(PW_DATA_MOUNT_DIAGNOSTIC_TEST)
++int pw_data_mount_request_test_detailed(const PwDataMountOps *, int32_t, int, PwDataMountResult *,
++    int (*)(int32_t, struct pw_lapy_elevation_diagnostics *));
++static int fake_detailed(int32_t pid, struct pw_lapy_elevation_diagnostics *d)
++{
++    (void)pid; effective_uid = real_uid = 0;
++    d->stage = "helper-result"; d->helper_status = 42; d->helper_status_valid = 1;
++    d->error = EACCES; errno = EACCES; return -1;
++}
++#endif
+ 
+ static int fake_visible(void)
+ {
+@@ -168,6 +180,14 @@
+     restore_no_effect = 0;
+     effective_uid = 1;
+ 
++#if defined(PW_DATA_MOUNT_DIAGNOSTIC_TEST)
++    visible_in = 100; effective_uid = real_uid = 1;
++    assert(pw_data_mount_request_test_detailed(&ops, 7, 300, &r, fake_detailed) == -1);
++    assert(r.helper_errno == EACCES && r.helper_diagnostics.error == EACCES);
++    assert(!strcmp(r.helper_diagnostics.stage, "helper-result"));
++    assert(r.helper_diagnostics.helper_status_valid && r.helper_diagnostics.helper_status == 42);
++    assert(effective_uid == 1 && real_uid == 1);
++#endif
+     assert(pw_data_mount_request_with(NULL, 7, 100, &r) == -1);
+     assert(pw_data_mount_request_with(&ops, 1, 100, &r) == -1);
+     puts("data mount: helper result, access visibility, deadline and settle delay covered");
+--- a/tests/test_pw_data_mount_native.c
++++ b/tests/test_pw_data_mount_native.c
+@@ -4,6 +4,7 @@
+ #include <assert.h>
+ #include <errno.h>
+ #include <stdio.h>
++#include <string.h>
+ #include <sys/stat.h>
+ #include <unistd.h>
+ 
+@@ -15,11 +16,15 @@
+     assert(pw_data_mount_request(&r) == -1);
+     assert(r.data_before == 0 && r.helper_completed == 0);
+     assert(r.helper_errno == ENOENT && r.data_after == 0);
++    assert(r.helper_diagnostics.error == ENOENT && !r.helper_diagnostics.helper_status_valid);
++    assert(!strcmp(r.helper_diagnostics.stage, "host-unavailable"));
+ 
+     assert(mkdir(PW_DATA_MOUNT_PATH, 0755) == 0);
+     assert(pw_data_mount_request(&r) == 0);
+     assert(r.data_before == 1 && r.data_after == 1 && r.helper_completed == 0);
+     assert(r.helper_errno == 0);
++    assert(!strcmp(r.helper_diagnostics.stage, "not-requested"));
++    assert(!r.helper_diagnostics.error && !r.helper_diagnostics.helper_status_valid);
+     rmdir(PW_DATA_MOUNT_PATH);
+     puts("data mount native: missing helper falls back; existing /data skips request");
+     return 0;
+--- a/native/wine64_main.c
++++ b/native/wine64_main.c
+@@ -838,6 +838,18 @@
+                mount.data_before, mount.elevated_before, mount.helper_completed,
+                mount.helper_errno, mount.credential_errno, mount.data_after, mount.elevated_after, mount.waited_ms,
+                mount.settled_ms, status == 0 ? library_root : "unavailable");
++    /* Stage names are fixed internal strings; do not log paths or credentials. */
++    PS5LOG_LOG("PW_WINE64 data_mount_helper stage=%s error=%d status_valid=%d status=%u",
++               mount.helper_diagnostics.stage ? mount.helper_diagnostics.stage : "unknown",
++               mount.helper_diagnostics.error, mount.helper_diagnostics.helper_status_valid,
++               mount.helper_diagnostics.helper_status_valid ? mount.helper_diagnostics.helper_status : 0u);
++    /* On bootstrap failure, the disk diagnostics writer may not have opened.
++     * Best effort to the already configured network logger; this may be off. */
++    if (status != 0 && ps5log_enabled())
++        (void)ps5log_printf(PS5LOG_ERR, "PW_WINE64 data_mount_helper stage=%s error=%d status_valid=%d status=%u",
++            mount.helper_diagnostics.stage ? mount.helper_diagnostics.stage : "unknown",
++            mount.helper_diagnostics.error, mount.helper_diagnostics.helper_status_valid,
++            mount.helper_diagnostics.helper_status_valid ? mount.helper_diagnostics.helper_status : 0u);
+     if (status != 0) return -1;
+     if (per_game_mode) {
+         /* Open the session report as soon as the private library is reachable,

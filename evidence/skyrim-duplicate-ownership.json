@@ -1,0 +1,5 @@
+{
+  "sha256": "c86a8337b378a0a4d25d55497bf1ee34728761df9bfd347e1ecb57c062fb7ff0",
+  "output": "identity uid=1 euid=0\n/data/homebrew uid=0 gid=0 mode=0777 type=dir dev=687931143 ino=5841\n/data/homebrew/FAKE78005 uid=1 gid=0 mode=0755 type=dir dev=687931143 ino=71211\n/data/homebrew/FAKE78005/sce_sys uid=1 gid=0 mode=0755 type=dir dev=687931143 ino=73020\n/data/homebrew/FAKE78005/game-launch.json uid=1 gid=0 mode=0600 type=file dev=687931143 ino=85407\n/data/homebrew/FAKE78007 uid=1 gid=0 mode=0755 type=dir dev=687931143 ino=71210\n/data/homebrew/FAKE78007/sce_sys uid=1 gid=0 mode=0755 type=dir dev=687931143 ino=97273\n/data/homebrew/FAKE78007/sce_sys/param.json uid=1 gid=0 mode=0644 type=file dev=687931143 ino=97275\n/data/homebrew/FAKE78007/game-launch.json unavailable\n/data/wine11/wine11-games/.playden-games unavailable\nDONE\n",
+  "complete": true
+}

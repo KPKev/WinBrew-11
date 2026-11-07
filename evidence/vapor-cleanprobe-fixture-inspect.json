@@ -1,0 +1,6 @@
+{
+  "sha256": "d9c684e31db5d943d1a8d478ff898cdfcdedb56a8b438ef908c356e50fcf7249",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "path0 uid=1 mode=0700 dev=687931143 ino=97032 size=65536\npath1 uid=1 mode=0600 dev=687931143 ino=97033 size=1\npath2 uid=1 mode=0600 dev=687931143 ino=97034 size=1\npath3 uid=1 mode=0700 dev=687931143 ino=97035 size=65536\npath4 uid=1 mode=0600 dev=687931143 ino=97036 size=1\npath5 uid=1 mode=0777 dev=687931143 ino=70244 size=65536\npath6 uid=1 mode=0777 dev=687931143 ino=92988 size=65536\nrows fixture=0 blender=1 cs2-paused=1\nPROBE_FIXTURE_INSPECT done\n"
+}

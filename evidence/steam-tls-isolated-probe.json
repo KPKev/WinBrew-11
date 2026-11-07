@@ -1,0 +1,14 @@
+{
+  "probe_sha256": "908e0b39e6b06a1e84834c16a9a49427d29b4b0468a26dc8fe67fd16dbbd6462",
+  "console_host": "192.168.7.26",
+  "loader_port": 9021,
+  "completion_observed": false,
+  "success_observed": false,
+  "output": "TLS_PROBE start endpoints=2 requests=3 credentials=none disk_writes=none\nTLS_PROBE mutex_lock=0 mutex_unlock=0\n",
+  "error": "Completion not observed; no retry or termination attempted.",
+  "credentials_used": false,
+  "console_files_written": false,
+  "changes_to_installed_app": false,
+  "automatic_retry": false,
+  "note": "Isolated diagnostic; does not establish Steam sign-in, game download, or release readiness."
+}

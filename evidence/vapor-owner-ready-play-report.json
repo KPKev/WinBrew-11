@@ -1,0 +1,6 @@
+{
+  "sha256": "b167a2898072b33e2566ba67ac12db3c883badc89f3a9f650ffaa6583012865f",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "REPORT0 inode=1418 size=528\nphase=0\njournal_app=0\njournal_title=\njournal_reinstall=0\nhost_status=2\nhost_installs_known=1\nmaintenance_ready=1\nhost_title=FAKE78008\nhost_state=3\nhost_step=\nhost_failure_code=\nhost_failure=\nhost_recovery_pending=0\nhost_awaiting_registration=0\nhost_matches=1\ninstalled_matches=1\ninstalled_root_matches=1\njobs=1\nuninstalling=0\ngame_identity_ok=1\nregistry_read=1\nregistry_errno=0\nregistry_plan=1\nrandom_uuid=1\nstate_probe_write=1\nstate_probe_error=0\nstate_probe_message=\nstate_probe_read=1\nstate_probe_removed=1\nreport_complete=1\nREPORT1 inode=1414 size=65\nmessage=This game does not use Steam Cloud.\nplay_test_complete=1\nCLEANPROBE_READ done\n"
+}

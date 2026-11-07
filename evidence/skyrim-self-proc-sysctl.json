@@ -1,0 +1,8 @@
+{
+  "sha256": "ca6a6365a08fbddabf6af5371a5b2d5c55d39a464f222288faf7eae212ad3d6c",
+  "output": "SELF_PROC sysctl_ok=0 errno=12 abi=0 pid_match=0 euid_match=0 valid=0\n",
+  "elapsed_s": 0.328,
+  "eof_observed": true,
+  "error": "",
+  "no_automatic_retry": true
+}

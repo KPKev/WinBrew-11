@@ -1,0 +1,40 @@
+{
+  "generation_tool": "built-in image_gen",
+  "system_icons": {
+    "pc": {
+      "path": "art/icons/pc.png",
+      "prompt": "Use case: stylized-concept. Asset type: premium Windows 11 inspired desktop application icon, a single finished icon on a genuinely transparent background. Square 1024x1024 canvas. The object fills about 82% of the square, perfectly centered, fully visible with generous transparent margin. Refined high-end realistic 3D app icon, authentic materials, precise silhouette, subtle bevels, soft studio lighting and restrained contact shadow, exceptionally crisp small-size readability. Mostly front-facing with very subtle perspective. Not a flat pictogram, not pixel art, no thick black outlines, no frame or colored tile, no text, no watermark. A realistic slim silver desktop monitor on a brushed-metal pedestal stand. Beveled dark screen border, glossy glass screen displaying an abstract luminous blue folded-silk wallpaper. Clean recognizable This PC icon. The screen is the dominant shape.",
+      "sha256": "8f45aa235d15d534e407982d27792d2f069ea51ec145bea2e040ebaa307b937a"
+    },
+    "recycle": {
+      "path": "art/icons/recycle.png",
+      "prompt": "Use case: stylized-concept. Asset type: premium Windows 11 inspired desktop application icon, a single finished icon on a genuinely transparent background. Square 1024x1024 canvas. The object fills about 82% of the square, perfectly centered, fully visible with generous transparent margin. Refined high-end realistic 3D app icon, authentic materials, precise silhouette, subtle bevels, soft studio lighting and restrained contact shadow, exceptionally crisp small-size readability. Mostly front-facing with very subtle perspective. Not a flat pictogram, not pixel art, no thick black outlines, no frame or colored tile, no text, no watermark. A realistic Windows 11 inspired empty recycling bin: a translucent frosted-glass tapered rectangular wastebasket with a clearly embossed blue recycling-arrow symbol on its front, pale blue glass rim, subtle glass edge refraction. No lid, no slats, no trash inside. Recognizable Recycle Bin icon.",
+      "sha256": "d97f4be96c6eb4f4c70c1e37abb0f1102798b620b959d80cf8477f657b6b715b"
+    },
+    "folder": {
+      "path": "art/icons/folder.png",
+      "prompt": "Use case: stylized-concept. Asset type: premium Windows 11 inspired desktop application icon, a single finished icon on a genuinely transparent background. Square 1024x1024 canvas. The object fills about 82% of the square, perfectly centered, fully visible with generous transparent margin. Refined high-end realistic 3D app icon, authentic materials, precise silhouette, subtle bevels, soft studio lighting and restrained contact shadow, exceptionally crisp small-size readability. Mostly front-facing with very subtle perspective. Not a flat pictogram, not pixel art, no thick black outlines, no frame or colored tile, no text, no watermark. A realistic Windows 11 File Explorer folder: warm yellow upright manila folder, layered gold rear tab and curved front cover, slight thickness, delicate bevels and soft realistic shadows, subtle pale document edges inside. A small blue horizontal organizer strip near the bottom. Recognizable Windows File Explorer style.",
+      "sha256": "71123225fe193b140d52d6d9a6111fcaf1eb49d300c7a475ba26c09aac28579f"
+    },
+    "settings": {
+      "path": "art/icons/settings.png",
+      "prompt": "Use case: stylized-concept. Asset type: premium Windows 11 inspired desktop application icon, a single finished icon on a genuinely transparent background. Square 1024x1024 canvas. The object fills about 82% of the square, perfectly centered, fully visible with generous transparent margin. Refined high-end realistic 3D app icon, authentic materials, precise silhouette, subtle bevels, soft studio lighting and restrained contact shadow, exceptionally crisp small-size readability. Mostly front-facing with very subtle perspective. Not a flat pictogram, not pixel art, no thick black outlines, no frame or colored tile, no text, no watermark. A realistic Windows 11 Settings icon: a single precision-machined silver-gray cogwheel with eight clearly defined teeth, substantial beveled metallic edges, soft blue rim reflections, a luminous blue circular hub inset at its center. Clear front-facing gear silhouette and realistic polished material. No extra gears.",
+      "sha256": "8a5db7f354728c4c4aa8439bdb15f6755286a1d1b8c3ac151e12d39c350b0221"
+    }
+  },
+  "identification_art": {
+    "playden": "Read-only copy of installed FAKE77031/sce_sys/icon0.png",
+    "quake-rtx": "Q2RTX source src/windows/res/q2rtx.ico, largest frame; installed title had generic floppy icon",
+    "chrome": "https://www.google.com/chrome/static/images/chrome-logo-m100.svg",
+    "wiki": "https://github.com/simple-icons/simple-icons/blob/develop/icons/wikipedia.svg",
+    "youtube": "https://github.com/simple-icons/simple-icons/blob/develop/icons/youtube.svg"
+  },
+  "glyphs": "Microsoft fluentui-system-icons, MIT; Search, WiFi 1/Off, Speaker 2/Mute, Network Adapter",
+  "filtering": "Source transparency retained; premultiplied-alpha Lanczos mipmaps at actual rendered sizes; fixed PS5 BSS atlas; no runtime image decoder",
+  "controller_fluent": {
+    "path": "art/icons/controller.svg",
+    "source": "https://github.com/microsoft/fluentui-system-icons/blob/main/assets/Games/SVG/ic_fluent_games_24_regular.svg",
+    "license": "MIT",
+    "sha256": "d200b4e0ee14963d6ee9223960796b7c53ac926415d5a8c6724242916e0a0a86"
+  }
+}

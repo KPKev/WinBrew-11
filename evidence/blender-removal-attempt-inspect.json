@@ -1,0 +1,6 @@
+{
+  "sha256": "0b1ce948db390368d5c862de051913d177423039ca994e4b3e462e795f0864b0",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "path0 present errno=0 directory\npath1 present errno=0 directory\npath2 absent-or-unavailable errno=2\npath3 absent-or-unavailable errno=2\npath4 absent-or-unavailable errno=13\nblender-row=365670\tinternal\t1077599753\nblender-rows=1 cs2-paused-rows=1\nBLENDER_INSPECT done\n"
+}

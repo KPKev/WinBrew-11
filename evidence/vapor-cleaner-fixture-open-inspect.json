@@ -1,0 +1,6 @@
+{
+  "sha256": "87e162944fb6729ae2bbf5a0a37a4da78d436d5d4df133eed56051911b77701b",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "p0 uid=0 mode=0755 dev=687931143 ino=67027\np1 uid=0 mode=0700 dev=687931143 ino=95593\np2 uid=1 mode=0700 dev=687931143 ino=97037\np3 uid=1 mode=0700 dev=687931143 ino=67030\np4 error=13\np5 error=13\np6 error=2\np7 error=2\np8 error=13\nopen-target fd=-1 errno=13\nCLEANER_FIXTURE_INSPECT done\n"
+}

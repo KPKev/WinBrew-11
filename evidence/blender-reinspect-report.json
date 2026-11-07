@@ -1,0 +1,6 @@
+{
+  "sha256": "532903b5fd3d972ff2291e6ce5d64232d4838568c2b17dbd8fa7082323c89282",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "INSPECT inode=95596 size=265\nphase=4\njournal_app=365670\njournal_title=FAKE78008\njournal_reinstall=0\nhost_status=2\nhost_installs_known=1\nmaintenance_ready=0\nhost_matches=0\ninstall_worker=stopped\ngame_identity_ok=0\nregistry_read=1\nregistry_errno=2\nregistry_plan=0\nrandom_uuid=1\nreport_complete=1\nINSPECT done\n"
+}

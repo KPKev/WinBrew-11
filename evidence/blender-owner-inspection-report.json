@@ -1,0 +1,6 @@
+{
+  "sha256": "532903b5fd3d972ff2291e6ce5d64232d4838568c2b17dbd8fa7082323c89282",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "INSPECT inode=95584 size=420\nphase=1\njournal_app=365670\njournal_title=FAKE78008\njournal_reinstall=0\nhost_status=2\nhost_installs_known=1\nmaintenance_ready=0\nhost_title=FAKE78008\nhost_state=6\nhost_step=retire\nhost_failure_code=retire-failed\nhost_failure=The PS5 title's folder could not be moved away (error 18).\nhost_matches=1\ninstall_worker=stopped\ngame_identity_ok=1\nregistry_read=1\nregistry_errno=0\nregistry_plan=1\nrandom_uuid=1\nreport_complete=1\nINSPECT done\n"
+}

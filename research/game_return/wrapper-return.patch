@@ -1,0 +1,444 @@
+diff --git a/native/return_intent.c b/native/return_intent.c
+new file mode 100644
+index 0000000..67f0b3d
+--- /dev/null
++++ b/native/return_intent.c
+@@ -0,0 +1,60 @@
++/* SPDX-License-Identifier: LGPL-2.1-or-later */
++#include "return_intent.h"
++#include <stddef.h>
++#include <string.h>
++
++static int bounded_length(const char *text, size_t limit, size_t *length)
++{
++    if (!text) return 0;
++    for (size_t n = 0; n <= limit; ++n) {
++        if (!text[n]) { *length = n; return 1; }
++    }
++    return 0;
++}
++static int session_argument(const char *text, size_t length)
++{
++    if (length != 44 || memcmp(text, "session=", 8)) return 0;
++    const char *id = text + 8;
++    for (size_t n = 0; n < 36; ++n) {
++        const int dash = n == 8 || n == 13 || n == 18 || n == 23;
++        const char c = id[n];
++        if (dash ? c != '-' : !((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
++            return 0;
++    }
++    return 1;
++}
++int wine11_return_parse(int argc, const char *const *argv, Wine11ReturnIntent *out)
++{
++    Wine11ReturnIntent candidate = {0};
++    /* Existing Playden title-launch boundary permits no more than eight args. */
++    if (!out || argc < 0 || argc > 8 || (argc && !argv)) return -1;
++    for (int n = 0; n < argc; ++n) {
++        size_t length;
++        if (!argv[n] || !argv[n][0]) continue;
++        if (!bounded_length(argv[n], 64, &length)) return -1;
++        if (length == sizeof(WINE11_RETURN_ARGUMENT) - 1 &&
++            !memcmp(argv[n], WINE11_RETURN_ARGUMENT, length)) {
++            if (candidate.requested) return -1;
++            candidate.requested = 1;
++        } else if (session_argument(argv[n], length)) {
++            if (candidate.session_argument) return -1;
++            candidate.session_argument = argv[n];
++        } else return -1;
++    }
++    *out = candidate;
++    return 0;
++}
++Wine11ReturnExit wine11_return_finish(Wine11ReturnIntent *intent, int was_running,
++                                     const Wine11ReturnExitOps *ops)
++{
++    if (!intent || intent->consumed || !ops || !ops->finish_session ||
++        !ops->close_session || !ops->close_publication) return WINE11_RETURN_HOME;
++    intent->consumed = 1; /* One attempt per native game process; no restart loop. */
++    const int reported = ops->finish_session(ops->context, was_running != 0);
++    ops->close_session(ops->context);
++    ops->close_publication(ops->context);
++    if (!intent->requested || !was_running || reported != 0 || !ops->launch_title)
++        return WINE11_RETURN_HOME;
++    const uint32_t result = ops->launch_title(ops->context, WINE11_RETURN_TITLE);
++    return result & 0x80000000u ? WINE11_RETURN_HOME : WINE11_RETURN_WAIT_FOR_HANDOFF;
++}
+diff --git a/native/return_intent.h b/native/return_intent.h
+new file mode 100644
+index 0000000..26ad7cb
+--- /dev/null
++++ b/native/return_intent.h
+@@ -0,0 +1,44 @@
++/* SPDX-License-Identifier: LGPL-2.1-or-later */
++/* Design prototype only: not part of Wine 11 or the installed game wrapper. */
++#ifndef WINE11_RETURN_INTENT_H
++#define WINE11_RETURN_INTENT_H
++#include <stdint.h>
++
++#define WINE11_RETURN_TITLE "PPSA77381"
++#define WINE11_RETURN_ARGUMENT "wine11-return=" WINE11_RETURN_TITLE
++#define WINE11_RETURN_FEATURE "wine11-return-on-exit-v1"
++
++typedef struct Wine11ReturnIntent {
++    const char *session_argument;
++    int requested;
++    int consumed;
++} Wine11ReturnIntent;
++
++/* Accept legacy session=<canonical UUID> and one fixed opt-in return argument.
++ * Empty/NULL argv slots keep the original wrapper's behavior. Output is changed
++ * only on success. No arbitrary destination, file, command or URL is accepted. */
++int wine11_return_parse(int argc, const char *const *argv, Wine11ReturnIntent *out);
++
++typedef struct Wine11ReturnExitOps {
++    void *context;
++    /* Return zero after reporting the existing session's exited/failed phase. */
++    int (*finish_session)(void *, int was_running);
++    void (*close_session)(void *);
++    void (*close_publication)(void *);
++    /* Must use the existing PS5 title-launch ABI and current foreground user.
++     * This callback is passed only the fixed Wine 11 target. */
++    uint32_t (*launch_title)(void *, const char *title);
++} Wine11ReturnExitOps;
++
++typedef enum Wine11ReturnExit {
++    WINE11_RETURN_HOME = 0,
++    WINE11_RETURN_WAIT_FOR_HANDOFF = 1
++} Wine11ReturnExit;
++
++/* Called only from normal per-game Wine exit, after Wine is done. The actual
++ * wrapper remains responsible for diagnostics closure and the final platform
++ * action: wait for an accepted handoff, otherwise existing leave_to_home().
++ * A crash/PS5 Close Game never calls this normal-exit helper. */
++Wine11ReturnExit wine11_return_finish(Wine11ReturnIntent *intent, int was_running,
++                                     const Wine11ReturnExitOps *ops);
++#endif
+diff --git a/native/return_native.c b/native/return_native.c
+new file mode 100644
+index 0000000..c72c9c4
+--- /dev/null
++++ b/native/return_native.c
+@@ -0,0 +1,44 @@
++/* SPDX-License-Identifier: LGPL-2.1-or-later */
++#include "return_native.h"
++#include "return_intent.h"
++#include <stddef.h>
++#include <string.h>
++/* Same platform ABI used by Wine 11 and Playden's native title backend. */
++struct Wine11LaunchParameters {
++    uint32_t size, user, options;
++    uint64_t crash_report;
++    uint32_t check_flag;
++};
++_Static_assert(sizeof(struct Wine11LaunchParameters) == 32, "native launch ABI size");
++_Static_assert(offsetof(struct Wine11LaunchParameters, check_flag) == 24, "native launch ABI offset");
++int sceSysmoduleLoadModuleInternal(uint32_t);
++int sceUserServiceInitialize(const void *);
++int sceUserServiceGetForegroundUser(uint32_t *);
++uint32_t sceSystemServiceLaunchApp(const char *, const char **, void *);
++static int ready;
++uint32_t wine11_return_native_preload(void)
++{
++    uint32_t user = 0;
++    ready = 0;
++    /* The wrapper already imports SystemService for LoadExec. Duplicate module
++     * load / user initialization may report already-loaded; the user query is
++     * the usable-provider test. Runtime dlsym is deliberately avoided. */
++    (void)sceSysmoduleLoadModuleInternal(0x80000010u);
++    (void)sceUserServiceInitialize(NULL);
++    uint32_t result = (uint32_t)sceUserServiceGetForegroundUser(&user);
++    ready = result == 0;
++    return result;
++}
++uint32_t wine11_return_native_launch(void *unused, const char *title)
++{
++    uint32_t user = 0;
++    (void)unused;
++    if (!ready) return 0x80020026u; /* ENOSYS */
++    if (!title || strcmp(title, WINE11_RETURN_TITLE)) return 0x80020016u; /* EINVAL */
++    uint32_t result = (uint32_t)sceUserServiceGetForegroundUser(&user);
++    if (result) return result | 0x80000000u;
++    /* SkipLaunchCheck is the existing big-app handoff ABI after root grant.
++     * This function is reached only after running/publication/session admission. */
++    struct Wine11LaunchParameters parameters = {sizeof(parameters), user, 0, 0, 1};
++    return sceSystemServiceLaunchApp(WINE11_RETURN_TITLE, NULL, &parameters);
++}
+diff --git a/native/return_native.h b/native/return_native.h
+new file mode 100644
+index 0000000..f853651
+--- /dev/null
++++ b/native/return_native.h
+@@ -0,0 +1,10 @@
++/* SPDX-License-Identifier: LGPL-2.1-or-later */
++#ifndef WINE11_RETURN_NATIVE_H
++#define WINE11_RETURN_NATIVE_H
++#include <stdint.h>
++/* Preload while the native title is starting, before filesystem elevation.
++ * Failure disables return only; it never prevents the game from starting. */
++uint32_t wine11_return_native_preload(void);
++/* Existing return-intent launch callback signature; fixed target only. */
++uint32_t wine11_return_native_launch(void *unused, const char *title);
++#endif
+diff --git a/native/wine64_main.c b/native/wine64_main.c
+index 3bf08c9..17acb0c 100644
+--- a/native/wine64_main.c
++++ b/native/wine64_main.c
+@@ -33,6 +33,8 @@
+ #include "../src/pw_title_launch.h"
+ #include "../src/pw_title_id.h"
+ #include "../src/pw_title_session.h"
++#include "return_intent.h"
++#include "return_native.h"
+ #include "../src/pw_wine_launch.h"
+ #include "pw_data_mount.h"
+ #include "pw_audio_ps5.h"
+@@ -415,24 +417,14 @@ static void close_title_publication(void)
+     pw_title_publication_close(&title_publication);
+ }
+ 
++static Wine11ReturnIntent wine11_return_intent;
+ static int per_game_argument(int argc, char **argv, char *error, size_t error_size)
+ {
+-    const char *argument = NULL;
+-
+-    for (int i = 0; i < argc; i++) {
+-        if (!argv || !argv[i] || !argv[i][0]) continue;
+-        if (argument) {
+-            snprintf(error, error_size, "per-game launch accepts one session argument");
+-            return -1;
+-        }
+-        argument = argv[i];
+-    }
+-    if (argument && (strncmp(argument, "session=", 8) ||
+-                     !pw_title_session_id_valid(argument + 8))) {
+-        snprintf(error, error_size, "per-game launch rejects argument %.32s", argument);
++    if (wine11_return_parse(argc, (const char *const *)argv, &wine11_return_intent) != 0) {
++        snprintf(error, error_size, "invalid per-game session or Wine 11 return intent");
+         return -1;
+     }
+-    title_session_argument = argument;
++    title_session_argument = wine11_return_intent.session_argument;
+     return 0;
+ }
+ 
+@@ -781,19 +773,51 @@ static void leave_to_home(void)
+ /* Wine ends the process with exit() when its last program ends. A generic
+  * title returns to its catalog; a per-game title records the observation and
+  * returns to Home. The callback does not carry Wine's exit status. */
++static int wine11_finish_session(void *unused, int was_running)
++{
++    (void)unused;
++    return was_running ? pw_title_session_exited(&title_session, 0, 0)
++                       : pw_title_session_failed(&title_session, 0, 0);
++}
++static void wine11_close_session(void *unused)
++{
++    (void)unused;
++    pw_title_session_close(&title_session);
++}
++static void wine11_close_publication(void *unused)
++{
++    (void)unused;
++    close_title_publication();
++}
++static uint32_t wine11_launch_return(void *unused, const char *title)
++{
++    uint32_t result = wine11_return_native_launch(unused, title);
++    PS5LOG_LOG("PW_WINE64 return target=%s result=0x%08x", title, (unsigned)result);
++    return result;
++}
+ static void on_exit_report(void)
+ {
++    Wine11ReturnExit route = WINE11_RETURN_HOME;
+     PS5LOG_LOG("PW_WINE64 exit sink_calls=%lu", sink_calls);
+     if (per_game_mode) {
+-        if (__atomic_load_n(&per_game_running, __ATOMIC_ACQUIRE))
+-            (void)pw_title_session_exited(&title_session, 0, 0);
+-        else (void)pw_title_session_failed(&title_session, 0, 0);
+-        pw_title_session_close(&title_session);
++        const Wine11ReturnExitOps ops = {
++            NULL, wine11_finish_session, wine11_close_session,
++            wine11_close_publication, wine11_launch_return
++        };
++        route = wine11_return_finish(&wine11_return_intent,
++            __atomic_load_n(&per_game_running, __ATOMIC_ACQUIRE), &ops);
+     } else {
+         restart_title(NULL, launch.cycle + 1u, "wine-exit");
+     }
+     pw_diagnostics_close("wine64-exit");
+-    if (per_game_mode) leave_to_home();
++    if (per_game_mode) {
++        if (route == WINE11_RETURN_WAIT_FOR_HANDOFF) {
++            /* The platform normally terminates us during accepted handoff.
++             * A failed asynchronous request must not leave a hung game title. */
++            for (int waited = 0; waited < 100; ++waited) usleep(100000);
++        }
++        leave_to_home();
++    }
+ }
+ 
+ /* ---- library ------------------------------------------------------------ */
+@@ -1339,6 +1363,10 @@ int main(int argc, char **argv)
+         ps5log_close("invalid-per-game-arguments");
+         return 1;
+     }
++    if (per_game_mode && wine11_return_intent.requested) {
++        uint32_t result = wine11_return_native_preload();
++        PS5LOG_LOG("PW_WINE64 return provider preload=0x%08x", (unsigned)result);
++    }
+     pw_hid_ps5_preload(hid_log);   /* before the /data grant changes the title's credentials */
+     if (open_library() != 0) {
+         PS5LOG_LOG("PW_WINE64 startup blocked reason=%s",
+diff --git a/tests/test_wine11_return_intent.c b/tests/test_wine11_return_intent.c
+new file mode 100644
+index 0000000..7554316
+--- /dev/null
++++ b/tests/test_wine11_return_intent.c
+@@ -0,0 +1,78 @@
++/* SPDX-License-Identifier: LGPL-2.1-or-later */
++#include "return_intent.h"
++#include <assert.h>
++#include <stdio.h>
++#include <string.h>
++typedef struct Test {
++    char sequence[32];
++    int report_error, was_running;
++    uint32_t launch_result;
++} Test;
++static void step(Test *test, char value) {
++    size_t count = strlen(test->sequence);
++    test->sequence[count] = value;
++    test->sequence[count + 1] = 0;
++}
++static int finish(void *context, int running) {
++    Test *test = context;
++    step(test, 'R'); test->was_running = running; return test->report_error;
++}
++static void close_session(void *context) { step(context, 'S'); }
++static void close_publication(void *context) { step(context, 'P'); }
++static uint32_t launch(void *context, const char *title) {
++    assert(!strcmp(title, WINE11_RETURN_TITLE));
++    Test *test = context;
++    assert(!strcmp(test->sequence, "RSP"));
++    step(test, 'L'); return test->launch_result;
++}
++int main(void) {
++    Wine11ReturnIntent intent = {0};
++    const char *session = "session=01234567-89ab-cdef-0123-456789abcdef";
++    const char *legacy[] = {session};
++    const char *opt_in[] = {WINE11_RETURN_ARGUMENT};
++    const char *both[] = {session, WINE11_RETURN_ARGUMENT};
++    assert(!wine11_return_parse(0, NULL, &intent) && !intent.requested && !intent.session_argument);
++    assert(!wine11_return_parse(1, legacy, &intent) && !intent.requested && intent.session_argument == session);
++    assert(!wine11_return_parse(2, both, &intent) && intent.requested && intent.session_argument == session);
++    const char *duplicates[] = {WINE11_RETURN_ARGUMENT, WINE11_RETURN_ARGUMENT};
++    Wine11ReturnIntent before = intent;
++    assert(wine11_return_parse(2, duplicates, &intent) && !memcmp(&intent, &before, sizeof(intent)));
++    const char *bad[] = {"wine11-return=PPSA77380", "wine11-return=FAKE78003", "wine11-return=/app0/eboot.bin",
++        "session=01234567-89AB-cdef-0123-456789abcdef", "session=01234567-89ab-cdef-0123-456789abcdefEXTRA", "--quit"};
++    for (size_t n = 0; n < sizeof(bad) / sizeof(bad[0]); ++n)
++        assert(wine11_return_parse(1, &bad[n], &intent));
++    char long_argument[70]; memset(long_argument, 'x', sizeof(long_argument)); long_argument[69] = 0;
++    const char *long_argv[] = {long_argument};
++    assert(wine11_return_parse(1, long_argv, &intent));
++    assert(wine11_return_parse(1, NULL, &intent));
++
++    Test test = {0};
++    Wine11ReturnExitOps ops = {&test, finish, close_session, close_publication, launch};
++    /* Direct Home launches and legacy Playden session launches still go Home. */
++    assert(!wine11_return_parse(0, NULL, &intent));
++    assert(wine11_return_finish(&intent, 1, &ops) == WINE11_RETURN_HOME);
++    assert(!strcmp(test.sequence, "RSP"));
++    test = (Test){0};
++    assert(!wine11_return_parse(1, legacy, &intent));
++    assert(wine11_return_finish(&intent, 1, &ops) == WINE11_RETURN_HOME);
++    assert(!strcmp(test.sequence, "RSP"));
++    test = (Test){0};
++    assert(!wine11_return_parse(1, opt_in, &intent));
++    assert(wine11_return_finish(&intent, 1, &ops) == WINE11_RETURN_WAIT_FOR_HANDOFF);
++    assert(!strcmp(test.sequence, "RSPL"));
++    assert(wine11_return_finish(&intent, 1, &ops) == WINE11_RETURN_HOME);
++    assert(!strcmp(test.sequence, "RSPL"));
++    test = (Test){0};
++    assert(!wine11_return_parse(1, opt_in, &intent));
++    assert(wine11_return_finish(&intent, 0, &ops) == WINE11_RETURN_HOME);
++    assert(!test.was_running && !strcmp(test.sequence, "RSP"));
++    test = (Test){.report_error = -1};
++    assert(!wine11_return_parse(1, opt_in, &intent));
++    assert(wine11_return_finish(&intent, 1, &ops) == WINE11_RETURN_HOME);
++    assert(!strcmp(test.sequence, "RSP"));
++    test = (Test){.launch_result = 0x80940001u};
++    assert(!wine11_return_parse(1, opt_in, &intent));
++    assert(wine11_return_finish(&intent, 1, &ops) == WINE11_RETURN_HOME);
++    assert(!strcmp(test.sequence, "RSPL"));
++    puts("PASS: return intent is opt-in, Home/session launches unchanged, cleanup precedes one fixed-target launch, failures fall back Home");
++}
+diff --git a/tests/test_wine11_return_native.c b/tests/test_wine11_return_native.c
+new file mode 100644
+index 0000000..de8bbc5
+--- /dev/null
++++ b/tests/test_wine11_return_native.c
+@@ -0,0 +1,35 @@
++/* SPDX-License-Identifier: LGPL-2.1-or-later */
++#include "return_native.h"
++#include "return_intent.h"
++#include <assert.h>
++#include <stddef.h>
++#include <stdint.h>
++#include <stdio.h>
++#include <string.h>
++static int queries, launches, user_error;
++static uint32_t launch_result;
++int sceSysmoduleLoadModuleInternal(uint32_t id) { assert(id == 0x80000010u); return 0; }
++int sceUserServiceInitialize(const void *arg) { assert(!arg); return 0; }
++int sceUserServiceGetForegroundUser(uint32_t *user) { ++queries; *user = 0x10000000u; return user_error; }
++uint32_t sceSystemServiceLaunchApp(const char *title, const char **args, void *raw) {
++    struct Params { uint32_t size, user, options; uint64_t crash; uint32_t flags; };
++    const struct Params *p = raw;
++    assert(!strcmp(title, WINE11_RETURN_TITLE) && !args);
++    assert(sizeof(*p) == 32 && p->size == 32 && p->user == 0x10000000u);
++    assert(!p->options && !p->crash && p->flags == 1);
++    ++launches;
++    return launch_result;
++}
++int main(void) {
++    assert(wine11_return_native_launch(NULL, WINE11_RETURN_TITLE) == 0x80020026u);
++    assert(!wine11_return_native_preload() && queries == 1);
++    assert(wine11_return_native_launch(NULL, "FAKE78003") == 0x80020016u && !launches);
++    assert(!wine11_return_native_launch(NULL, WINE11_RETURN_TITLE) && launches == 1 && queries == 2);
++    launch_result = 0x80940001u;
++    assert(wine11_return_native_launch(NULL, WINE11_RETURN_TITLE) == launch_result);
++    user_error = (int)0x80960001u;
++    assert(wine11_return_native_launch(NULL, WINE11_RETURN_TITLE) == (uint32_t)user_error && launches == 2);
++    assert(wine11_return_native_preload() == (uint32_t)user_error);
++    assert(wine11_return_native_launch(NULL, WINE11_RETURN_TITLE) == 0x80020026u && launches == 2);
++    puts("PASS: native return provider preload, fixed-target/user validation, exact launch ABI and failure propagation");
++}
+diff --git a/tools/build_native.sh b/tools/build_native.sh
+index 045bfcb..0025351 100755
+--- a/tools/build_native.sh
++++ b/tools/build_native.sh
+@@ -237,7 +237,7 @@ common=(-DPW_BUILD_ID=\""$build_id"\" -DPW_TITLE_ID=\""$title_id"\"
+         -DPW_TITLE_PROBE="$title_probe")
+ 
+ sources=(
+-    native/wine64_main.c native/pw_diagnostics.c native/pw_audio_ps5.c native/pw_pad_ps5.c native/pw_agc_ps5.c
++    native/wine64_main.c native/return_intent.c native/return_native.c native/pw_diagnostics.c native/pw_audio_ps5.c native/pw_pad_ps5.c native/pw_agc_ps5.c
+     native/pw_agc_submit_lifecycle.c native/pw_videoout_ps5.c native/pw_data_mount.c
+     native/pw_lapy_elevation.c
+     native/pw_wine_display.c native/pw_wine_library.c native/pw_hid_ps5.c native/pw_wine_prefix.c
+@@ -322,6 +322,13 @@ if sys.argv[8] == "1":
+     # at startup and title_id is only the template's.
+     manifest["any_title"] = True
+     manifest["title_rule"] = json.loads(pathlib.Path(sys.argv[9]).read_text())["title_rule"]
++manifest["wine11_return"] = {
++    "feature": "wine11-return-on-exit-v1",
++    "argument": "wine11-return=PPSA77381",
++    "target": "PPSA77381",
++    "normal_exit_only": True,
++    "base_source_revision": "ce289425bb34acbcc98f77b4e00ac98b3c16e4bc",
++}
+ destination.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n")
+ PY
+ # The console installer copies icon0.png into /user/app/<title> and aborts

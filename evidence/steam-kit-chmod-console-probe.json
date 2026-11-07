@@ -1,0 +1,9 @@
+{
+  "test_path": "/data/wine11-extract-test-7fa01fef09e9",
+  "observed_modes": {
+    "executable": 493,
+    "data": 420
+  },
+  "corrected": true,
+  "other_files_modified": false
+}

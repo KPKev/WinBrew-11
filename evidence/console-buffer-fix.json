@@ -1,0 +1,18 @@
+{
+  "host": "192.168.7.26",
+  "port": 8889,
+  "title": "PPSA77380",
+  "updated": true,
+  "launched": false,
+  "old_files": {
+    "manifest.json": "e147775ea16f0a01457206ca51429c3ad5efb7f187585b80eef65bf19e7c112a",
+    "eboot.bin": "2c6f32765e5941c9a4dac02417623084682f683c281a6d1ce5761fc9bd934a5e"
+  },
+  "new_files": {
+    "manifest.json": "94ad8ad52bf2e66761acd5ce1bb1a6de2a8955f827769031e97f22b008b29f73",
+    "eboot.bin": "1e5a87c7d077eed1add61a4f17250052da77bfc8318f1b84eee7bb39e50d1104"
+  },
+  "crash_rip": "0x4001c9",
+  "crash_return_address": "0x4028c4",
+  "mapped_failure": "operator new[] allocation-failure UD2 on second 8294400-byte Shell::init buffer"
+}

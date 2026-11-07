@@ -1,0 +1,15 @@
+{
+  "test_path": "/data/wine11-extract-test-7fa01fef09e9",
+  "archive_sha256": "973fa6fb2c2d24fa581e0c53dce9034948a9870d5c6d4e54ce84fa9a582c0956",
+  "observed_modes": {
+    "executable": 511,
+    "data": 511
+  },
+  "expected_modes": {
+    "data": 420,
+    "executable": 493
+  },
+  "preserves_modes": false,
+  "contains_only_harmless_test_data": true,
+  "installed_or_modified_existing_files": false
+}

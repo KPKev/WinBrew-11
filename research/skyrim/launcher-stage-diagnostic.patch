@@ -1,0 +1,96 @@
+--- a/native/wine64_main.c
++++ b/native/wine64_main.c
+@@ -63,6 +63,17 @@
+ #include <time.h>
+ #include <unistd.h>
+ 
++/* Isolated diagnostic build: surface early failures before the async log
++ * worker has a writable library. Never includes credentials or paths. */
++struct Wine11ProbeNotice { unsigned char reserved[45]; char message[3075]; };
++extern int sceKernelSendNotificationRequest(unsigned int, void*, size_t, int);
++static void wine11_probe_notice(const char* message)
++{
++    struct Wine11ProbeNotice notice = {0};
++    snprintf(notice.message, sizeof(notice.message), "Wine 11 diagnostic: %s", message);
++    (void)sceKernelSendNotificationRequest(0, &notice, sizeof(notice), 0);
++}
++
+ #ifndef PW_TITLE_ID
+ #define PW_TITLE_ID "PPSA99995"
+ #endif
+@@ -814,7 +825,7 @@
+                mount.data_before, mount.elevated_before, mount.helper_completed,
+                mount.helper_errno, mount.credential_errno, mount.data_after, mount.elevated_after, mount.waited_ms,
+                mount.settled_ms, status == 0 ? library_root : "unavailable");
+-    if (status != 0) return -1;
++    if (status != 0) { wine11_probe_notice("data mount helper did not complete"); return -1; }
+     if (per_game_mode) {
+         /* Open the session report as soon as the private library is reachable,
+          * before publication admission, so a refused start leaves its reason
+@@ -831,19 +842,21 @@
+         const int previous_mask = pw_title_ps5_umask(077);
+         PS5LOG_LOG("PW_WINE64 umask private=%d previous=%o errno=%d", previous_mask >= 0,
+                    previous_mask >= 0 ? (unsigned)previous_mask : 0u, previous_mask >= 0 ? 0 : errno);
+-        if (previous_mask < 0) return -1;
++        if (previous_mask < 0) { wine11_probe_notice("private file mask could not be set"); return -1; }
+         const PwTitlePublicationPlatform platform = {
+             .host_root = NULL, .owner_uid = (uint32_t)geteuid(),
+             .try_lock_shared = pw_title_publication_ps5_lock, .context = NULL
+         };
+         if (pw_title_publication_open(&title_descriptor, &platform,
+                 &title_publication, session_error, sizeof(session_error)) != 0) {
++            wine11_probe_notice("game publication was refused");
+             PS5LOG_LOG("PW_WINE64 publication refused reason=%s", session_error);
+             return -1;
+         }
+         library_root = per_game_library_root;
+         if (pw_title_session_start(&title_session, &title_launch, title_session_argument,
+                                    session_error, sizeof(session_error)) != 0) {
++            wine11_probe_notice("game session could not be started");
+             PS5LOG_LOG("PW_WINE64 session start refused reason=%s", session_error);
+             return -1;
+         }
+@@ -1312,13 +1325,13 @@
+     char title_error[192];
+     int title_from_kernel = pw_title_id_resolve(kernel_title_id, PW_TITLE_ID, title_id);
+ 
+-    if (title_from_kernel < 0) return 1;
++    if (title_from_kernel < 0) { wine11_probe_notice("title identity unavailable"); return 1; }
+     snprintf(sandbox_app0, sizeof(sandbox_app0), "/mnt/sandbox/%s_000/app0", title_id);
+ #if PW_TITLE_PROBE
+     return title_probe();
+ #endif
+     ps5log_config_defaults(&log_config);
+-    if (atexit(close_title_publication) != 0) return 1;
++    if (atexit(close_title_publication) != 0) { wine11_probe_notice("exit registration failed"); return 1; }
+     if (ps5log_load_config(ps5log_default_conf_paths, ps5log_default_conf_path_count,
+                            &log_config, NULL) == 0)
+         ps5log_init(&log_config, title_id, PW_APP_NAME, now_ns());
+@@ -1326,6 +1339,9 @@
+                title_from_kernel ? "kernel" : "compiled", PW_TITLE_ID);
+     status = load_title_descriptor(title_error, sizeof(title_error));
+     if (status < 0) {
++        wine11_probe_notice("game descriptor rejected");
++        (void)ps5log_line(PS5LOG_ERR, "DIAGNOSTIC: invalid per-game descriptor");
++        (void)ps5log_line(PS5LOG_ERR, title_error);
+         PS5LOG_LOG("PW_WINE64 startup blocked reason=invalid-descriptor detail=%s", title_error);
+         ps5log_close("invalid-descriptor");
+         return 1;
+@@ -1334,6 +1350,9 @@
+     /* The private umask is set after the data grant (see open_library): the
+      * libkernel gateway it uses is not resolvable before it. */
+     if (per_game_mode && per_game_argument(argc, argv, title_error, sizeof(title_error)) != 0) {
++        wine11_probe_notice("game launch arguments rejected");
++        (void)ps5log_line(PS5LOG_ERR, "DIAGNOSTIC: invalid per-game arguments");
++        (void)ps5log_line(PS5LOG_ERR, title_error);
+         PS5LOG_LOG("PW_WINE64 startup blocked reason=invalid-per-game-arguments detail=%s",
+                    title_error);
+         ps5log_close("invalid-per-game-arguments");
+@@ -1341,6 +1360,7 @@
+     }
+     pw_hid_ps5_preload(hid_log);   /* before the /data grant changes the title's credentials */
+     if (open_library() != 0) {
++        (void)ps5log_line(PS5LOG_ERR, "DIAGNOSTIC: game bootstrap or data helper failed");
+         PS5LOG_LOG("PW_WINE64 startup blocked reason=%s",
+                    per_game_mode ? "per-game-bootstrap" : "data-helper-incomplete");
+         ps5log_close(per_game_mode ? "per-game-bootstrap" : "data-helper-incomplete");

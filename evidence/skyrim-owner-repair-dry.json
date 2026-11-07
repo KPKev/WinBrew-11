@@ -1,0 +1,6 @@
+{
+ "mode": "dry",
+ "payload_sha256": "75a340f3f15e0132616babd36884ea8c831d660bc99b4b5c71083486d8f55a1f",
+ "output": "OBS owner-repair ready apply=0 uid=1 euid=0\nR root=/data/homebrew/FAKE78005 apply=0 seen=1817 already_app=0 would_change=1817 verified=0 symlinks=0 refused=0 errors=0\nR root=/data/playden/games/wine11-steam-489830 apply=0 seen=2059 already_app=0 would_change=2059 verified=0 symlinks=0 refused=0 errors=0\nT dir=/data/wine11/wine11-games mode=0700 would_set=0711\nOBS done result=ok\n",
+ "complete": true
+}

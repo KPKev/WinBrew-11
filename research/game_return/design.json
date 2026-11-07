@@ -1,0 +1,103 @@
+{
+  "status": "Isolated wrapper variant built and linked from the exact installed revision. Review patch, source archive, manifest and valid FSELF are available; no installed kit admission or deployment performed.",
+  "installed_observation": {
+    "title": "FAKE78003",
+    "title_wrapper_revision": "ce289425bb34acbcc98f77b4e00ac98b3c16e4bc",
+    "title_wrapper_sha256_from_build_record": "10fc130547881d917aabf63ec1f137b04e70c215e7230607fafd364b715ec187",
+    "publication_guard": "playden-publication-guard-v1",
+    "managed_descriptor_required": true,
+    "descriptor_read": false,
+    "descriptor_reason": "The file exists with mode0600; the current read-only WFM download returns404. No permissions were changed.",
+    "lifecycle": "PS5 terminates Wine11 during the native big-app handoff. A fresh Wine11 process is required after the game exits."
+  },
+  "exact_revision_sources": [
+    "https://raw.githubusercontent.com/leolobato/prospero-win/ce289425bb34acbcc98f77b4e00ac98b3c16e4bc/native/wine64_main.c",
+    "https://raw.githubusercontent.com/leolobato/prospero-win/ce289425bb34acbcc98f77b4e00ac98b3c16e4bc/src/pw_title_launch.c"
+  ],
+  "exact_source_availability": {
+    "existing_local_checkout_head": "e709a0b72361c6c8e16c80ff93a3705a5e5421b7",
+    "installed_revision_present_in_local_git": false,
+    "exact_revision_remote_archive_http_status": 200,
+    "archive_url": "https://codeload.github.com/leolobato/prospero-win/zip/ce289425bb34acbcc98f77b4e00ac98b3c16e4bc",
+    "verified_remote_source_sha256": {
+      "native/wine64_main.c": "a8372d5097e84251ec762beeed3e0f521db596f3d6c2ea9d5c5863532b462def",
+      "src/pw_title_launch.c": "30daba286977bf88207f73003e2975a95b488465a7e50682bb2f29a36456e93f",
+      "src/pw_title_session.c": "a378e05f6de3a418ea5f3b0a33e8dabc92c5f2502a0224c05afc53f80088bb72",
+      "native/pw_title_publication_native.c": "9a3841bf42b7e70f87f180630f9ccb48d2b4e64b98185c895b0e168b4e4f6e7c"
+    },
+    "original_checkout_modified": false
+  },
+  "existing_contract": {
+    "normal_per_game_exit": "Report the session, close it, close publication, then sceSystemServiceLoadExec(exit,NULL).",
+    "only_exit_policy": "exit-title",
+    "only_optional_argument": "session=<canonical lowercase UUID>",
+    "generic_mode_restart": "Only restarts that native title's own catalog; it is not an arbitrary title return."
+  },
+  "proposed_contract": {
+    "feature": "wine11-return-on-exit-v1",
+    "optional_argument": "wine11-return=PPSA77381",
+    "fixed_return_title": "PPSA77381",
+    "legacy_arguments_preserved": true,
+    "descriptor_changes": "None. Keep game-launch.json byte-identical and exit_policy=exit-title.",
+    "home_screen_launch": "No argument, therefore existing exit-to-Home behavior.",
+    "legacy_playden_launch": "Existing session argument alone, therefore existing exit-to-Home behavior.",
+    "wine11_launch": "Add the exact opt-in argument only after independently verified wrapper capability admission.",
+    "normal_exit": "Only after a game reached running and session reporting succeeded: close session/publication, make one fixed-target PS5 title-launch request, then let the system complete handoff.",
+    "failure": "No retry/relaunch loop. Fall back to existing leave_to_home on startup/session/launch failure.",
+    "not_supported": "Native process faults, forced PS5 Close Game, power loss and process kill bypass normal atexit logic. Wine supplies no game exit status here, so a Windows game failure that exits Wine normally can also trigger an opted-in return. No watcher or daemon is introduced."
+  },
+  "upgrade_seam": {
+    "reference": "Playden9f5a7cbebeaf07fa3ea5324dce5ad8f374ca0aec",
+    "files": [
+      "src/homebrew/runtime_host.cpp: existing Ready update branch",
+      "src/runtime/package_installer.cpp: FilesystemPackageInstaller::RefreshTitle",
+      "src/runtime/settings_publication_owner.h: publisher ownership/transaction boundaries"
+    ],
+    "procedure": [
+      "Build an isolated variant from the installed wrapper's exact source revision, preserving original source and artifacts.",
+      "Extend only per-game argument parsing and normal-exit routing; keep descriptor parsing, publication admission and session reporting intact.",
+      "Preload/link the already used PS5 title-launch/user APIs and use the validated32-byte launch ABI. Avoid runtime symbol lookup at atexit.",
+      "Record the opt-in capability and new wrapper/provenance/file digests in a newly verified kit variant.",
+      "Use the existing same-artifact title refresh and ownership checks with the native title confirmed stopped. Do not raw-upload an eboot behind stale owner/kit digests.",
+      "Acquire a qualified exclusive publication/control lease before the activity recheck and hold it through the refresh. RefreshTitle itself is not a standalone coordinator or lease acquisition API.",
+      "Require the unchanged runtime/recipe artifact set and unchanged game/settings publication. Refuse any path that would regenerate profiles or upgrade game data as a side effect.",
+      "Update only Wine11's caller to send the new opt-in argument after the new wrapper capability is verified."
+    ]
+  },
+  "ownership_preconditions": [
+    "Resolve(record) must admit the verified kit, managed title identity and canonical owned paths.",
+    "Runtime and recipe artifacts must match the existing record by exact artifact_id, identity and sha256, with the same count.",
+    "Title directory must be a nonsymlink directory; the private game/bottle directory tree must pass the existing ownership and mode checks.",
+    "Both existing title/template owner markers must be readable, name the same install/title and carry the same valid old files_sha256.",
+    "RespinIdentity must match for both markers. The admitted exceptions cover file-inventory digest, runtime revision/path and variant_id; install_id, title_id, compatible kit_id, runtime_bundle_id, template_path and recipe identity stay bound.",
+    "New files are copied through temporary files, synced and digest-verified before both owner markers advance. Partial updates must retain the existing retry/recovery semantics.",
+    "The general RunPrepare path is broader than this operation and can call EnsureWritable and settings publication. Do not invoke it blindly for a wrapper-only change.",
+    "Snapshot and verify byte-identical descriptor/profile/committed-publication files and original game-data/config/save hashes around any future title refresh."
+  ],
+  "preserved_files": [
+    "Original prospero-win source checkout",
+    "Original installed game-launch.json",
+    "Quake executable, assets, PAK files, configurations, saves and existing bottle/profile contents"
+  ],
+  "expected_control_metadata_changes_on_future_upgrade": [
+    "Native title eboot/build provenance and verified kit file inventory",
+    "Existing title and bottle owner marker inventory digests, as required by the supported title refresh"
+  ],
+  "validation": {
+    "portable_argument_and_exit_sequence_tests": "passed",
+    "address_and_undefined_behavior_sanitizers": "passed",
+    "ps5_toolchain_compilation_of_pure_helper": "passed",
+    "complete_wrapper_build_and_link": "passed in isolated source checkout; see evidence/game-return-build.json",
+    "hardware_title_launch_from_normal_exit": "not performed",
+    "console_state_changes": "none"
+  },
+  "remaining_risks": [
+    "Calling platform launch during Wine's exit handler must be verified on hardware; portable tests cannot prove acceptance or timing.",
+    "An accepted launch request may still fail asynchronously. Exact waiting/fallback timing needs platform verification.",
+    "Target absence, disabled jailbreak or provider initialization failure must retain a clean Home fallback.",
+    "The installed kit's exact refresh compatibility and ownership records must be admitted before any future replacement; these private records were not read during this task.",
+    "Adding a new exit_policy or blindly sending the new argument to the current wrapper would break validation and is not proposed.",
+    "This is a new Wine11 process, not a resumed Windows desktop process. Restoring the prior library/window state requires separate Wine11-owned state handling.",
+    "Direct PS5Home launches are unchanged by the argument parser when the platform supplies no launch argument. Hardware validation must confirm the platform does not replay a previous launch's opt-in arguments."
+  ]
+}

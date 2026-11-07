@@ -1,0 +1,58 @@
+{
+  "title": "PPSA77381",
+  "version": "01.003.000",
+  "updated_at": "20261028T174136Z",
+  "files": {
+    "eboot.bin": {
+      "before": "1e8c3954e53976441b57e84edab171a76b78b052e85c6738d2cc5c6fb6328df9",
+      "after": "955a1fe8a1f8d16fa700a5d370788090fa99b4560cde11a7dbe53dde0361ac2b"
+    },
+    "sce_sys/param.json": {
+      "before": "fe49e3729435fe65b887513c195e6755345938dcff0b1b21cd72a4c30c0632d3",
+      "after": "e80736a51ed53a7d0ef67b9afaedf9d9aa040b35af2bef051a011a0e0309dbfc"
+    },
+    "manifest.json": {
+      "before": "f4c90ac858ae825aebaf5d2d29c29ed76cbe116edb923a546e3b3e51954b57ba",
+      "after": "575f3960125e404136c71f49326913687d3958ccf712ead8319435f78f4cf2f5"
+    }
+  },
+  "backup": "C:\\Users\\12227\\OneDrive\\Documents\\ChatGPT\\WrappedWine\\build\\console-backups\\desktop-20261028T174136Z",
+  "hardware_launch_tested": false,
+  "browser": "Native PS5 system browser launch; Chrome/Chromium not installed",
+  "logo_unchanged": true,
+  "game_files_modified": false,
+  "features": [
+    "master-derived About/Start/pane branding",
+    "KPKev creator and builder credit",
+    "three full outlined cursor sizes, speed, edge margin",
+    "verified atomic preference saves with post-elevation path rebinding",
+    "live network, desktop windows, and app-scoped audio tray",
+    "two-argument SDK browser launch ABI"
+  ],
+  "tests": [
+    "restart/migration/read-back and save failure tests",
+    "pointer bounds at all screen edges and sizes",
+    "speed/deadzone and tray controls",
+    "ASan/UBSan desktop3 test",
+    "Windows preview build",
+    "native PS5 FSELF integrity"
+  ],
+  "owner_ui_acceptance": "pending",
+  "owner_restart_persistence": "Theme survives reopening; no save error",
+  "owner_browser_page": "No webpage appears",
+  "native_startup": {
+    "pid": 203,
+    "private_directory_bound": true,
+    "root_proof": true,
+    "controller_opened": true,
+    "network_initialized": true,
+    "desktop_audio_port_opened": true
+  },
+  "console_preferences_file_observed": {
+    "schema": 2,
+    "pointer_speed": 9,
+    "theme": "light",
+    "bytes": "2 0 1 0 0 0 0 0 0 9 0 0 50 0",
+    "restart_acceptance_pending": true
+  }
+}

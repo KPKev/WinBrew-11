@@ -1,0 +1,4 @@
+{
+  "payload_sha256": "0cc39db1f985e97269dc8b1b6cd8eed578f892049c4e2861b283809ee14ef610",
+  "result": "[SceLncUtil] W:\\Build\\J03950016\\vsh\\common_lib\\lnc_util\\src\\lnc_util_ipc_client.cpp(382) getAppStatus: LNC_ISOK::0x80940004\nLAUNCH FAKE78008 code=0x00004018 accepted=1\n"
+}

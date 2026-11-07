@@ -1,0 +1,8 @@
+{
+  "probe_sha256": "4a03476e7dd81db7ce7d15fade61eacc7e712b5f3b8e751d2159b4f131d90dac",
+  "output": "STEAM_STORAGE_OWNER ok=1 owner=0 group=0 root=1\nSTEAM_STORAGE_OWNER done\n",
+  "completed": true,
+  "error": "",
+  "writes": false,
+  "automatic_retry": false
+}

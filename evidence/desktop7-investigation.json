@@ -1,0 +1,32 @@
+{
+  "version": "01.007.000",
+  "installed": true,
+  "hardware_verified": false,
+  "console_probe": {
+    "diagnostic_only": true,
+    "output": "target0 load=0\ntarget0 public handle rc=0 handle=0x21\ntarget0 plain symbol=0x80020003 found=0\ntarget0 NID symbol=0x80020003 found=0\ntarget0 modulelist=0 count=1\ntarget1 load=0\ntarget1 public handle rc=0 handle=0x22\ntarget1 plain symbol=0x80020003 found=0\ntarget1 NID symbol=0x80020003 found=0\ntarget1 modulelist=0 count=1\ntarget2 load=0\ntarget2 public handle rc=0 handle=0x23\ntarget2 plain symbol=0x80020003 found=0\ntarget2 NID symbol=0x80020003 found=0\ntarget2 modulelist=0 count=1\n",
+    "timed_out": false
+  },
+  "finding": "On this console, public module load succeeds and gives handles, but sceKernelDlsym returns 0x80020003 for both readable names and NIDs. Module-list enumeration does not expose them.",
+  "change": "Use native linked imports for keyboard, mouse and browser dialogs; build-only extension catalog is isolated from the SDK and never packaged.",
+  "checks": [
+    "portable regression and linked native lifecycle mocks pass",
+    "native package builds and integrity validates",
+    "LLVM executable needs Keyboard, Mouse, CommonDialog and WebBrowserDialog providers; APIs remain imports, not fake implementations"
+  ],
+  "pending": [
+    "console start",
+    "both USB device handles and input",
+    "browser dialog initialize and page navigation",
+    "YouTube and other site rendering"
+  ],
+  "installed_at": "20261028T200435Z",
+  "console_file_readback_verified": true,
+  "console_launch_tested": true,
+  "usb_movement_owner_verified": true,
+  "usb_keyboard_owner_verified": true,
+  "google_and_youtube_owner_verified": true,
+  "desktop_left_click_owner_verified": false,
+  "owner_result": "Mouse movement and keyboard typing work. Google and YouTube load. USB left-click works on webpages but fails inside Wine 11.",
+  "console_result": "HID linked exports=0xF each, both init/open/connected successful; browser exports=0x3F, initialization/open succeed."
+}

@@ -1,0 +1,55 @@
+--- a/native/wine64_main.c
++++ b/native/wine64_main.c
+@@ -831,8 +831,10 @@
+          * before publication admission, so a refused start leaves its reason
+          * (buffered earlier records are flushed into it as well). */
+         if (snprintf(per_game_library_root, sizeof(per_game_library_root), "%s/library",
+-                     title_launch.data_root) >= (int)sizeof(per_game_library_root))
++                     title_launch.data_root) >= (int)sizeof(per_game_library_root)) {
++            wine11_probe_notice("game library path too long");
+             return -1;
++        }
+         diagnostics_opened = pw_diagnostics_open(per_game_library_root, PW_BUILD_ID,
+                                                  title_launch.default_profile_id, 0) == 0;
+         /* The console starts titles with umask 0, so Wine would save the
+@@ -907,6 +909,7 @@
+         PS5LOG_LOG("PW_WINE64 default profile refused id=%s matches=%u",
+                    title_launch.default_profile_id, (unsigned)catalog_count);
+         (void)pw_title_session_failed(&title_session, 0, 0);
++        wine11_probe_notice("default game profile refused");
+         return -1;
+     }
+     PS5LOG_LOG("PW_WINE64 library status=%s listed_by=%d scan_errno=%d entries=%u games=%u "
+@@ -1399,6 +1402,7 @@
+         (void)pw_title_session_failed(&title_session, 0, 0);
+         pw_title_session_close(&title_session);
+         pw_diagnostics_close("per-game-prefix-refused");
++        wine11_probe_notice("game prefix refused");
+         return 1;
+     }
+     if (per_game_mode) {
+@@ -1411,6 +1415,7 @@
+             (void)pw_title_session_failed(&title_session, 0, 0);
+             pw_title_session_close(&title_session);
+             pw_diagnostics_close("per-game-executable-refused");
++            wine11_probe_notice("game executable refused");
+             return 1;
+         }
+     }
+@@ -1453,6 +1458,7 @@
+             extra[config.extra_env_count++] = (PwWineStartEnv){ "WINEDLLOVERRIDES", effective_dll_overrides };
+         else if (overrides_status != PW_OK) {
+             PS5LOG_LOG("PW_WINE64 DLL overrides refused: %s", game->app.id);
++            wine11_probe_notice("game DLL overrides refused");
+             return 1;
+         }
+         {
+@@ -1474,7 +1480,7 @@
+             }
+             PS5LOG_LOG("PW_WINE64 zink provider=%s copied=%u architecture=%s", pw_result_name(provider_status),
+                        copied, game->app.architecture == PW_APP_ARCH_PE32 ? "pe32" : "pe64");
+-            if (provider_status != PW_OK) return 1;
++            if (provider_status != PW_OK) { wine11_probe_notice("graphics provider unavailable"); return 1; }
+         }
+         /* xinput mode: SDL2 games (Half-Life) look for controllers through
+          * raw input first, which Wine on the PS5 has none of, and then skip

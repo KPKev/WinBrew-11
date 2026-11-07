@@ -1,0 +1,56 @@
+{
+  "title": "PPSA77381",
+  "version": "01.004.000",
+  "updated_at": "20261028T175742Z",
+  "files": {
+    "THIRD_PARTY_NOTICES.md": {
+      "before": "c8c75f06d1d6954cb82b17b78838b5944a926b93437add53451fd05296f6cce4",
+      "after": "7667f0fa1b2b5a831e28b8dd9115d4e01ff665b1eedc97bc9e1beadbc6a3f568"
+    },
+    "assets/font.bin": {
+      "before": "8da8c6a22552905d1ba5077ab424853e1f1488b90245555f68bc2a1d81dc9750",
+      "after": "f817ecdd32c91430ec85ade5f345e589aab84ee13bac90b0be413fa57d1c41ab"
+    },
+    "licenses/Fluent-System-Icons-MIT.txt": {
+      "before": null,
+      "after": "69bc45dc42b9acb96a69823adbc6ae538374e3c0bde169b855b32c48eaaef52f"
+    },
+    "licenses/Q2RTX-LICENSE.txt": {
+      "before": null,
+      "after": "1e523e3bda161c8e50e881a92296d718074c736a52115332c893e82bea364427"
+    },
+    "licenses/Simple-Icons-CC0.txt": {
+      "before": null,
+      "after": "9046848b63a5c92bff14e4accca80bd987e0623b74adf9226ce5198d312b79d5"
+    },
+    "eboot.bin": {
+      "before": "955a1fe8a1f8d16fa700a5d370788090fa99b4560cde11a7dbe53dde0361ac2b",
+      "after": "717d222db8d6a33c18a9056701c059722722c3b5cf0b494fbf8bf2d1b34cb2f4"
+    },
+    "sce_sys/param.json": {
+      "before": "e80736a51ed53a7d0ef67b9afaedf9d9aa040b35af2bef051a011a0e0309dbfc",
+      "after": "ecf41d964a6e6365b8c4c5fc19bb41c73342968345f7d1bbbe71344dd8a50ad3"
+    },
+    "manifest.json": {
+      "before": "575f3960125e404136c71f49326913687d3958ccf712ead8319435f78f4cf2f5",
+      "after": "3f64a6c3f0867b01471f6359820cd6a0d5418277bae562a7b97a529b44444ac0"
+    }
+  },
+  "backup": "C:\\Users\\12227\\OneDrive\\Documents\\ChatGPT\\WrappedWine\\build\\console-backups\\desktop-20261028T175742Z",
+  "hardware_launch_tested": false,
+  "browser": "Unresolved: native API returned zero without page; standalone SDK retry logs user-context code 0x80940004",
+  "logo_unchanged": true,
+  "game_files_modified": false,
+  "icons": "Detailed transparent system art, real Playden/Q2RTX art, browser logo and Fluent glyphs",
+  "credit": "Created by KPKev / Developed with AI assistance.",
+  "owner_restart_persistence": "Theme survives reopening; no save error (confirmed on previous update 3)",
+  "icon_atlas_bytes": 3753600,
+  "fixed_bss_atlas": true,
+  "tests": [
+    "shared UI/launch/preferences/static-buffer/pointer tests",
+    "additive update promotion and injected rollback tests",
+    "native PS5 FSELF integrity"
+  ],
+  "hardware_visual_acceptance": "New icons and credits look right",
+  "browser_owner_observation": "Google appeared after explicit SDK retry; a subsequent page took roughly 60 seconds; controller pointer works, physical USB keyboard/mouse do not"
+}

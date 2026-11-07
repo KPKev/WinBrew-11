@@ -1,0 +1,22 @@
+{
+  "scope": "Local isolated Vapor test package PPSA77382; no deployment",
+  "eboot_sha256": "7127323d0229a44f86e12ff546a28db943dac4a39739fabce63ae5a7077b1512",
+  "pie_sha256": "7149e11c1aae8d1077b78b0ec4b975cbec25a48c8caa256167d32ae7c89cf221",
+  "source_snapshot_receipt_sha256": "149e62b23f9729f0ac9aa7068813b1408bd76a762ec68ab9dfb35130cba6c5d0",
+  "validation": [
+    "Current staged UI and Steam integration sources match snapshot",
+    "Native backend and combined PIE links passed",
+    "Signed container inspection reports valid integrity",
+    "41 package files match manifest",
+    "Host artwork service regression passed"
+  ],
+  "inputs": "Verified console-probed experimental networking archives and pinned compiler runtime; dedicated game host; source snapshot and generated service overlays",
+  "limits": "Experimental local build, not installed or console-tested. Successful links and integrity do not establish launch, account, game or UI behavior.",
+  "logs": [
+    "build/vapor-current-ui-build.log",
+    "build/vapor-current-ui-refresh.log",
+    "build/vapor-current-link.log",
+    "build/vapor-current-package.log",
+    "build/vapor-current-isolated.log"
+  ]
+}

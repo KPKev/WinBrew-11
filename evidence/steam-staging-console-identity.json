@@ -1,0 +1,8 @@
+{
+  "probe_sha256": "b2befaca5c6bb25fe8c968c7841f9f2aaeba9c5d79961874ace03a0941876fd5",
+  "output": "STAGING_IDENTITY euid_is_root=1 kit_present=1 kit_root_owned=1 kit_mode=755 wine_exists=0\nSTAGING_IDENTITY done\n",
+  "completed": true,
+  "error": "",
+  "writes": false,
+  "automatic_retry": false
+}

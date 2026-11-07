@@ -1,0 +1,8 @@
+/data/wine11/wine11-games/365670/blender.exe uid=1 mode=0666 size=69320192 mtime=1793811610
+/data/wine11/wine11-games/365670/2.80 uid=1 mode=0777 size=65536 mtime=1793803936
+/data/wine11/wine11-games/365670/5.2 uid=1 mode=0777 size=65536 mtime=1793804046
+/data/wine11/wine11-games/365670/python37.dll uid=1 mode=0666 size=3447808 mtime=1793811669
+/data/wine11/wine11-games/365670/python313.dll uid=1 mode=0666 size=7185408 mtime=1793811669
+/data/wine11/wine11-games/365670/.playden-install.json uid=1 mode=0666 size=176 mtime=1793811670
+/data/wine11/wine11-games/365670/.playden-download-journal unavailable errno=2
+DONE

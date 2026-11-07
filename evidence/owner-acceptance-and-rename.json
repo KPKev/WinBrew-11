@@ -1,0 +1,15 @@
+{
+  "desktop_confirmed_by_owner": true,
+  "tested_original_title": "PPSA77380",
+  "main_game_handoff_confirmed_by_owner": true,
+  "black_world_resolution": "Owner changed video settings; rendering restored; suspected resolution mismatch",
+  "game_files_changed_by_this_project": false,
+  "current_name": "Wine 11",
+  "current_title": "PPSA77381",
+  "new_title_registered": true,
+  "old_title_removal_pending_game_closure": false,
+  "original_logo_sha256": "80fee2fe115e2fcefd8a8262d3175fac50f602179a2d21ddd601f0a26948343f",
+  "old_title_and_source_removed": true,
+  "new_polished_icon_name_confirmed_by_owner": true,
+  "current_version": "01.001.001"
+}

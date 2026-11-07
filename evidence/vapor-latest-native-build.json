@@ -1,0 +1,21 @@
+{
+  "scope": "Local isolated Vapor PS5 test candidate PPSA77382; no deployment",
+  "eboot_sha256": "ce6894026d37f6c06d94826d9e65f14c839a5dda46d5f4e8be5917ab24f41062",
+  "pie_sha256": "2219c27fae229a8fb0ef80d5369673e21a656dc5a38b23f6ca040cd20a2ab4d3",
+  "source_snapshot_receipt_sha256": "868d33de15911561bfb2cc55a18f1bff3a593b973755f0380e835c55e3fb7603",
+  "validation": [
+    "Current staged UI, owner and Steam integration sources and headers match snapshot",
+    "Native UI, Steam backend and combined PIE links passed",
+    "Signed container integrity valid",
+    "All 41 package files match manifest",
+    "Host artwork service, image decoding and Steam UI tests passed"
+  ],
+  "inputs": "Verified console-probed experimental networking archives and pinned compiler runtime; dedicated game host; generated service overlays",
+  "limits": "Local experimental package not installed or console-tested; link and integrity checks do not establish runtime behavior",
+  "logs": [
+    "build/vapor-latest-ui.log",
+    "build/vapor-latest-link.log",
+    "build/vapor-latest-package.log",
+    "build/vapor-latest-isolated.log"
+  ]
+}

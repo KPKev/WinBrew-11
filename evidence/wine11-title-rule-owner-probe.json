@@ -1,0 +1,7 @@
+{
+  "phase": "completed",
+  "completed": true,
+  "no_retry": true,
+  "output": "WINE11_RULE_OWNER dir_present=1 dir_root=1 dir_private=1 list_present=1 list_root=1 list_private=1 list_single_link=1 stable=1\n",
+  "note": "Loader context only; does not establish game/helper access or SIGSYS cause."
+}

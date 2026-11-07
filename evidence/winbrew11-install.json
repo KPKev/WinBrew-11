@@ -1,0 +1,19 @@
+{
+  "title": "PPSA77382",
+  "name": "WinBrew 11",
+  "executable_sha256": "e592995aae6c1fc137041851e1583055dd7ecd0480cfacdcd81aecfc43afdf9e",
+  "icon_sha256": "65ebb2f88882831091c09f4de19d12fe24415ef82773e21889e1f34d1b8590af",
+  "manifest_project": "WinBrew 11",
+  "old_desktop_registration_disabled": false,
+  "old_desktop_registration_status": "Unverified; metadata was renamed but the old Home tile remains visible and rediscovery prevention has not been confirmed.",
+  "old_desktop_backup": "build/retired-PPSA77381-source-backup.zip",
+  "old_desktop_source": "Still present under /data/homebrew/PPSA77381; its param.json has been renamed and the app and appmeta paths were absent on last inspection. Permanent retirement and Home tile absence are unverified.",
+  "skyrim_title": "FAKE78005",
+  "skyrim_registration_modified": false,
+  "game_files_modified": false,
+  "save_files_modified": false,
+  "home_title_visible": "WinBrew 11",
+  "home_icon_status": "User photo showed the old icon; source, appmeta, and installed-app icon files now read back as the new icon. Subsequent Home display remains unverified.",
+  "branded_diagnostics_update": "Built locally; not installed because the existing notices do not match the installed manifest and the application is running.",
+  "visual_acceptance_required": true
+}

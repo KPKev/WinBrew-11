@@ -1,0 +1,21 @@
+{
+  "files": {
+    "runtime/input/LICENSE": "da07098f25b7786f3414c59525e5c3f6ef284a8f34648fad6563a4428f432b74",
+    "runtime/input/arrows.input": "b4383bda7e137b3cdb8e37ac563f5f2881a506691af8fa4857799d97cb088698",
+    "runtime/input/gamepad.input": "9b6245325f7f024853edc181f7fa75d50414f643757d9b5d4470274d80c18213",
+    "runtime/input/mouse.input": "359be76f1fc12c1d481e6e83021792803bcfb41768ce543a078e21539adfe997",
+    "runtime/presets.json": "8cb419e8a19e819a1216fbb6ae9bc4aae1c98381de9428d12b827fd286089e4f",
+    "runtime/recipes/LICENSE": "a2010f343487d3f7618affe54f789f5487602331c0a8d03f49e9a7c547cf0499",
+    "runtime/recipes/recipes.lst": "426353d67b03245deb23783bf80f029389fcc227ca16c1dc9d753269d2f5ffb9",
+    "runtime/recipes/steam-220-hl2-v1.json": "57e9a69012374e1502e2a2a85f63cbbd76903307f8303c60931fa51d795d8dfe",
+    "runtime/recipes/steam-2640950-scottpilgrimex-v1.json": "ea4da30dd28208148e0db26d15011418fc014c51d127d16f422c85696d1d6ab2",
+    "runtime/recipes/steam-292120-ffxiii-v1.json": "10672af1fa0d94d8124cc845ea79f13cb9aa9a359e6094396f76a7a94c8023f4",
+    "runtime/recipes/steam-4241920-braziliandrugdealer4-v1.json": "18158c629958c4d6f783716cefa2fee1c6d2562287d76116fa2ae64d0b94d1e9",
+    "runtime/steamworks/LICENSE": "e3a994d82e644b03a792a930f574002658412f62407f5fee083f2555c5f23118",
+    "runtime/steamworks/README.md": "776759e6e16b1bf1d0b7e141dc438b0ddad7924bb2d05cbc1192130f9d015ccb",
+    "runtime/steamworks/steam.dll": "f813075716892ab19ee9b0c06000c328bd5f15e713692384a30ddbcfc9065e57",
+    "runtime/steamworks/steam_api.dll": "cae4372bceda997d6c73cebc1c14eb27d39b74a7999d8f28384bdfd8d746a79c",
+    "runtime/steamworks/steam_api64.dll": "70d9826a402d3a78b0c07e9f7ea7c6832468a1113013f31ea570fccaa5445ea9"
+  },
+  "source_revision": "9f5a7cbebeaf07fa3ea5324dce5ad8f374ca0aec"
+}

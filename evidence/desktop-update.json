@@ -1,0 +1,24 @@
+{
+  "title": "PPSA77381",
+  "version": "01.015.000",
+  "updated_at": "20261029T012440Z",
+  "files": {
+    "eboot.bin": {
+      "before": "ade61e6e3d8ebd569cd05941adcab435f5558ba4835651a1657ffe690108b92f",
+      "after": "8c8eb229a5ef7f8788f2a0f1dcc0cd217fa4005e2ad493196fb13400e5222025"
+    },
+    "sce_sys/param.json": {
+      "before": "3aa5c5034fe3cea7dd1901063b8a7b59aa9e7706f5ab862d9eaffafd78d7411d",
+      "after": "afbaf454470761d0fbc088f6434d2027047707124f195a969e7340d506fc3834"
+    },
+    "manifest.json": {
+      "before": "a17edbd3ec4fb89efd99d0131d6e0becc8d8dbb85b388dd2edefcba88fae786f",
+      "after": "557a2d684054608108dc9b22b2e0b35c7f73aa6d4a0b55004dab6cb2204aaa7e"
+    }
+  },
+  "backup": "C:\\Users\\12227\\OneDrive\\Documents\\ChatGPT\\WrappedWine\\build\\console-backups\\desktop-20261029T012440Z",
+  "hardware_launch_tested": false,
+  "browser": "Native PS5 system browser launch; Chrome/Chromium not installed",
+  "logo_unchanged": true,
+  "game_files_modified": false
+}

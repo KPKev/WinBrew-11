@@ -1,0 +1,29 @@
+{
+  "version": "01.009.000",
+  "installed": true,
+  "hardware_verified": true,
+  "checks": [
+    "full portable regression suite including PS5 controller, file browsing, anchored menu and native input/browser mocks",
+    "native PS5 build and signature integrity",
+    "controller settings screenshot reviewed"
+  ],
+  "features": [
+    "PS5-only controller preferences and live input test",
+    "desktop context menu fixed position",
+    "read-only folder browsing and text preview for accessible locations",
+    "Wine 11 Game Library shortcut for known Quake II RTX"
+  ],
+  "limitations": [
+    "browser webpage right-click remains unresolved",
+    "file operations and arbitrary binary launching not yet implemented",
+    "Steam account, library sync, install, and download integration not yet implemented",
+    "game backend launch after latest root-proof failure needs hardware retest"
+  ],
+  "installed_at": "20261028T215715Z",
+  "console_file_readback_verified": true,
+  "owner_checks": {
+    "desktop_right_click": "menu stays anchored and options work",
+    "ps5_controller_settings": "page works",
+    "file_explorer": "folder browsing works"
+  }
+}

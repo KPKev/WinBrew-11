@@ -1,0 +1,6 @@
+{
+  "sha256": "5faf47f72334daf80bb09109725ce8e696a450719bc216dff3cfd554f4ce9967",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "GAME_TARGET operation=3f47b240-334f-4dc6-8ce8-2f81f0b51240 mode=0777\nGAME_REMAIN files=11064 dirs=1439 links=0 foreign=0 cross=0 other=0 errors=0 unwritable=0\nGAME_TREE_INSPECT done\n"
+}

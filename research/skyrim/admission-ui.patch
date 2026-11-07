@@ -1,0 +1,36 @@
+--- a/src/desktop_ui.cpp
++++ b/src/desktop_ui.cpp
+@@ -246,7 +246,7 @@
+          "Independent software. Microsoft Windows is not installed.", 0,
+          muted());
+     card(620, 126);
+-    text(cx + 22, y + 638, "Game return", 1, ink());
++    text(cx + 22, y + 638, "Skyrim diagnostic", 1, ink());
+     button({cx + cw - 176, y + 635, 154, 38}, 185, "Run check");
+     text(cx + 22, y + 681, owner_check_line(owner_check_status), 0, ink());
+     text(cx + 22, y + 715, "Checks only. Your game files and settings stay unchanged.", 0, muted());
+--- a/src/owner_check_dispatch.hpp
++++ b/src/owner_check_dispatch.hpp
+@@ -13,12 +13,17 @@
+   shell.owner_check_status = status >= 0 && status <= 8 ? status : 4;
+ }
+ inline const char *owner_check_line(int status) {
+-  if (status == -1) return "Check Quake II RTX automatic return compatibility.";
++  if (status == -1) return "Check Skyrim publication and ownership.";
+   if (status == -2) return "Waiting to run the read-only check.";
+-  if (status == WINE11_ADMISSION_READ_ONLY_PASSED) return "Read-only checks passed. Return is not installed yet.";
++  if (status == WINE11_ADMISSION_READ_ONLY_PASSED) return "Skyrim publication and owner checks passed.";
+-  if (status == WINE11_ADMISSION_BUSY) return "The game is busy. Close it and try again.";
++  if (status == WINE11_ADMISSION_BUSY) return "Skyrim publication is busy. Try again later.";
+   if (status == WINE11_ADMISSION_NO_ACCESS) return "The required game details are not accessible.";
+-  if (status == WINE11_ADMISSION_WRONG_GAME) return "This installation does not match Quake II RTX.";
+-  return "The game details could not be verified.";
++  if (status == WINE11_ADMISSION_WRONG_GAME) return "The title does not match Skyrim.";
++  if (status == WINE11_ADMISSION_DESCRIPTOR_REFUSED) return "Skyrim descriptor was refused.";
++  if (status == WINE11_ADMISSION_PUBLICATION_REFUSED) return "Skyrim publication was refused.";
++  if (status == WINE11_ADMISSION_OWNER_REFUSED) return "Skyrim owner records were refused.";
++  if (status == WINE11_ADMISSION_OWNER_MISMATCH) return "Skyrim owner records differ.";
++  if (status == WINE11_ADMISSION_KIT_BINDING_REFUSED) return "Skyrim kit binding was refused.";
++  return "The Skyrim check could not be completed.";
+ }
+ } // namespace ww

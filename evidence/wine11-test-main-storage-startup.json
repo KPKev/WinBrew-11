@@ -1,0 +1,15 @@
+{
+  "title": "PPSA77382",
+  "source": "PS5 read-only startup log and directory listing",
+  "markers": [
+    "Steam data anchor error code=0x00000000",
+    "Steam startup accepted code=0x00000000",
+    "Steam game startup state code=0x00000001",
+    "Steam game startup state code=0x00000002"
+  ],
+  "main_drive_game_directory_present": true,
+  "game_runtime_ready": true,
+  "credentials_read": false,
+  "download_verified": false,
+  "game_launch_verified": false
+}

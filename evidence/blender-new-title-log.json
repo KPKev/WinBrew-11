@@ -1,0 +1,6 @@
+{
+  "sha256": "ccb93f5fdbd96b9dd0273edeba3697801ef2bb2c798270ccdb201404d3df246a",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "[22:26:51]   [MDBG] monitoring game errors: FAKE78008 pid=319 for up to 60 seconds\n[22:27:08]   [FAKELIB] game stopped: pid=319 title=FAKE78008 layers=5\n[22:27:08]   [FAKELIB] directory unmounted: /preinst/common/font -> /mnt/sandbox/FAKE78008_000/preinst/common/font\n[22:27:08]   [FAKELIB] directory unmounted: /data -> /mnt/sandbox/FAKE78008_000/data\n[22:27:08]   [GAME] process exited, awaiting same-app handoff: FAKE78008 pid=319 app_id=0x0000C018\n[22:27:09]   [GAME] finalizing stopped application: FAKE78008 pid=319\n[22:27:09]   [SHELLCORE] runtime release awaiting sandbox removal: FAKE78008\n[22:27:09]   [DB] snd0info normalized after game exit rows=0 title=FAKE78008\n[22:27:09]   [SHELLCORE] runtime release start: FAKE78008\n[22:27:09]   [LINK] runtime layers released: FAKE78008\n[23:16:58]   [CACHE] source removed: FAKE78008 (/data/homebrew/FAKE78008)\n[23:16:58]   [LINK] removed stale mount link: /user/app/FAKE78008/mount.lnk\nNEW_TITLE_LOG done\n"
+}

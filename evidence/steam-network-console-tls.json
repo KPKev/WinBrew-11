@@ -1,0 +1,25 @@
+{
+  "status": "isolated_console_tls_check_passed_not_release_qualified",
+  "probe_sha256": "5dc7ad7c018aa5f8f5cd140cc7b08dcef7cc36c19a9bc40dc22476ede2cefc79",
+  "archives_match_tested_build": {
+    "libcurl.a": true,
+    "libeverest.a": true,
+    "libmbedcrypto.a": true,
+    "libmbedtls.a": true,
+    "libmbedx509.a": true,
+    "libp256m.a": true
+  },
+  "checks": {
+    "mutex": "passed",
+    "public_https": "passed",
+    "wrong_ca_rejected": "passed",
+    "steam_public_https": "passed"
+  },
+  "no_credentials": true,
+  "installed_app_unchanged": true,
+  "limitations": [
+    "No Steam authentication, session restoration, library fetch, CDN downloads, cloud sync or game launch tested.",
+    "The test used an isolated ELF loader payload and an in-memory CA bundle, not the Wine 11 title or Playden HttpClient.",
+    "The libraries still differ from Playden archive pins; no release verification was replaced or bypassed."
+  ]
+}

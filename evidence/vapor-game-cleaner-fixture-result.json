@@ -1,0 +1,6 @@
+{
+  "sha256": "9e64065866aad5bf4628e15bbdfda20954c0c322161dec3d0aa41c921f55e4e2",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "target uid=1 mode=0700 dev=687931143 ino=97037\nfile0 inode=97043 text=1 4294967286 47fc159f-096c-4399-a934-4455637be846 687931143 97037 FAKE78999\nfile1 error=2\nblender inode=70244\nregistry 365670\tinternal\t945021611\nregistry 730\tinternal\t0\tpaused\nGAME_CLEANER_RESULT done\n"
+}

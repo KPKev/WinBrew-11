@@ -1,0 +1,40 @@
+{
+  "ps5-native-app-boilerplate": {
+    "url": "https://github.com/leolobato/ps5-native-app-boilerplate.git",
+    "revision": "38c68b4645ab6a1470c7598df1a3fc10d3e0cae0",
+    "path": "vendor/ps5-native-app-boilerplate"
+  },
+  "ps5-homebrew-ui": {
+    "url": "https://github.com/leolobato/ps5-homebrew-ui.git",
+    "revision": "0a6fb4b851da86cd4e9512aae3abf1352a96086a",
+    "path": "vendor/ps5-homebrew-ui",
+    "role": "controller ABI reference only"
+  },
+  "selawik": {
+    "url": "https://github.com/microsoft/Selawik.git",
+    "revision": "89362e84731d1f5777fa078fd4d5ebbd339e4378",
+    "path": "vendor/selawik",
+    "font_archive": "https://github.com/microsoft/Selawik/releases/download/1.01/Selawik_Release.zip"
+  },
+  "playden-reference": {
+    "url": "https://github.com/leolobato/playden-ps5.git",
+    "revision": "9f5a7cbebeaf07fa3ea5324dce5ad8f374ca0aec",
+    "role": "pinned Steam and runtime service source for Wine 11 integration",
+    "path": "vendor/playden-source"
+  },
+  "playden-lapy": {
+    "url": "https://github.com/leolobato/PS5-Lapy-JB-Daemon.git",
+    "revision": "66ab4f10f9a6c6a5a42d05f1d165230c13ae2ab7",
+    "path": "vendor/playden-lapy",
+    "role": "exact-title helper source used by Playden",
+    "source_sha256": {
+      "source/owned_root_daemon.c": "f247b61b6daf17e881be14b53b74aaa578d10f4d0aef3973932f8aaffc2d6147",
+      "source/donor_transaction.c": "6844275eca240aab25d5d61ae030f94b50b9538116452ccb6078f6518ba876d9",
+      "source/vnode_ref_probe.c": "ef49b83a80cdc980ea6b5cdb0477110b08b10feba7e7229cbb0c7db1bf0a87f0",
+      "source/donor_transaction.h": "c976e43a298a3621b2ff0f83f92f1304dc5c177a00d5af14c5a78a9620d2ce5b",
+      "source/vnode_ref_probe.h": "13e7f3b9ba77c696209f647e5a0fb60f50a6e8112991bb4bfc63da632a6a0153",
+      "source/lapy_elevation_protocol.h": "bb02c4aa814eaba7a7a423a31b29ff41f786212c2953678cf29434e85fa0f869",
+      "tools/build_owned_daemon.py": "fb00c1f3b732afc36be6ea8324b749cef40d99ae32ad604c508839744afdc6d1"
+    }
+  }
+}

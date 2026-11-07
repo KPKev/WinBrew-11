@@ -1,0 +1,40 @@
+{
+  "version": "01.006.000",
+  "installed": true,
+  "initial_pid": 236,
+  "findings": [
+    "Owner confirms full Web card responds",
+    "Both USB handles=-1 in update5",
+    "Module preload calls return 0 but handle/resolution stage was not logged in update5",
+    "System browser launch returns 0 in less than 1ms; loaded page not confirmed",
+    "Filesystem proof failed on this launch; status/path diagnostics added"
+  ],
+  "network_probe": {
+    "diagnostic_only": true,
+    "elapsed_seconds": 0.47,
+    "timed_out": false,
+    "output": "DNS target=0 rc=0 address=142.251.150.119 elapsed_ms=45\nDNS target=1 rc=0 address=142.251.156.4 elapsed_ms=44\nnetwork probe target=0 start\nnetwork probe target=0 init=0 elapsed_ms=0\nHTTP status=200\nnetwork probe target=0 result=0xc8 elapsed_ms=118\nnetwork probe target=1 start\nnetwork probe target=1 init=0 elapsed_ms=0\nHTTP send code=0x8095f00c\nsceHttp2SendRequest: No such file or directory\nnetwork probe target=1 result=0xffffffff elapsed_ms=74\nnetwork probe target=2 start\nnetwork probe target=2 init=0 elapsed_ms=0\nHTTP send code=0x8095f00c\nsceHttp2SendRequest: No such file or directory\nnetwork probe target=2 result=0xffffffff elapsed_ms=75\n"
+  },
+  "interpretation": "Payload diagnostic proves DNS and a plain HTTP request work promptly. HTTPS send code belongs to diagnostic SceHttp2 context; it does not establish the browser failure cause.",
+  "repair": [
+    "Resolve exact HID API symbols through returned own-process module handles if internal ID lookup fails",
+    "Resolve/open HID before filesystem elevation",
+    "Log module handles and init codes, never typed input",
+    "Add Settings Network Test browsing action to compare a simple plain HTTP page in the actual browser",
+    "Preinitialize native WebBrowserDialog before elevation, prefer it over legacy system launch, pause desktop HID while dialog active",
+    "Retain legacy launch only when native dialog backend unavailable"
+  ],
+  "checks": [
+    "portable regression suite passed",
+    "mock HID module resolution and lifecycle passed",
+    "mock browser ABI, persistent URL and lifecycle passed",
+    "native package build and integrity validation passed"
+  ],
+  "installed_at": "20261028T194420Z",
+  "console_file_readback_verified": true,
+  "console_launch_tested": true,
+  "usb_hardware_repair_verified": false,
+  "browser_hardware_repair_verified": false,
+  "owner_result": "Neither USB device works. Google loads; YouTube and other sites do not.",
+  "console_log_finding": "Module handles returned, but linked init never reached. Browser dialog exports unavailable; legacy system-browser fallback used."
+}

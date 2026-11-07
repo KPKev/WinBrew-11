@@ -1,0 +1,65 @@
+{
+  "status": "unverified_do_not_ship",
+  "sdk_version": "v0.43",
+  "llvm_version": "18.1.8",
+  "manifest": [
+    "format=playden-steam-network-ps5-deps-v2",
+    "curl_version=8.22.0",
+    "curl_source_sha256=f7ef3ae8a22e521f289803fe93543eb64c329b58aa73a9e224dfd915a2a5f4f7",
+    "curl_ps5_native_nonblock_patch_sha256=8ad3d3b23ed6c526d89e289c0acc11784df994f6ba99a3d6392cac0f5065e526",
+    "mbedtls_version=3.6.6",
+    "mbedtls_source_sha256=8fb65fae8dcae5840f793c0a334860a411f884cc537ea290ce1c52bb64ca007a",
+    "cacert_version=2026-09-25",
+    "cacert_source_sha256=a41b5d356aea97a529fe27e0f7316d2f9d946d75927476cf9cf1b90637d00505",
+    "ps5_payload_sdk_archive_sha256=a9cc9929f21b2b2c5d5b309f3bab4997067c45281c0622cf4838b1aecba66fcb",
+    "ps5_toolchain_sha256=1854059fb62e05e8482ff49756d15a8992dc0cc994816a729e37e72ced58503c",
+    "ps5_compiler_launcher_sha256=3dcf3139662db7b0f796c2073bc8f673a5557e48bc24d2e413896d33847a69db",
+    "ps5_compiler_binary_sha256=0211a2b217e0815a7f05db66e6342b953ba699dec3cce436e7b35ef1a401ef54",
+    "ps5_compiler_version=Ubuntu clang version 18.1.8 (++20240731025043+3b5b5c1ec4a3-1~exp1~20240731145144.92)",
+    "mbedtls_config=MBEDTLS_THREADING_C;MBEDTLS_THREADING_PTHREAD",
+    "mbedtls_flags=CMAKE_BUILD_TYPE=Release;CMAKE_C_FLAGS=-ffile-prefix-map=<src>/=;ENABLE_PROGRAMS=OFF;ENABLE_TESTING=OFF;USE_SHARED_MBEDTLS_LIBRARY=OFF",
+    "curl_flags=CMAKE_BUILD_TYPE=Release;CMAKE_C_FLAGS=-DPLAYDEN_PS5_NATIVE_NONBLOCK=1 -ffile-prefix-map=<src>/=;BUILD_CURL_EXE=OFF;BUILD_EXAMPLES=OFF;BUILD_LIBCURL_DOCS=OFF;BUILD_MISC_DOCS=OFF;BUILD_SHARED_LIBS=OFF;HTTP_ONLY=OFF;CURL_USE_MBEDTLS=ON;CURL_USE_CMAKECONFIG=ON;CURL_DISABLE_WEBSOCKETS=OFF;ENABLE_IPV6=OFF;ENABLE_THREADED_RESOLVER=OFF;CURL_DISABLE_SOCKETPAIR=ON;CURL_USE_LIBPSL=OFF;CURL_USE_LIBSSH2=OFF;CURL_ZLIB=OFF;CURL_DISABLE_NETRC=ON;HAVE_GETPWUID_R=0;HAVE_GMTIME_R=0;HAVE_IF_NAMETOINDEX=0;HAVE_PIPE2=0;HAVE_FCNTL_O_NONBLOCK=0;CURL_BROTLI=OFF;CURL_ZSTD=OFF;USE_NGHTTP2=OFF;USE_LIBIDN2=OFF;CURL_DISABLE_DICT=ON;CURL_DISABLE_FILE=ON;CURL_DISABLE_FTP=ON;CURL_DISABLE_GOPHER=ON;CURL_DISABLE_IMAP=ON;CURL_DISABLE_LDAP=ON;CURL_DISABLE_LDAPS=ON;CURL_DISABLE_MQTT=ON;CURL_DISABLE_POP3=ON;CURL_DISABLE_RTSP=ON;CURL_ENABLE_SMB=OFF;CURL_DISABLE_SMTP=ON;CURL_DISABLE_TELNET=ON;CURL_DISABLE_TFTP=ON",
+    "mbedtls_config_sha256=92f08b8ed84a09b84ff9a1728a2b7868c45dabdcdda6574dc8ae3b64d290c035",
+    "output_libcurl.a_sha256=6e23d1e67a533d5fe88b984b6b69374418e4ba162882b1b34de8fedde7715034",
+    "output_libmbedtls.a_sha256=5a1399cf805250d9330ffc16e82960729a74bfd2df894288438fece38d1e147f",
+    "output_libmbedx509.a_sha256=e96fd24af3a514d053f79220fc6e14039627db890f18c524fdf89b39f5ba1da0",
+    "output_libmbedcrypto.a_sha256=c88a32784e3cf03f954d6424414603e0b22444abaedbaec10a671f413feb6c73",
+    "output_libeverest.a_sha256=225e920110b8bfe37fb3c3db495b933132861be91360ed2bc629a968d7a7d783",
+    "output_libp256m.a_sha256=3db966a0b8361004bb90e5e2fe694975cd5f853762def8a0dbb5fed5537e4331",
+    "output_cacert.pem_sha256=a41b5d356aea97a529fe27e0f7316d2f9d946d75927476cf9cf1b90637d00505"
+  ],
+  "archives": {
+    "libcurl.a": {
+      "expected": "48073d585213b7698514c3d15ee9f85f6fa74ba8d7f3728116b96271601eb951",
+      "actual": "6e23d1e67a533d5fe88b984b6b69374418e4ba162882b1b34de8fedde7715034",
+      "matches": false
+    },
+    "libeverest.a": {
+      "expected": "beb61a9fb21e7a9cc016f0ad7fc9027cc09da674a3f2c743bfa8d1bfe06de00c",
+      "actual": "225e920110b8bfe37fb3c3db495b933132861be91360ed2bc629a968d7a7d783",
+      "matches": false
+    },
+    "libmbedcrypto.a": {
+      "expected": "10702b58c100c6c6dfde592949a8282c708518c030f6672b6bed955113bcecde",
+      "actual": "c88a32784e3cf03f954d6424414603e0b22444abaedbaec10a671f413feb6c73",
+      "matches": false
+    },
+    "libmbedtls.a": {
+      "expected": "d7e12979e590a796a8f6383fec0b5e285b3badc19afc44f4cb89da7e7544c8b2",
+      "actual": "5a1399cf805250d9330ffc16e82960729a74bfd2df894288438fece38d1e147f",
+      "matches": false
+    },
+    "libmbedx509.a": {
+      "expected": "547c3ea5244efe1836edbec54a43c5fda31244926892084076fdcbeccc217aa6",
+      "actual": "e96fd24af3a514d053f79220fc6e14039627db890f18c524fdf89b39f5ba1da0",
+      "matches": false
+    },
+    "libp256m.a": {
+      "expected": "412e12a472d4b2a3377760ccea57c87609831197c9183736ccd848d23b27da02",
+      "actual": "3db966a0b8361004bb90e5e2fe694975cd5f853762def8a0dbb5fed5537e4331",
+      "matches": false
+    }
+  },
+  "certificate_and_headers": "passed tools/verify-steam-network.py --headers-only",
+  "console_tested": false
+}

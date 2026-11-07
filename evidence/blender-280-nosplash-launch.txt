@@ -1,0 +1,2 @@
+[SceLncUtil] W:\Build\J03950016\vsh\common_lib\lnc_util\src\lnc_util_ipc_client.cpp(382) getAppStatus: LNC_ISOK::0x80940004
+LAUNCH FAKE78008 code=0x00008018 accepted=1

@@ -1,0 +1,76 @@
+{
+  "steam_app_id": 489830,
+  "console_title_id": "FAKE78005",
+  "observed": {
+    "console_error": "SIGSYS (signal 12) in eboot.bin",
+    "instruction_pointer": "0x00000008000003ac",
+    "first_backtrace_address": "0x000000010040017c",
+    "title_eboot_manifest_sha256": "10fc130547881d917aabf63ec1f137b04e70c215e7230607fafd364b715ec187",
+    "source_revision": "ce289425bb34acbcc98f77b4e00ac98b3c16e4bc",
+    "gameplay_verified": false
+  },
+  "comparison": "Blackjack FAKE78004 reported the same signal, instruction and backtrace addresses and its manifest records the same title eboot digest. This strongly suggests a shared launcher failure but does not establish the cause.",
+  "handoff": "The user confirmed Finish Setup returned Wine 11 to PS5 Home. Launching Skyrim from Home still produced SIGSYS.",
+  "verified_installed_eboot_sha256": "10fc130547881d917aabf63ec1f137b04e70c215e7230607fafd364b715ec187",
+  "extracted_elf_sha256": "85faa7c09dbe5129f947f750e34c3fd5cd79ee4f5de2b4f0843d98bdceb3fbef",
+  "startup_lead": "The ELF entry is 0x100000120. If the screenshot's backtrace is the matching relocated address with a 0x400000 slide, 0x10040017c is the instruction immediately following the final indirect call in _start. The matching source calls main, catchReturnFromMain, then exit. This suggests main returned before the SIGSYS, but the slide, return status, indirect target, and reason for any return have not been observed and remain unconfirmed.",
+  "rea_export_evidence": "ev_2197c29dfc4834024198b4dff5a791eefd8c05f7a8d27023557b4de2e44b645c",
+  "diagnostic_build": "An isolated copy of source revision ce289425 was patched to send the three early-failure reasons directly to ps5log, then compiled successfully. It is not installed or admitted. Because the source archive is nested in the workspace, its generated native manifest reported the enclosing workspace Git revision; that manifest is not valid provenance for distribution.",
+  "notification_probe": "A second isolated diagnostic build reports five early failure branches through a PS5 notification. It compiled, but has not been installed or run. A comparison to the local baseline shows one additional undefined symbol: sceKernelSendNotificationRequest; runtime binding and behavior remain unverified.",
+  "bootstrap_stage_probe": "A further isolated build reports the data-mount, private-mask, publication and session stages individually. Its title eboot SHA-256 is 1ac5eb4a76f6caeb7bf8872b7e1258b021f981383d3b3177f5b03cc377d748d4. It has not been installed, admitted, or tested on the console.",
+  "limits": "The installed container was verified and its plaintext ELF extracted by the project's tool. REA reports that this ELF has no section headers, preventing its export inspection; the Windows host has no configured native disassembly provider. No proposed game-specific fix has been verified.",
+  "extracted_elf_startup_mapping": {
+    "load_mapping": "PT_LOAD file offset 0x4000 maps to virtual address 0x100000000; ELF entry 0x100000120",
+    "instructions": "call main at 0x100000165; after return call 0x100000010 (ret); call GOT 0x100030518 at 0x100000176; return address 0x10000017c contains UD2",
+    "final_import": "GOT relocation type 6 references libSceLibcInternal NID uMei1W9uyNo#B#C; the local PS5 NID algorithm produces uMei1W9uyNo for exit",
+    "interpretation": "If the reported backtrace is a return address with a 0x400000 slide, it corresponds to the instruction after the imported exit call. This does not establish the runtime slide, main return status, failing instruction module, or reason for return."
+  },
+  "syscall_mapping_leads": {
+    "prior_module_layout": "Source tests/native_libkernel_resolver_fixture.c models a previously measured owner-console libkernel.sprx text segment starting at 0x800000000 with length 0x48000. The reported instruction address would be libkernel+0x3ac under that prior layout; this is not a map from the crashing process and cannot establish its module or bytes.",
+    "launcher_text_scan": "GNU objdump linear x86-64 disassembly of extracted ELF executable PT_LOAD (file offset 0x4000, size 0x241f1, virtual address 0x100000000) decoded no syscall or sysenter instructions. A linear scan does not exclude alternate instruction entry points or imported-module instructions.",
+    "needed": "Actual crash process module map, bytes and signal context including syscall number and registers, or a validated staged probe, are required to identify the failing instruction and earliest refusal."
+  },
+  "read_only_console_telemetry": {
+    "service": "Payload Manager 8084 process listing and Web File Manager 8888; no title was launched",
+    "error_history": "Eleven Skyrim FAKE78005 and three Blackjack FAKE78004 records share CE-108255-1 and internal error -2135293940; logReport empty, no registers or mappings",
+    "core_directory": "/devlog/system/sce_coredumps.0 was empty at inspection",
+    "logs": "16 MiB /devlog/system/sce_logs/log.bin had no ASCII title IDs, SIGSYS, 8000003ac, or 108255; SQLite system logger tbl_log and tbl_pe log text had no title IDs, SIGSYS or address matches. Encoded, rotated or unexamined data could exist.",
+    "limitation": "No current crashing process or debugger register/mapping endpoint was found; this does not identify the syscall."
+  },
+  "read_only_publication_comparison": {
+    "scope": "Read-only WFM inspection of FAKE78005 and FAKE78004 title and publication files; no launch or changes",
+    "result": "For both titles publication state is committed and SHA-256 of publication metadata matches state. The profile, descriptor, and catalog hashes match their publication metadata. Corresponding game executables and prefix directories were listed. Neither library contained a logs directory.",
+    "host_parser": "Host build of preserved launcher pw_title_publication.c parsed both read-only metadata and state records with PW_OK, schema 3 and committed phase. Downloaded inputs were removed after inspection. Reproducible synthetic-only parser test: bash tools/test-skyrim-publication-parser.sh; it does not reproduce the console observations.",
+    "limitations": "No uid, link count, inode safety, lock state, registry policy, runtime credentials or complete admission verified. An absent logs directory can reflect diagnostics open failure and does not prove which startup stage failed. Comparisons are not an atomic snapshot.",
+    "descriptor_host_parse": "The preserved source pw_title_launch_parse was compiled on the host and accepted each live descriptor as schema 2 with its matching expected title ID; bytes were passed through stdin and not saved. This does not prove the console could read /app0 or establish its resolved title ID.",
+    "profile_registry_host_check": "On 2026-10-29, the preserved launcher profile parser and Windows-path translator accepted both games profiles. The preserved native reader registry_semantics accepted each game\u2019s metadata, profile and user.reg together on a host build. Bytes were streamed through stdin, not retained or printed; results are not atomic and do not establish console permission, locking, mapping, runtime state or cause."
+  },
+  "read_only_helper_chain": {
+    "observation": "Both installed titles helper ELF and protocol hashes match their own manifests; their shared dedicated allow-list contains both exact title IDs. WFM reports title-rule directory mode 0700 and list mode 0600. Both manifests report console_validated=false, validated_firmware includes 12.02. Quake uses a different helper/list path.",
+    "source_contract": "The preserved helper requires UID 0 ownership for list and parent, a regular single-link file, and no group/world write; mode and membership checks alone cannot establish these conditions. Provisioning and replacement source use WithRoot, but observed object UID and link count remain unknown.",
+    "test": "vendor/playden-lapy/tests/test_title_rule.c passed host compilation and execution; synthetic cases do not establish console behavior.",
+    "limits": "These checks satisfy the visible title-rule data conditions at their observation times, not the helper process access, kernel title identity, later credential handshakes, 13.60 ABI, or the observed SIGSYS.",
+    "owner_observation": "A separate read-only loader-context probe reported directory/list present, root-owned and not group/world writable; list regular, single-link, and stable across its checks. See evidence/wine11-title-rule-owner-probe.json. WFM read the 20-byte list and verified both exact title lines were newline terminated. These observations were separate and not an atomic snapshot."
+  },
+  "gateway_resolution_hypothesis": {
+    "source": "The preserved launcher resolves getpid with sceKernelDlsym(0x2001, \"getpid\"), tests a gateway at entry+10 with SYS_getpid, and calls it for umask and flock. A lookup failure returns ENOSYS before either syscall; open_library returns failure when umask cannot be set.",
+    "host_test": "bash tools/test-skyrim-gateway-failure.sh injects lookup failure and confirms both operations return ENOSYS without invoking the gateway; it uses no actual PS5 runtime.",
+    "limitations": "No observation establishes whether lookup succeeds in these titles after their data grant; prior desktop lookup errors used different module handles, symbols, and context. A failed lookup would explain an early return but not independently establish the observed SIGSYS instruction or backtrace interpretation. Gateway code assumes an instruction at getpid+10, but its exact bytes and runtime address have not been captured in these processes.",
+    "data_mount_fallback": "Source and existing host tests explicitly allow success when data is already visible even if the helper fails or never elevates. Consequently reaching later bootstrap code does not prove helper success. Quake historical logs show data already visible and a successful helper; no equivalent failed-title data-mount record is available. This intentional fallback is not established as the crash cause."
+  },
+  "existing_read_only_gateway_observation": {
+    "status": "Route identified; not executed",
+    "installed_vapor_eboot_sha256": "7127323d0229a44f86e12ff546a28db943dac4a39739fabce63ae5a7077b1512",
+    "route": "The installed Vapor test title matches the previously built PPSA77382 candidate. Its Settings > About > Game return > Run check uses the shared native lock adapter during its Quake-specific publication observer. The observer opens the existing lock without writing and temporarily holds a nonblocking shared lease.",
+    "interpretation": "A read-only checks passed result demonstrates that the gateway and shared flock worked in that Vapor process. A busy result indicates the flock returned EAGAIN/EWOULDBLOCK. A generic refusal may occur before the gateway and is inconclusive. This observation does not prove resolution, umask, process credentials, or SIGSYS behavior in Skyrim.",
+    "qualification": "Source and host mutation-interception tests support read-only behavior; actual hardware observation was not performed, and any execution requires coordination."
+  },
+  "read_only_quake_comparison": {
+    "current_binary_comparison": "Read-back of all three currently installed title eboots matched SHA-256 10fc130547881d917aabf63ec1f137b04e70c215e7230607fafd364b715ec187. Their ntdll.prx read-backs matched 810300bde97eed2c912222e2881c5314bbbf4db389adf64079cdaa24f7af9b2c; runtime inventory files matched each other.",
+    "helper_difference": "Current Quake helper ELF SHA-256 17f7fc80688273aa7ef807de8f7040aabaf307049125abb460bcde5011ce1792 points at Playden title-rule list; both other title helpers SHA-256 76a1936fbf35b702379d479e6b856362887f0530f8a27da00c6d86bf748dc50f point at Wine11 title-rule list. Protocol hashes and declared features match. Both lists contain their respective title IDs.",
+    "historical_control": "Two existing Quake title logs dated 2026-10-28 report source build ce289425, helper completion, no credential error, successful private umask, and running session with graphics evidence. This demonstrates success in those historical Quake contexts, not the precise historical eboot digest or current title runtime.",
+    "limits": "The helper difference is a testable lead, not a proven failure. The Quake descriptor was listed but could not be read via WFM, so its configuration could not be compared. Current file equality does not prove those exact bytes were running when older logs were recorded.",
+    "derivation": "The derived-kit tool replaces the helper ELF/manifest, changes title-rule metadata and rewrites a Wine Mono kit path. The helper build ID is SHA-256 over recorded source hashes, full SDK hash inventory and compiler flags. The local Wine11 helper source and SDK files match its recorded manifest; recomputing its build ID succeeds, and changing only the allow-list path flag reproduces the recorded Quake helper build ID exactly. This strongly supports identical recorded helper source, SDK and remaining flags, assuming truthful manifests and SHA-256; it does not prove byte-identical output or runtime execution. Reproduce with python tools/check-helper-build-provenance.py.",
+    "owner_evidence": "A subsequent independent read-only probe verified root ownership, private modes, one list link and limited name stability in loader context; WFM separately verified both exact newline-terminated title entries. See evidence/wine11-title-rule-owner-probe.json. This does not establish the helper process result."
+  }
+}

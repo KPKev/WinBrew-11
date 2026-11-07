@@ -1,0 +1,128 @@
+{
+  "scope": "Read-only public DNS queries from Windows PC; not a PS5 process test",
+  "query_count": 40,
+  "samples_per_server_host_type": 5,
+  "first_utc": "2026-10-29T01:06:56.566947+00:00",
+  "last_utc": "2026-10-29T01:07:10.096719+00:00",
+  "sample_span_seconds": 13.53,
+  "summary": [
+    {
+      "server": "192.168.7.1",
+      "name": "accounts.google.com",
+      "queries": 10,
+      "success": 10,
+      "types": [
+        "A",
+        "AAAA"
+      ],
+      "minimum_ms": 31.0,
+      "maximum_ms": 47.0,
+      "median_ms": 47.0
+    },
+    {
+      "server": "192.168.7.1",
+      "name": "example.com",
+      "queries": 10,
+      "success": 10,
+      "types": [
+        "A",
+        "AAAA"
+      ],
+      "minimum_ms": 32.0,
+      "maximum_ms": 47.0,
+      "median_ms": 47.0
+    },
+    {
+      "server": "1.1.1.1",
+      "name": "accounts.google.com",
+      "queries": 10,
+      "success": 10,
+      "types": [
+        "A",
+        "AAAA"
+      ],
+      "minimum_ms": 31.0,
+      "maximum_ms": 47.0,
+      "median_ms": 31.0
+    },
+    {
+      "server": "1.1.1.1",
+      "name": "example.com",
+      "queries": 10,
+      "success": 10,
+      "types": [
+        "A",
+        "AAAA"
+      ],
+      "minimum_ms": 31.0,
+      "maximum_ms": 32.0,
+      "median_ms": 31.0
+    }
+  ],
+  "conclusion": "No failure reproduced from PC. Router and public resolver both returned valid IPv4/IPv6 answers for both public names. Does not prove PS5 browser resolver state, per-client/router policy, IPv6 reachability or later intermittent behavior.",
+  "configuration_changes": false,
+  "safe_next_step": "Reproduce direct accounts.google.com in the actual PS5 browser while observing the PS5 resolver route, or compare the same public host through another PS5 system-browser entry point. PC DNS is healthy during the bounded test, so a DNS setting change is not supported by this evidence.",
+  "sustained_check": {
+    "query_count": 48,
+    "sample_rounds": 6,
+    "sample_span_seconds": 51.86,
+    "first_utc": "2026-10-29T01:07:55.212657+00:00",
+    "last_utc": "2026-10-29T01:08:47.073350+00:00",
+    "summary": [
+      {
+        "server": "192.168.7.1",
+        "name": "accounts.google.com",
+        "queries": 12,
+        "success": 12,
+        "types": [
+          "A",
+          "AAAA"
+        ],
+        "minimum_ms": 31.0,
+        "maximum_ms": 47.0,
+        "median_ms": 47.0
+      },
+      {
+        "server": "192.168.7.1",
+        "name": "example.com",
+        "queries": 12,
+        "success": 12,
+        "types": [
+          "A",
+          "AAAA"
+        ],
+        "minimum_ms": 31.0,
+        "maximum_ms": 63.0,
+        "median_ms": 47.0
+      },
+      {
+        "server": "1.1.1.1",
+        "name": "accounts.google.com",
+        "queries": 12,
+        "success": 12,
+        "types": [
+          "A",
+          "AAAA"
+        ],
+        "minimum_ms": 31.0,
+        "maximum_ms": 47.0,
+        "median_ms": 31.0
+      },
+      {
+        "server": "1.1.1.1",
+        "name": "example.com",
+        "queries": 12,
+        "success": 12,
+        "types": [
+          "A",
+          "AAAA"
+        ],
+        "minimum_ms": 31.0,
+        "maximum_ms": 47.0,
+        "median_ms": 31.0
+      }
+    ],
+    "all_queries_succeeded": true
+  },
+  "total_public_queries": 88
+}

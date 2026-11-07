@@ -1,0 +1,7 @@
+{
+  "scope": "Fresh local clone of Playden-pinned prospero-win kit validator",
+  "result": "passed",
+  "revision": "e709a0b72361c6c8e16c80ff93a3705a5e5421b7",
+  "source": "https://github.com/leolobato/prospero-win.git",
+  "limits": "Fresh clone and provenance verification only; no kit built, published or console tested."
+}

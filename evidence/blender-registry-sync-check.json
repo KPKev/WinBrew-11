@@ -1,0 +1,6 @@
+{
+  "sha256": "78a0dd159fdeec89ebed4aac9de12f461c51a46e46ee962ffdee419b166754ff",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "registry-fsync result=0 errno=0\ndirectory-fsync result=0 errno=0\nREGISTRY_SYNC done\n"
+}

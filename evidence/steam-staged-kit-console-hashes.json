@@ -1,0 +1,13 @@
+{
+  "probe_sha256": "290ecc3849c916fd40793a94d4e00f1b5d0ffeaeb54d02f264886b38f45ee655",
+  "console_host": "192.168.7.26",
+  "loader_port": 9021,
+  "completed": true,
+  "hashes_verified": true,
+  "output": "STAGED_HASH_PROBE start writes=none elevation=none\nSTAGED_HASH_PROBE checked=512\nSTAGED_HASH_PROBE checked=1024\nSTAGED_HASH_PROBE checked=1536\nSTAGED_HASH_PROBE checked=2048\nSTAGED_HASH_PROBE checked=2560\nSTAGED_HASH_PROBE checked=3072\nSTAGED_HASH_PROBE checked=3584\nSTAGED_HASH_PROBE checked=4096\nSTAGED_HASH_PROBE done verified=4348\n",
+  "error": "",
+  "writes": false,
+  "elevation": false,
+  "automatic_retry": false,
+  "note": "Staged kit content validation only; helper and app launch are not console-qualified."
+}

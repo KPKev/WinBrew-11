@@ -1,0 +1,71 @@
+"""Apply the first startup correction only to the recorded WrappedWine install."""
+import argparse
+import hashlib
+import json
+from pathlib import Path
+import shutil
+import urllib.request
+from install_console import WFM, ROOT, DEST
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--host', default='192.168.7.26')
+parser.add_argument('--port', type=int, default=8889)
+parser.add_argument('--apply', action='store_true')
+args = parser.parse_args()
+names = ['manifest.json', 'eboot.bin']
+source = ROOT / 'dist/PPSA77380'
+record = json.loads((ROOT / 'evidence/console-install.json').read_text())
+expected = record['files']
+print('Plan: back up and replace WrappedWine manifest and executable only.')
+if not args.apply:
+    raise SystemExit(0)
+with urllib.request.urlopen(f'http://{args.host}:8888/api/processes', timeout=8) as response:
+    processes = json.load(response)
+if any('eboot' in str(p.get('name', '')).lower() or '77380' in str(p) for p in processes):
+    raise RuntimeError('A title process is still present; close WrappedWine before replacing its executable')
+w = WFM(args.host, args.port)
+backup = ROOT / 'build/console-backups/startup-buffer-fix'
+if backup.exists():
+    raise RuntimeError('This update already has a local backup; inspect rather than repeat')
+entries = {e['name'] for e in w.listing(DEST)}
+stage = ROOT / 'build/buffer-fix-stage'
+stage.mkdir(parents=True, exist_ok=True)
+old = {}
+for name in names:
+    if name + '.before-buffer-fix.bak' in entries or name + '.buffer-fix.stage' in entries:
+        raise RuntimeError('A previous update file exists; inspect rather than overwrite')
+    data = w.read(DEST + '/' + name)
+    if hashlib.sha256(data).hexdigest() != expected[name]:
+        raise RuntimeError('Installed WrappedWine differs from the recorded original: ' + name)
+    old[name] = data
+    shutil.copy2(source / name, stage / (name + '.buffer-fix.stage'))
+backup.mkdir(parents=True)
+for name, data in old.items():
+    (backup / name).write_bytes(data)
+w.upload(stage, [name + '.buffer-fix.stage' for name in names])
+for name in names:
+    w.permissions(DEST + '/' + name + '.buffer-fix.stage')
+applied = []
+try:
+    for name in names:
+        w.post('/api/rename', params={'path': DEST + '/' + name, 'name': name + '.before-buffer-fix.bak'})
+        try:
+            w.post('/api/rename', params={'path': DEST + '/' + name + '.buffer-fix.stage', 'name': name})
+        except Exception:
+            w.post('/api/rename', params={'path': DEST + '/' + name + '.before-buffer-fix.bak', 'name': name})
+            raise
+        applied.append(name)
+        if hashlib.sha256(w.read(DEST + '/' + name)).digest() != hashlib.sha256((source / name).read_bytes()).digest():
+            raise RuntimeError('Updated file read-back differs: ' + name)
+except Exception:
+    for name in reversed(applied):
+        w.post('/api/rename', params={'path': DEST + '/' + name, 'name': name + '.buffer-fix.stage'})
+        w.post('/api/rename', params={'path': DEST + '/' + name + '.before-buffer-fix.bak', 'name': name})
+    raise
+report = {'host': args.host, 'port': args.port, 'title': 'PPSA77380', 'updated': True,
+          'launched': False, 'old_files': {n: hashlib.sha256(old[n]).hexdigest() for n in names},
+          'new_files': {n: hashlib.sha256((source / n).read_bytes()).hexdigest() for n in names},
+          'crash_rip': '0x4001c9', 'crash_return_address': '0x4028c4',
+          'mapped_failure': 'operator new[] allocation-failure UD2 on second 8294400-byte Shell::init buffer'}
+(ROOT / 'evidence/console-buffer-fix.json').write_text(json.dumps(report, indent=2))
+print('Startup buffer correction deployed and verified. Original executable retained on PC and PS5.')

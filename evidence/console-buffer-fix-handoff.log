@@ -1,0 +1,30 @@
+[10:18:33]   [LINK] nullfs mounted: /data/homebrew/PPSA77380 -> /system_ex/app/PPSA77380
+[10:18:33]   [SHELLCORE] launch mount ready: PPSA77380
+[10:18:33]   [FAKELIB] directory mounted for PPSA77380: /data -> /mnt/sandbox/PPSA77380_000/data
+[10:18:33]   [FAKELIB] directory mounted for PPSA77380: /preinst/common/font -> /mnt/sandbox/PPSA77380_000/preinst/common/font
+[10:18:33]   [SHELLCORE] sandbox ready handled: PPSA77380
+[10:18:33]   [GAME] started: PPSA77380 pid=114 app_id=0x00008018
+[10:18:33]   [MDBG] log monitor ready: PPSA77380 buffer_size=0x20018
+[10:18:33]   [MDBG] monitoring game errors: PPSA77380 pid=114 for up to 60 seconds
+[10:19:32]   [SHELLCORE] game switch prepared: outgoing=PPSA77380 incoming=FAKE78003
+[10:19:32]   [LINK] nullfs mounted: /data/homebrew/FAKE78003 -> /system_ex/app/FAKE78003
+[10:19:32]   [SHELLCORE] launch mount ready: FAKE78003
+[10:19:32]   [LINK] runtime layers released: FAKE78003
+[10:19:32]   [SHELLCORE] launch retry prepared during game switch: FAKE78003
+[10:19:32]   [FAKELIB] game stopped: pid=114 title=PPSA77380 layers=5
+[10:19:32]   [FAKELIB] directory unmounted: /preinst/common/font -> /mnt/sandbox/PPSA77380_000/preinst/common/font
+[10:19:32]   [FAKELIB] directory unmounted: /data -> /mnt/sandbox/PPSA77380_000/data
+[10:19:32]   [GAME] process exited, awaiting same-app handoff: PPSA77380 pid=114 app_id=0x00008018
+[10:19:32]   [LINK] nullfs mounted: /data/homebrew/FAKE78003 -> /system_ex/app/FAKE78003
+[10:19:32]   [SHELLCORE] launch mount ready: FAKE78003
+[10:19:32]   [FAKELIB] directory mounted for FAKE78003: /data -> /mnt/sandbox/FAKE78003_000/data
+[10:19:32]   [FAKELIB] directory mounted for FAKE78003: /preinst/common/font -> /mnt/sandbox/FAKE78003_000/preinst/common/font
+[10:19:32]   [SHELLCORE] sandbox ready handled: FAKE78003
+[10:19:33]   [GAME] finalizing stopped application: PPSA77380 pid=114
+[10:19:33]   [SHELLCORE] runtime release awaiting sandbox removal: PPSA77380
+[10:19:33]   [DB] snd0info normalized after game exit rows=0 title=PPSA77380
+[10:19:33]   [GAME] started: FAKE78003 pid=119 app_id=0x0000A018
+[10:19:33]   [MDBG] log monitor ready: FAKE78003 buffer_size=0x20018
+[10:19:33]   [MDBG] monitoring game errors: FAKE78003 pid=119 for up to 60 seconds
+[10:19:33]   [SHELLCORE] runtime release start: PPSA77380
+[10:19:33]   [LINK] runtime layers released: PPSA77380

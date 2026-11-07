@@ -1,0 +1,6 @@
+{
+  "sha256": "fc0d6aa9ca2e11ccf1b8805765ad735d2cbd536cf1ddaa28f83b8de2a4efe4b3",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "RENAME same-device fixture verified; fixture removed\nDONE\n"
+}

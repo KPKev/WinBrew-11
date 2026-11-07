@@ -1,0 +1,6 @@
+{
+  "sha256": "8b3c52b035271f7c2b4e69fcc7dc8b502d944aa3cd31764fe5179f19857a93f2",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "path0 uid=0 mode=0777 dev=687931143 inode=5841 type=dir size=65536\npath1 uid=1 mode=0777 dev=687931143 inode=92988 type=dir size=65536\npath2 uid=0 mode=0755 dev=687931143 inode=67027 type=dir size=65536\npath3 uid=1 mode=0700 dev=687931143 inode=67030 type=dir size=65536\npath4 uid=1 mode=0777 dev=687931143 inode=70244 type=dir size=65536\npath5 errno=2\npath6 uid=1 mode=0600 dev=687931143 inode=94808 type=file size=383\nTITLE_IDENTITY done\n"
+}

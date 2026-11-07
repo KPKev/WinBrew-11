@@ -1,0 +1,43 @@
+{
+  "title": "PPSA77381",
+  "version": "01.002.000",
+  "status": "installed; owner confirmed new desktop and Settings work; browser page test pending",
+  "installed": true,
+  "hardware_launch_tested": true,
+  "tests": [
+    "shell interaction and game launch intents",
+    "borrowed static-buffer ownership and zero array allocations",
+    "settings persistence across restart",
+    "controller keyboard spatial focus and input limits",
+    "URL normalization, query escaping and rejected non-web schemes",
+    "ASan/UBSan preferences and browser checks",
+    "Visual Studio Windows build",
+    "native PS5 FSELF integrity"
+  ],
+  "preview_ui_checked": [
+    "Settings navigation",
+    "light/dark appearance and saved file",
+    "address keyboard clear and input",
+    "Wikipedia opens in actual PC Chrome"
+  ],
+  "browser_engine": "PS5 system browser; Chrome/Chromium not installed or verified",
+  "icon_sha256": "aa3ce89ea34ee3c3e53307a4ab890317aaea14fcc546ad2dc8aafa7c43703fec",
+  "package_files": {
+    "LICENSE": "230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809",
+    "THIRD_PARTY_NOTICES.md": "c8c75f06d1d6954cb82b17b78838b5944a926b93437add53451fd05296f6cce4",
+    "assets/desktop.png": "b668cf3839827a63b9cb64f174e186c844281336b307c12cc2960a947350767d",
+    "assets/desktop.rgba": "bc7e26145b92f662a964893e9eb613bbce4c5d42001045d8657b4f32b1f40846",
+    "assets/font.bin": "8da8c6a22552905d1ba5077ab424853e1f1488b90245555f68bc2a1d81dc9750",
+    "eboot.bin": "1e8c3954e53976441b57e84edab171a76b78b052e85c6738d2cc5c6fb6328df9",
+    "lapy-manifest.json": "68f487f13d71eae43cc904c34ba8afc44d938026431c264dbfbc62fe3ac96306",
+    "lapy.elf": "06768d0b933df0e58a5166d490dfc801b2f4446b995bbb20d89133d2c56860ef",
+    "licenses/Boilerplate-NOTICES.md": "33e1ad92f23513b5ab3b3f56039d455248cee276f811428a23dd7d4492a3584f",
+    "licenses/LGPL-2.1.txt": "dc626520dcd53a22f727af3ee42c770e56c97a64fe3adb063799d8ab032fe551",
+    "licenses/Lapy-MIT.txt": "47645713c15f6b0d8389ae695ff662edf25e96804ce9190b053be87362584b7d",
+    "licenses/Selawik-OFL.txt": "e31f45705da24b2be9f8f59f43488c3ace32be7a1629eb6f2f5754f40145a74f",
+    "sce_module/libc.prx": "e6ff45d16adf687855cc3b33b0c8a4132b6504360b221e0a34c7e99fb3ba0036",
+    "sce_sys/icon0.png": "aa3ce89ea34ee3c3e53307a4ab890317aaea14fcc546ad2dc8aafa7c43703fec",
+    "sce_sys/param.json": "fe49e3729435fe65b887513c195e6755345938dcff0b1b21cd72a4c30c0632d3"
+  },
+  "game_files_modified": false
+}

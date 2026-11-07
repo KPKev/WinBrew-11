@@ -1,0 +1,38 @@
+{
+  "version": "01.005.000",
+  "title": "PPSA77381",
+  "built": true,
+  "installed": true,
+  "console_launch_tested": true,
+  "usb_console_tested": true,
+  "external_browser_input_tested": false,
+  "browser_page_latency_fixed": false,
+  "checks": [
+    "native package integrity and pinned helper/logo",
+    "portable regression suite",
+    "mixed raw HID, text editing, full-card clicks and persisted speed",
+    "mixed input ASan and UBSan",
+    "Windows preview build and direct keyboard character check",
+    "light and dark touch keyboard and Input settings rendered review",
+    "scoped updater backup and rollback tests"
+  ],
+  "eboot_sha256": "dc86f58f3c335655244b9d6f999e8953e6e01c42edf6741828dd85e5b94ef731",
+  "limitations": [
+    "US ASCII text mapping; no clipboard or international composition",
+    "desktop HID does not forward into Sony browser",
+    "external browser page latency still unresolved"
+  ],
+  "prepared_features": [
+    "entire web shortcut, library and toggle card clickable",
+    "controller-triggered themed touch keyboard",
+    "physical USB keyboard and mouse alongside controller",
+    "caret editing and Ctrl+L/Ctrl+A",
+    "Input and typing device status and saved mouse speed"
+  ],
+  "installed_at": "20261028T183731Z",
+  "console_file_readback_verified": true,
+  "deployment_report": "evidence/desktop-update.json",
+  "full_card_click_owner_verified": true,
+  "usb_console_result": "Owner reports both USB devices fail; console logs show each device handle=-1 despite module preload success.",
+  "browser_owner_result": "Google and YouTube launch blank white browser page"
+}

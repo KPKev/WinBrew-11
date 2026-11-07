@@ -1,0 +1,84 @@
+=== session-0.previous.log ===
+REC seq=10 t=11652.247020721 PW_WINE64 zink provider=ok copied=2 architecture=pe32
+REC seq=15 t=11652.275347023 PW_WINE64 profile id=playden-steam-365670 prefix=/data/playden/games/wine11-steam-365670/library/prefixes/game desktop=1920x1080 scaling=0 view=window show_fps=0 input=ok preset=- mode=xinput mouse=0 dll_overrides=opengl32=n
+REC seq=19 t=11652.301727305 PW_WINE64 ntdll=/mnt/sandbox/FAKE78008_000/app0/win/wine/lib/wine/x86_64-unix/ntdll.prx prefix=/data/playden/games/wine11-steam-365670/library/prefixes/game exe=Z:\data\wine11\wine11-games\365670\blender.exe
+REC seq=31 t=11652.334476233 PW_WINE64 pad connected=1 overlay=0 rc=3 intercepted=0 disconnected=0 errors=0 generation=1
+REC seq=50 t=11652.431006410 WINE 0024:err:environ:run_wineboot failed to start wineboot c00000bb
+REC seq=68 t=11652.570614199 WINE 0024:trace:loaddll:build_module Loaded L"Z:\\data\\wine11\\wine11-games\\365670\\blender.exe" at 00400000: native
+REC seq=142 t=11652.763167299 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\OPENGL32.dll" at 78450000: native
+REC seq=169 t=11653.031471565 WINE 0024:err:secur32:start_samss Failed to open service manager
+REC seq=170 t=11653.031478782 WINE 0024:err:secur32:load_auth_packages Failed to get security packages list: 80090304
+REC seq=174 t=11654.058511052 WINE 0024:err:wgl:internal_context_create Failed to create internal thread context
+REC seq=230 t=11654.588988287 STDOUT Unable to create directory C:\users\prospero/.thumbnails/fail/blender/
+REC seq=240 t=11654.638711026 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\vulkan-1.dll" at 76BE0000: builtin
+REC seq=242 t=11654.643205098 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\winevulkan.dll" at 76B00000: builtin
+REC seq=247 t=11654.732991761 PW_WINE64 display released to vulkan close=ok shown=0
+REC seq=248 t=11654.734719195 PW_WINE64 vulkan frames idle=1 show=1 buffer=1
+REC seq=258 t=11654.881748786 WINESERVER MESA: error: CreateSwapchainKHR failed with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR
+REC seq=259 t=11654.882150756 WINESERVER MESA: error: zink: could not create swapchain
+REC seq=260 t=11654.891988785 WINESERVER MESA: error: CreateSwapchainKHR failed with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR
+REC seq=261 t=11654.892352747 WINESERVER MESA: error: zink: could not create swapchain
+REC seq=1189 t=12293.025424622 PW_WINE64 pad connected=0 overlay=0 rc=1 intercepted=0 disconnected=1 errors=0 generation=1
+=== session-0.log ===
+REC seq=5850 t=15652.786452981 PW_WINE64 pad connected=1 overlay=0 rc=6 intercepted=0 disconnected=199696 errors=0 generation=2
+REC seq=5860 t=15659.466092901 PW_WINE64 pad connected=0 overlay=1 rc=12 intercepted=6 disconnected=199696 errors=0 generation=2
+=== session-1.log ===
+REC seq=10 t=1016.572756287 PW_WINE64 zink provider=ok copied=0 architecture=pe32
+REC seq=15 t=1016.589007226 PW_WINE64 profile id=playden-steam-365670 prefix=/data/playden/games/wine11-steam-365670/library/prefixes/game desktop=1920x1080 scaling=0 view=window show_fps=0 input=ok preset=- mode=xinput mouse=0 dll_overrides=opengl32=n
+REC seq=19 t=1016.592468750 PW_WINE64 ntdll=/mnt/sandbox/FAKE78008_000/app0/win/wine/lib/wine/x86_64-unix/ntdll.prx prefix=/data/playden/games/wine11-steam-365670/library/prefixes/game exe=Z:\data\wine11\wine11-games\365670\blender.exe
+REC seq=31 t=1016.624312786 PW_WINE64 pad connected=1 overlay=0 rc=1 intercepted=0 disconnected=0 errors=0 generation=1
+REC seq=50 t=1016.705090938 WINE 0024:err:environ:run_wineboot failed to start wineboot c00000bb
+REC seq=68 t=1016.840366308 WINE 0024:trace:loaddll:build_module Loaded L"Z:\\data\\wine11\\wine11-games\\365670\\blender.exe" at 00400000: native
+REC seq=142 t=1017.044626399 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\OPENGL32.dll" at 78450000: native
+REC seq=169 t=1017.301615301 WINE 0024:err:secur32:start_samss Failed to open service manager
+REC seq=170 t=1017.301622918 WINE 0024:err:secur32:load_auth_packages Failed to get security packages list: 80090304
+REC seq=174 t=1018.041120693 WINE 0024:err:wgl:internal_context_create Failed to create internal thread context
+REC seq=229 t=1018.392280635 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\vulkan-1.dll" at 76BE0000: builtin
+REC seq=231 t=1018.396846553 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\winevulkan.dll" at 76B00000: builtin
+REC seq=236 t=1018.503724257 PW_WINE64 display released to vulkan close=ok shown=0
+REC seq=237 t=1018.505421943 PW_WINE64 vulkan frames idle=1 show=1 buffer=1
+REC seq=247 t=1018.576075482 WINESERVER MESA: error: CreateSwapchainKHR failed with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR
+REC seq=248 t=1018.576474966 WINESERVER MESA: error: zink: could not create swapchain
+REC seq=249 t=1018.586466150 WINESERVER MESA: error: CreateSwapchainKHR failed with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR
+REC seq=250 t=1018.586849516 WINESERVER MESA: error: zink: could not create swapchain
+REC seq=317 t=1034.798820798 PW_WINE64 pad connected=0 overlay=1 rc=12 intercepted=2 disconnected=0 errors=0 generation=1
+=== session-2.log ===
+REC seq=10 t=4454.562780892 PW_WINE64 zink provider=ok copied=0 architecture=pe32
+REC seq=15 t=4454.575483866 PW_WINE64 profile id=playden-steam-365670 prefix=/data/playden/games/wine11-steam-365670/library/prefixes/game desktop=1920x1080 scaling=0 view=window show_fps=0 input=ok preset=- mode=xinput mouse=0 dll_overrides=opengl32=n
+REC seq=19 t=4454.578346405 PW_WINE64 ntdll=/mnt/sandbox/FAKE78008_000/app0/win/wine/lib/wine/x86_64-unix/ntdll.prx prefix=/data/playden/games/wine11-steam-365670/library/prefixes/game exe=Z:\data\wine11\wine11-games\365670\blender.exe
+REC seq=31 t=4454.628902672 PW_WINE64 pad connected=1 overlay=0 rc=2 intercepted=0 disconnected=0 errors=0 generation=1
+REC seq=50 t=4454.708549407 WINE 0024:err:environ:run_wineboot failed to start wineboot c00000bb
+REC seq=68 t=4454.841007463 WINE 0024:trace:loaddll:build_module Loaded L"Z:\\data\\wine11\\wine11-games\\365670\\blender.exe" at 00400000: native
+REC seq=142 t=4455.042609888 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\OPENGL32.dll" at 78450000: native
+REC seq=169 t=4455.300115985 WINE 0024:err:secur32:start_samss Failed to open service manager
+REC seq=170 t=4455.300123041 WINE 0024:err:secur32:load_auth_packages Failed to get security packages list: 80090304
+REC seq=174 t=4456.035222806 WINE 0024:err:wgl:internal_context_create Failed to create internal thread context
+REC seq=229 t=4456.385640713 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\vulkan-1.dll" at 76BE0000: builtin
+REC seq=231 t=4456.390338616 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\winevulkan.dll" at 76B00000: builtin
+REC seq=236 t=4456.474488164 PW_WINE64 display released to vulkan close=ok shown=0
+REC seq=237 t=4456.476191382 PW_WINE64 vulkan frames idle=1 show=1 buffer=1
+REC seq=247 t=4456.550449015 WINESERVER MESA: error: CreateSwapchainKHR failed with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR
+REC seq=248 t=4456.550855796 WINESERVER MESA: error: zink: could not create swapchain
+REC seq=249 t=4456.560724055 WINESERVER MESA: error: CreateSwapchainKHR failed with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR
+REC seq=250 t=4456.561086333 WINESERVER MESA: error: zink: could not create swapchain
+REC seq=324 t=4477.890594688 PW_WINE64 pad connected=0 overlay=1 rc=12 intercepted=2 disconnected=0 errors=0 generation=1
+=== session-3.log ===
+REC seq=10 t=7601.591724538 PW_WINE64 zink provider=ok copied=0 architecture=pe32
+REC seq=15 t=7601.593011113 PW_WINE64 profile id=playden-steam-365670 prefix=/data/playden/games/wine11-steam-365670/library/prefixes/game desktop=1920x1080 scaling=0 view=window show_fps=0 input=ok preset=- mode=xinput mouse=0 dll_overrides=opengl32=n
+REC seq=19 t=7601.593260811 PW_WINE64 ntdll=/mnt/sandbox/FAKE78008_000/app0/win/wine/lib/wine/x86_64-unix/ntdll.prx prefix=/data/playden/games/wine11-steam-365670/library/prefixes/game exe=Z:\data\wine11\wine11-games\365670\blender.exe
+REC seq=31 t=7601.605727238 PW_WINE64 pad connected=0 overlay=0 rc=1 intercepted=0 disconnected=1 errors=0 generation=0
+REC seq=50 t=7601.656803026 WINE 0024:err:environ:run_wineboot failed to start wineboot c00000bb
+REC seq=68 t=7601.693924145 WINE 0024:trace:loaddll:build_module Loaded L"Z:\\data\\wine11\\wine11-games\\365670\\blender.exe" at 00400000: native
+REC seq=142 t=7601.760744821 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\OPENGL32.dll" at 78450000: native
+REC seq=169 t=7601.812454715 WINE 0024:err:secur32:start_samss Failed to open service manager
+REC seq=170 t=7601.812461370 WINE 0024:err:secur32:load_auth_packages Failed to get security packages list: 80090304
+REC seq=173 t=7601.883668269 WINE 0024:err:wgl:internal_context_create Failed to create internal thread context
+REC seq=228 t=7602.040535168 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\vulkan-1.dll" at 76BE0000: builtin
+REC seq=230 t=7602.041923418 WINE 0024:trace:loaddll:build_module Loaded L"C:\\windows\\system32\\winevulkan.dll" at 76B00000: builtin
+REC seq=235 t=7602.100270981 PW_WINE64 display released to vulkan close=ok shown=0
+REC seq=236 t=7602.101978850 PW_WINE64 vulkan frames idle=1 show=1 buffer=1
+REC seq=246 t=7602.168367086 WINESERVER MESA: error: CreateSwapchainKHR failed with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR
+REC seq=247 t=7602.168764004 WINESERVER MESA: error: zink: could not create swapchain
+REC seq=248 t=7602.178592011 WINESERVER MESA: error: CreateSwapchainKHR failed with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR
+REC seq=249 t=7602.178952925 WINESERVER MESA: error: zink: could not create swapchain
+DONE

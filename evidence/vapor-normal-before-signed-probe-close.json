@@ -1,0 +1,9 @@
+{
+  "status": "inspect",
+  "pid": 428,
+  "automatic_retry": false,
+  "result": {
+    "ok": true,
+    "message": "Killed"
+  }
+}

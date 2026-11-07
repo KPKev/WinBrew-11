@@ -1,0 +1,8 @@
+{
+  "sha256": "b28261062dcc837fff66e53bbfe3197fe44d6ec6e65bfc99413ed15603c73a14",
+  "output": "SELF_CANDIDATE ok=1 bounded=1 length=1096 sdk=1088 size_match=1 pid_match=1 euid_match=1 ruid_match=1 rgid_match=1\n",
+  "elapsed_s": 0.313,
+  "eof_observed": true,
+  "error": "",
+  "no_automatic_retry": true
+}

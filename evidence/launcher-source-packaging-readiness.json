@@ -1,0 +1,7 @@
+{
+  "scope": "Offline source packaging and supplementary launcher provenance; no installation",
+  "current_limitation": "The source archive includes launcher return research and a pinned source fetch tool, but does not embed the independently verified base launcher checkout. Reproduction requires the pinned checkout to be fetched and verified; the nested local archive is not a Git repository root and cannot establish revision provenance.",
+  "tool_change": "Launcher release verifier scopes Git safe.directory to the reviewed checkout using per-command configuration; no global Git setting is changed.",
+  "validation": "Eight verifier tests and four launcher source archive tests pass, including rejection of a nested non-repository archive and scoped Git configuration.",
+  "limits": "Supplementary provenance checks are not full kit validation, reproducible binary proof, target admission or console gameplay evidence."
+}

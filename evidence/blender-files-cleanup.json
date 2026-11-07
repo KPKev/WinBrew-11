@@ -1,0 +1,8 @@
+{
+  "sha256": "f2eacbb56373359f3328f110bb3e2b9ddcd0a48b4fe1e253b3116eb0569dfb6a",
+  "status": "complete",
+  "automatic_retry": false,
+  "app": 365670,
+  "title": "FAKE78008",
+  "output": "BLENDER_FILES game-cleanup-start\nBLENDER_FILES game-cleanup-complete\nBLENDER_FILES title-cleanup-start\nBLENDER_FILES both-cleaned\nBLENDER_FILES done\n"
+}

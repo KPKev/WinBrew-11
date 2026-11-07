@@ -1,0 +1,118 @@
+{
+  "scope": "Quake II RTX native return-wrapper preflight",
+  "title": "FAKE78003",
+  "safe_to_install": false,
+  "read_only": true,
+  "checks": [
+    {
+      "check": "title_directory_observed",
+      "result": "pass"
+    },
+    {
+      "check": "title_owner_listed",
+      "result": "pass"
+    },
+    {
+      "check": "title_owner_private_mode",
+      "result": "pass"
+    },
+    {
+      "check": "descriptor_listed",
+      "result": "pass"
+    },
+    {
+      "check": "descriptor_private_mode",
+      "result": "pass"
+    },
+    {
+      "check": "installed_wrapper_record_read",
+      "result": "pass"
+    },
+    {
+      "check": "installed_wrapper_record_format",
+      "result": "pass"
+    },
+    {
+      "check": "installed_publication_guard",
+      "result": "pass"
+    },
+    {
+      "check": "installed_wrapper_binary_read",
+      "result": "pass"
+    },
+    {
+      "check": "installed_wrapper_record_hash",
+      "result": "pass"
+    },
+    {
+      "check": "candidate_wrapper_record_hash",
+      "result": "pass"
+    },
+    {
+      "check": "candidate_fixed_return_feature",
+      "result": "pass"
+    },
+    {
+      "check": "candidate_matches_installed_base",
+      "result": "pass"
+    },
+    {
+      "check": "candidate_preserves_publication_guard",
+      "result": "pass"
+    },
+    {
+      "check": "title_owner_read",
+      "result": "unavailable"
+    },
+    {
+      "check": "descriptor_read",
+      "result": "unavailable"
+    },
+    {
+      "check": "native_uid_inode_and_single_link_ownership",
+      "result": "unverified"
+    },
+    {
+      "check": "qualified_publication_lease",
+      "result": "unverified"
+    },
+    {
+      "check": "native_publication_semantic_admission",
+      "result": "unverified"
+    },
+    {
+      "check": "native_title_stopped_state",
+      "result": "unverified"
+    },
+    {
+      "check": "proposed_whole_kit_and_same_artifact_admission",
+      "result": "unverified"
+    }
+  ],
+  "blockers": [
+    "descriptor_unreadable",
+    "title_owner_unreadable"
+  ],
+  "required_next_step": "Read native owner and committed publication metadata through an authorized existing owner context, then use the exact native admission and lease rules. Do not chmod, replace markers or install the wrapper alone.",
+  "observed_at_utc": "2026-10-29T01:23:28.265423+00:00",
+  "tests": "6 portable diagnostic tests passed; private-value redaction, invalid descriptors, changed hashes/target, and mutation endpoint refusal covered",
+  "verified_source_seams": {
+    "Playden revision": "9f5a7cbebeaf07fa3ea5324dce5ad8f374ca0aec",
+    "admission": "src/runtime/package_installer.cpp: FilesystemPackageInstaller::AdmissionDiagnostic and PublicationMatches",
+    "upgrade": "src/runtime/package_installer.cpp: RefreshTitle; identity, same-artifact and owner-marker checks",
+    "native guard": "prospero-win installed revision ce289425: pw_title_publication_read_descriptor/open",
+    "native_read_requirements": [
+      "Authorized existing owner context",
+      "Canonical private directory and regular-file ownership/mode/single-link/inode validation",
+      "Existing publication lock opened without create/truncate and held shared for coherent descriptor/receipt/metadata verification",
+      "Native stopped-state observation and exact installed record / kit artifact binding"
+    ],
+    "future_install_requirements": [
+      "New verified whole-kit inventory containing the return wrapper",
+      "Both coherent title/template owner markers and same runtime/recipe artifacts",
+      "Qualified exclusive publisher lease before activity recheck, held through supported refresh",
+      "Descriptor, committed profile/publication and game data unchanged",
+      "Hardware verification of Wine11-only quit return and direct Home / legacy behavior"
+    ]
+  }
+}

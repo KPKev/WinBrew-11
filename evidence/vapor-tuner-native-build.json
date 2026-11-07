@@ -1,0 +1,23 @@
+{
+  "scope": "Local isolated Vapor PS5 test candidate PPSA77382; no staging or deployment",
+  "eboot_sha256": "1e85ae510bdf3637a2a038057dd3ee0352e8ceadea20cd32e7b30d9305a204fe",
+  "pie_sha256": "ea4504c77cd133d5f3cdc99b3c7d82f90e497836dd10000c886f696e3ab6fd80",
+  "pie_map_sha256": "0393d3a846a71ad52de3c01dae318beb4caffbd37a404a5fb391f27376ed5453",
+  "source_snapshot_receipt_sha256": "f29277ff39241bb744f193efd6ae1d3945418180260836963934cada85b09b2e",
+  "validation": [
+    "Current UI, owner and Steam integration sources and headers match snapshot",
+    "Generated HTTP and depot overlays verified against generators; link map retains HTTP WriteBody and tuned depot code",
+    "Guarded UID receipt verified",
+    "Native UI, Steam backend and combined PIE links and conversion passed",
+    "Signed container integrity valid and all 41 package files match manifest",
+    "Host artwork service, adaptive tuner and traffic tests passed; UI agent reports malformed-decode regression passed"
+  ],
+  "inputs": "Verified console-probed experimental network archives and pinned compiler runtime; dedicated game host; generated service overlays",
+  "limits": "Local experimental package not installed or console-tested; link and integrity do not establish runtime behavior",
+  "logs": [
+    "build/vapor-tuner-ui.log",
+    "build/vapor-tuner-link.log",
+    "build/vapor-tuner-package.log",
+    "build/vapor-tuner-isolated.log"
+  ]
+}

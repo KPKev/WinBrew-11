@@ -1,0 +1,15 @@
+{
+  "probe_sha256": "2938e9ec590bfd8a7d327eddbdca2a2e9122df75f8df6b39237d5923811b8b9d",
+  "console_host": "192.168.7.26",
+  "loader_port": 9021,
+  "completion_observed": true,
+  "socket_eof_observed": false,
+  "success_observed": false,
+  "output": "TLS_PROBE start endpoints=2 requests=3 credentials=none disk_writes=none\nTLS_PROBE mutex_lock=0 mutex_unlock=0\nTLS_PROBE phase=net_init\nTLS_PROBE net_init_result=00000000\nTLS_PROBE phase=pool_create\nTLS_PROBE pool_result=00000bb8\nTLS_PROBE phase=curl_global_init\nTLS_PROBE curl_global_result=0\nTLS_PROBE phase=resolver_create host=example.com\nTLS_PROBE phase=resolve host=example.com\nTLS_PROBE phase=transfer host=example.com invalid_ca=0\nTLS_PROBE host=example.com invalid_ca=0 curl=0 http=200 bytes=577\nTLS_PROBE phase=resolver_create host=example.com\nTLS_PROBE phase=resolve host=example.com\nTLS_PROBE phase=transfer host=example.com invalid_ca=1\nTLS_PROBE host=example.com invalid_ca=1 curl=58 http=0 bytes=0\nTLS_PROBE phase=resolver_create host=api.steampowered.com\nTLS_PROBE phase=resolve host=api.steampowered.com\nTLS_PROBE phase=transfer host=api.steampowered.com invalid_ca=0\nTLS_PROBE host=api.steampowered.com invalid_ca=0 curl=0 http=200 bytes=71\nTLS_PROBE done success=0\n",
+  "error": "",
+  "credentials_used": false,
+  "console_files_written": false,
+  "changes_to_installed_app": false,
+  "automatic_retry": false,
+  "note": "Isolated diagnostic; does not establish Steam sign-in, game download, or release readiness."
+}

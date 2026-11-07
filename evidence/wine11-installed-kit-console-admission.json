@@ -1,0 +1,9 @@
+{
+  "probe_sha256": "e203bed3ea21921b5ecdd8c27d12bd636c26b8376ff71c19dd94c9709ba47083",
+  "output": "STAGED_KIT_PROBE start writes=none elevation=none\nSTAGED_KIT_PROBE status=0 reason= manifest=1cd63397e5c560fddbc0f3b8baea3bf87ace1e0ba997a46ee0ed4acf4dac8dfc\nSTAGED_KIT_PROBE done\n",
+  "verified": true,
+  "error": "",
+  "writes": false,
+  "automatic_retry": false,
+  "note": "Payload-context admission only; app launch is untested."
+}

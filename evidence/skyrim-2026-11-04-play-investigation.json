@@ -1,0 +1,19 @@
+{
+  "observed_at_utc": "2026-11-04T12:39:00Z",
+  "report": "Skyrim worked last night; user reports nothing happens when pressing Play in Vapor today.",
+  "console": {
+    "vapor_title": "PPSA77382",
+    "vapor_eboot_sha256": "d333ad7a7c21d729cd356f9139e7808a5dd016420ea9b6bcc911edac6e410c8f",
+    "vapor_hash_matches_last_working_build": true,
+    "vapor_process": {"pid": 245, "started_at_console_time": "06:33:52"},
+    "shadowmount_process": true,
+    "web_file_manager_reachable": true,
+    "skyrim_title_directory_present": true,
+    "new_skyrim_game_started_in_shadowmount_log_since_vapor_started": false,
+    "vapor_startup_log": "app user, Steam data anchor and game startup reported success",
+    "game_private_state": "Not accessible through WFM; no permission changes attempted",
+    "inspections": "Read only; no game launch, restart, or save modifications"
+  },
+  "cause": "Unknown; no launch reached ShadowMount, so investigate UI, Steam details and preflight. Cloud is only an unconfirmed possibility.",
+  "pending": "User's observations of button label/status and Steam sign-in"
+}

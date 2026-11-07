@@ -1,0 +1,8 @@
+{
+  "sha256": "fdbae60f2e100a9cf3991d410e50ca3a14269ee0580139a505ec5305b13748c7",
+  "output": "STAT item=parent first=1 second=1 type=directory uid=0 gid=0 mode=0755 links=2 dev=687931143 ino=71211 stable=1\nSTAT item=descriptor first=1 second=1 type=regular uid=0 gid=0 mode=0600 links=1 dev=687931143 ino=75103 stable=1\n",
+  "elapsed_s": 0.328,
+  "eof_observed": true,
+  "error": "",
+  "no_automatic_retry": true
+}

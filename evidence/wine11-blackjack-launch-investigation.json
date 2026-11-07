@@ -1,0 +1,21 @@
+{
+  "steam_app_id": 3594780,
+  "console_title_id": "FAKE78004",
+  "observed": {
+    "download_completed": true,
+    "console_error": "SIGSYS (signal 12) in eboot.bin",
+    "instruction_pointer": "0x00000008000003ac",
+    "first_backtrace_address": "0x000000010040017c",
+    "title_eboot_manifest_sha256": "10fc130547881d917aabf63ec1f137b04e70c215e7230607fafd364b715ec187",
+    "title_source_revision": "ce289425bb34acbcc98f77b4e00ac98b3c16e4bc",
+    "per_game_library_log_directory_present": false,
+    "gameplay_verified": false
+  },
+  "lead": "The runtime source documents firmware-dependent kernel import failures before startup logging. Its documented null-address failure is not the same as the observed instruction pointer, so the cause is unconfirmed.",
+  "additional_source_evidence": {
+    "observed_firmware_log": "Playden runtime reported 13.60 / SDK version 0x13600007",
+    "recorded_source_revision_build_script": "At ce289425, tools/build_native.sh explicitly links native libkernel.so and excludes other libkernel stub variants, addressing the documented 13.60 null-import failure.",
+    "limit": "This source inspection does not prove the exact link inputs of the installed binary and does not explain the reported nonzero SIGSYS instruction pointer. No FAKE78004 title log was present."
+  },
+  "next_step": "After restarting Codex to load the updated REA server, inspect the actual crashing launcher and map the crash addresses; corroborate any proposed correction with an isolated console test."
+}

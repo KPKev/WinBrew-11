@@ -1,0 +1,8 @@
+{
+  "probe_sha256": "dc61f337b4525944017b74e2eecd996651651a1ec5463a49e51c6696e8e499c0",
+  "output": "RAW_VOLUME_PROBE start writes=none\nRAW_VOLUME_PROBE volume=game-storage ok=1 errno=0 block=65536 available=4088\nRAW_VOLUME_PROBE volume=data ok=1 errno=0 block=65536 available=5078227\nRAW_VOLUME_PROBE done\n",
+  "completed": true,
+  "error": "",
+  "writes": false,
+  "automatic_retry": false
+}

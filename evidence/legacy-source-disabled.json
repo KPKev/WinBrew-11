@@ -1,0 +1,7 @@
+{
+  "retired_title": "PPSA77380",
+  "source_removed": true,
+  "backup_verified_files": 18,
+  "native_icon_removal_pending": true,
+  "reason": "Prevent ShadowMountPlus automatically re-registering the retired app"
+}

@@ -1,0 +1,13 @@
+{
+  "probe_sha256": "09899ae3f44442a36bee5dd0c9a9c0a1553f253227b623d2b250746cc8087014",
+  "console_host": "192.168.7.26",
+  "loader_port": 9021,
+  "completed": true,
+  "admission_verified": true,
+  "output": "STAGED_KIT_PROBE start writes=none elevation=none\nSTAGED_KIT_PROBE status=0 reason= manifest=1cd63397e5c560fddbc0f3b8baea3bf87ace1e0ba997a46ee0ed4acf4dac8dfc\nSTAGED_KIT_PROBE done\n",
+  "error": "",
+  "writes": false,
+  "elevation": false,
+  "automatic_retry": false,
+  "note": "Payload-context structural admission only; not an app launch or full file-hash verification."
+}

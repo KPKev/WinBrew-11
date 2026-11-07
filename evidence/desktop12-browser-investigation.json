@@ -1,0 +1,48 @@
+{
+  "version": "01.012.000",
+  "read_only_console_inspection": true,
+  "live_title_pid": 343,
+  "confirmed": [
+    "All browser module and initialization imports returned0",
+    "Filesystem helper/root proof returned0",
+    "Two browser requests returned0 after2-3milliseconds",
+    "Latest request remains in system dialog RUNNING state; no page-network completion is exposed in current API",
+    "nanoDNS binds127.0.0.1 and::1; external PC queries to PS5 are not a valid resolver test",
+    "nanoDNS has configured upstream servers and no Google/YouTube-specific matching rules were found in read-only config inspection"
+  ],
+  "not_established": [
+    "DNS failure or IPv6 fallback on the PS5",
+    "TLS failure in the system browser",
+    "HTTP2 diagnostic failures causing the browser problem",
+    "Browser initialization before/after elevation affecting page loads"
+  ],
+  "safe_next_check": "Read actual PS5 DNS values and compare exact accounts.google.com resolution through that route. Keep update-blocking rules and DNS configuration unchanged until the failing resolver path is established.",
+  "browser_limit": "Wine11 opens Sony system WebBrowserDialog; Chrome/Chromium is not present, and Wine11 cannot observe page requests, replace the engine or report true page load progress from the current lifecycle API.",
+  "console_writes": false,
+  "code_changes": false,
+  "primary_reference": "https://github.com/sainsaji/EVO-PLAYER-PS5",
+  "owner_observation": {
+    "error_host": "accounts.google.com",
+    "error_text": "Could not resolve host name",
+    "repeated_wait": "Approximately five minutes reported",
+    "sign_in_disappears": "Within one browser window and after close/reopen"
+  },
+  "subsequent_read_only_inspection": {
+    "wine11_closed": true,
+    "nanodns_process": {
+      "pid": 92,
+      "active": true
+    },
+    "dns_config": "loopback-only IPv4/IPv6, three default upstreams,1500ms total query budget; no Google-specific override",
+    "dns_log": "1312bytes, startup/listener lines; no records for owner-reported diagnostic public hosts",
+    "actual_console_dns_configuration": "Not observed; absence of query logs does not prove browser uses nanoDNS"
+  },
+  "session_findings": [
+    "One native dialog remains open during internal page navigation; Wine11 does not reopen it for link clicks",
+    "Wine11 does not call ResetCookie, and main never calls browser shutdown/Terminate",
+    "Same-window sign-in disappearance does not prove cookies were erased; failed identity-host DNS can prevent session verification",
+    "Referenced EVO hardware trials observed empty localStorage per dialog Open; this is not proof of all-cookie behavior on this owner firmware",
+    "Verified public binding has SetCookie/ResetCookie for a session store but no cookie export, durable profile, or browser-history interface",
+    "Optional WebViewParam is undocumented; no guessed flags are justified"
+  ]
+}

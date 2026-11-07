@@ -1,0 +1,11 @@
+{
+  "probe_sha256": "fe9636be4c67adaa0776017de26aecb5bbeac193bc028cdde31c124c282d0d54",
+  "status": "published",
+  "source": "/data/wine11-kit-stage-0f803ada2eee/playden-kit",
+  "destination": "/data/wine11/kits/playden-kit",
+  "overwrite": false,
+  "automatic_retry": false,
+  "output": "WINE11_KIT_PUBLISH start overwrite=none\nWINE11_KIT_PUBLISH done installed=1\n",
+  "error": "",
+  "completed": true
+}

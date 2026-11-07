@@ -1,0 +1,6 @@
+{
+  "sha256": "10d806c58b0bbfb787a8c9beb64f9d633f562e1bdb45243701cb97ce7febabbc",
+  "output": "SYNC child=0 errno=2 parent=0 errno=2\nRENAME identity=match parent_sync=0 errno=2\nCLEANUP done sync=0 errno=2\nDONE\n",
+  "error": "",
+  "complete": true
+}

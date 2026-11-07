@@ -1,0 +1,6 @@
+{
+  "sha256": "b863df6b4a3aab57e2268e72159ad6c3da9ca6e803e30584e89b7bcf909fdcc2",
+  "output": "PATH access=-1 errno=13\nDIRECTORY-WALK nested=24 sentinel=preserved sync=ok\nCLEANUP done\nDONE\n",
+  "error": "",
+  "complete": true
+}

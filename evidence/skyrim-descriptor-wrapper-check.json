@@ -1,0 +1,9 @@
+{
+  "title_id": "FAKE78005",
+  "descriptor_length": 375,
+  "descriptor_sha256": "c2240c3bdb870deb2ac2fcdcbdd65796bc4fed3de996b9ea1b0ab89e5ef14255",
+  "full_preserved_wrapper": "accepted on host with matching title ID",
+  "registration_mount_record": "points to /data/homebrew/FAKE78005",
+  "limits": "Read-only observations, separate in time. Neither proves live /app0 mapping, in-title access, credentials, or sender authenticity. The precise descriptor error remains unknown.",
+  "host_test": "research/skyrim/test_descriptor_wrapper.py passed synthetic valid, invalid, wrong-title and oversize cases."
+}

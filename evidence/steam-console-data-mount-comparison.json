@@ -1,0 +1,8 @@
+{
+  "probe_sha256": "ae6db7f9e2caf83c8611d99dc7b9ad7aeeb3cf37127b71cc455af2ffd4900d68",
+  "output": "DATA_MOUNT_PROBE sandbox_exists=1 global_exists=1 same_directory=0\nDATA_MOUNT_PROBE done\n",
+  "completed": true,
+  "error": "",
+  "writes": false,
+  "automatic_retry": false
+}

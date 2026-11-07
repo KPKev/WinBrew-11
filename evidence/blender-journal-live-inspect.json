@@ -1,0 +1,6 @@
+{
+  "sha256": "ae6862f91f450b3d7b52fa3e2a9abb7e58687d1682adb4c72b7014e71c251280",
+  "status": "complete",
+  "automatic_retry": false,
+  "output": "JOURNAL open errno=13\nJOURNAL_INSPECT done\n"
+}

@@ -1,0 +1,22 @@
+{
+  "scope": "PS5 compile and native conversion diagnostic only",
+  "status": "passed",
+  "output_sha256": "57072767f6b2bba20ca8c0aba5133dc3203a7101a5e9de53bc6e536cc1743bd3",
+  "source_snapshot_manifest_sha256": "0c79ddbed54477da7b6ac08c147a46de09dd94fd055b0d3b316cbae60a29191a",
+  "playden_source_revision": "9f5a7cbebeaf07fa3ea5324dce5ad8f374ca0aec",
+  "prospero_source_revision": "e709a0b72361c6c8e16c80ff93a3705a5e5421b7",
+  "includes": [
+    "Wine 11 UI snapshot",
+    "Steam account, library, downloads and Cloud backend",
+    "Playden game host and dependencies",
+    "Wine 11-specific runtime game identity"
+  ],
+  "host_link_anchor": "Forced into the diagnostic link; not connected to the application startup.",
+  "console_executed": false,
+  "app_packaged": false,
+  "limitations": [
+    "Game-host configuration and Cloud locations are not attached to the application.",
+    "Shared title-registration coordination and actual Steam account, download and game launch require verification.",
+    "This is not a release-qualified build."
+  ]
+}
