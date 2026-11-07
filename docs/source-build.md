@@ -2,6 +2,31 @@
 
 The default **main** branch is the current source tree. The `cs2-runtime-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
 
+**Only want to install it on your jailbroken PS5? Follow [the installation walkthrough](getting-started.md).** You do not need this page, Git, a compiler, or a PS5 SDK to use the ready-made release. This page is for developers rebuilding the app.
+
+## Start with a fresh source checkout
+
+Use Git to download the source:
+
+```text
+git clone https://github.com/KPKev/WinBrew-11.git
+cd WinBrew-11
+```
+
+For PS5 builds, use an x86-64 Linux/WSL environment. The pinned LLVM fetcher extracts Ubuntu Noble amd64 packages, so this is not a native Windows PowerShell build. Have Git, Python 3, Bash, CMake, a C++20 host compiler, curl, unzip, and dpkg-deb available. Run build commands from the repository root.
+
+Fetch the source/font/helper inputs first:
+
+```bash
+python3 tools/bootstrap.py
+bash tools/fetch-steam-sdk.sh
+python3 tools/fetch-steam-llvm.py
+python3 tools/fetch-steam-compiler-rt.py
+python3 tools/prepare-cs2-runtime.py
+```
+
+These commands download and verify their pinned inputs; they do **not** finish the full native build setup. Check the prerequisite list below before running the full target. Existing mismatched dependency checkouts must be reviewed rather than reset or silently replaced.
+
 ## Choose the right target
 
 | Goal | Entry point | Requirements/scope |
@@ -25,6 +50,12 @@ The full build consumes:
 - The complete matched CS2 runtime. `python tools/prepare-cs2-runtime.py` acquires the public archive and verifies its fixed digest and all 1,760 entries. `--verify-only` checks an existing cache without downloading/rebuilding it.
 
 A bare clone is **not** a one-command full native rebuild; the native/network prerequisites are still required. Do not substitute unverified archives or bypass failed hash checks. The complete prebuilt release is the immediate run path; the corresponding-source bundle supplies the runtime module's rebuild inputs while the advanced app-build setup is being streamlined.
+
+In particular, this repository does not yet provide a complete fresh-machine recipe for producing the native assembly base, title-specific helpers, tested network snapshot, and configured dedicated-host CMake build. The commands above are a partial dependency bootstrap, not a claim that this remaining gap is solved. If those generated inputs are missing, use the prebuilt app for installation and report the missing build input rather than borrowing binaries from an unrelated title.
+
+Check a prepared network snapshot with `python3 tools/verify-steam-tested-inputs.py`. The full target also expects `build/steam-host-dedicated-cmake/CMakeCache.txt`, the native boilerplate host tool, and the assembly/helper inputs consumed by `tools/assemble-steam-review.py` and `tools/assemble-steam-isolated-title.py`. The fetchers alone do not create these.
+
+For the Windows preview, the current `tools/build-preview.cmd` calls Visual Studio 2022 Professional's `vcvars64.bat` at a fixed path. If you use another edition/location, adjust that local toolchain path first. The preview cannot verify PS5 installation, console payloads, or game compatibility.
 
 Once prerequisites exist:
 

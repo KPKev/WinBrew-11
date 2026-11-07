@@ -15,9 +15,15 @@ The tested Counter-Strike installation is CS2/app 730, not a separately tested l
 
 ## Get the latest runnable version
 
-1. Open the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) and download the complete application ZIP, currently **Vapor-CS2-019.1.zip**.
-2. Follow [getting started](docs/getting-started.md). New installations also need the dedicated **Vapor-base-kit-0.13.zip**; existing configured installations retain their base kit and private app data.
-3. Keep the complete **PPSA77382** folder and its recorded file permissions. Copying only `eboot.bin` omits the bundled CS2 runtime. The release supplies a permission-repair helper, checksums, licenses, and corresponding source.
+**Start with a PS5 that already has its jailbreak running.** You also need a computer on the same network, a way to copy files to the PS5, and a homebrew loader that adds apps from `/data/homebrew` to the PS5 Home screen. The guide explains these pieces before you copy anything. You do not need to build the source code.
+
+1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/cs2-runtime-v1). Under **Assets**, download **Vapor-CS2-019.1.zip**, **Vapor-base-kit-0.13.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. The base kit is needed for a first installation.
+2. Extract the ZIPs on your computer. Copy the complete **PPSA77382** folder to **`/data/homebrew/PPSA77382`** on the PS5. Copy **playden-kit** to **`/data/wine11/kits/playden-kit`**. Keep every file and subfolder; copying only `eboot.bin` is incomplete.
+3. Check the copied files' permissions using the supplied helper, let your homebrew loader scan the app folder, then launch **WinBrew 11** from Home. Open **Vapor** inside it and sign into your own Steam account.
+
+**Follow the [step-by-step installation guide](docs/getting-started.md) for the full walkthrough**, including download checks, exact folder layouts, permission commands, and first-launch checks. Already installed? Use its [update steps](docs/getting-started.md#updating-an-existing-installation). Stuck? See [troubleshooting](docs/troubleshooting.md).
+
+The downloads above are for the documented `cs2-runtime-v1` release. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
 
 Clone or pull **main** for current code and documentation. SDKs, downloaded runtimes, and generated outputs are separate from Git. The [source-build guide](docs/source-build.md) explains the prerequisites and full target, `tools/build-vapor-cs2.sh`. The historical desktop-only `build-ps5.sh` is not the complete current Steam/Vapor application.
 
