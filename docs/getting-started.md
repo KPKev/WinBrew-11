@@ -1,6 +1,6 @@
 # Install WinBrew 11 and Vapor
 
-Current release line: **cs2-runtime-v1 / cs2-019.1**, November 7, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
+Current release line: **cs2-runtime-v1.1 / cs2-019.1**, November 7, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
 
 Start with a **PS5 that already has its jailbreak running**. This guide explains how to install the ready-made app. You do not need to compile code or install Windows. WinBrew 11 is the desktop; Vapor is the Steam library inside it.
 
@@ -32,7 +32,7 @@ Web File Manager starts looking for a free port at **8888** and can choose **888
 
 ## 1. Download the right files
 
-On your computer, open the [cs2-runtime-v1 release](https://github.com/KPKev/WinBrew-11/releases/tag/cs2-runtime-v1). Expand **Assets** and save these four files into one new folder:
+On your computer, open the [cs2-runtime-v1.1 release](https://github.com/KPKev/WinBrew-11/releases/tag/cs2-runtime-v1.1). Expand **Assets** and save these four files into one new folder:
 
 | File | What it is for |
 | --- | --- |

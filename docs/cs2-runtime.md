@@ -2,7 +2,7 @@
 
 Current combined app: **PPSA77382 / 01.016.000**, installed and startup-verified November 7, 2026. Start with [getting started](getting-started.md), [current verification](current-status.md), and the [compatibility matrix](compatibility.md). The release also contains the persistent game cache and desktop/Vapor efficiency fixes.
 
-Use the **Vapor-CS2-019.1.zip** application from the `cs2-runtime-v1` GitHub release. Keep the entire app folder together: the fixed runtime is inside it. Copying only `eboot.bin` does not install this feature.
+Use the **Vapor-CS2-019.1.zip** application from the `cs2-runtime-v1.1` GitHub release. Keep the entire app folder together: the fixed runtime is inside it. Copying only `eboot.bin` does not install this feature.
 
 On a supported homebrew-enabled PS5, install the app folder as `/data/homebrew/PPSA77382`. Existing Vapor users keep their existing app account/state and base kit. New users also need the release's `Vapor-base-kit-0.13.zip`, extracted so its `playden-kit/manifest.json` is at `/data/wine11/kits/playden-kit/manifest.json`. Preserve archive file modes (directories 0755; individual files 0644/0755 as recorded in the kit manifest). Use a homebrew installer/extractor that preserves Unix modes; a plain FTP copy may require correcting modes. Do not replace another application's `/data/playden` kit. The normal PS5 homebrew loader, its supported system version and payload prerequisites still apply.
 

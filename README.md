@@ -2,7 +2,7 @@
 
 A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created by **KPKev** with AI development assistance. Supported Windows games use Playden's Wine-based PS5 runtime. WinBrew 11 is an independent homebrew application; it does not install Microsoft Windows.
 
-**Updated November 7, 2026:** the combined update is installed and startup-verified on the owner's PS5. The current application is **PPSA77382**, version **01.016.000**. This repository contains its current source, tests, runtime-selection logic, and build tools.
+**Updated November 7, 2026:** hotfix **cs2-runtime-v1.1** is installed on the owner's PS5, and the owner confirmed CS2 opens through Vapor after its managed runtime refresh. The current application is **PPSA77382**, version **01.016.000**. This repository contains its current source, tests, runtime-selection logic, and build tools.
 
 ## Working games
 
@@ -30,17 +30,19 @@ Vapor uses Playden's underlying runtime, so the console still needs its supporti
 
 ### Download and install
 
-1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/cs2-runtime-v1). Under **Assets**, download **Vapor-CS2-019.1.zip**, **Vapor-base-kit-0.13.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. The base kit is needed for a first installation.
+1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/cs2-runtime-v1.1). Under **Assets**, download **Vapor-CS2-019.1.zip**, **Vapor-base-kit-0.13.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. The base kit is needed for a first installation.
 2. Extract the ZIPs on your computer. Copy the complete **PPSA77382** folder to **`/data/homebrew/PPSA77382`** on the PS5. Copy **playden-kit** to **`/data/wine11/kits/playden-kit`**. Keep every file and subfolder; copying only `eboot.bin` is incomplete.
 3. Check the copied files' permissions using the supplied helper, let your homebrew loader scan the app folder, then launch **WinBrew 11** from Home. Open **Vapor** inside it and sign into your own Steam account.
 
 **Follow the [step-by-step installation guide](docs/getting-started.md) for the full walkthrough**, including download checks, exact folder layouts, permission commands, and first-launch checks. Already installed? Use its [update steps](docs/getting-started.md#updating-an-existing-installation). Stuck? See [troubleshooting](docs/troubleshooting.md).
 
-The downloads above are for the documented `cs2-runtime-v1` release. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
+The downloads above are for the documented `cs2-runtime-v1.1` release. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
 
 Clone or pull **main** for current code and documentation. SDKs, downloaded runtimes, and generated outputs are separate from Git. The [source-build guide](docs/source-build.md) explains the prerequisites and full target, `tools/build-vapor-cs2.sh`. The historical desktop-only `build-ps5.sh` is not the complete current Steam/Vapor application.
 
 ## Included in the combined update
+
+The v1.1 hotfix sends an existing Ready CS2 installation through preparation when its selected runtime is not current, instead of skipping directly to a refused launch. All 11 installed titles passed the runtime inventory/folder-ownership audit. See the [hotfix verification report](docs/reports/cs2-handoff-20261107.md) for scope and the legacy manual-install ownership correction.
 
 - Steam sign-in, automatic game discovery, downloads, and per-game preparation through the existing Playden services.
 - Persistent per-game hero images, logos, icons, covers, portraits, store descriptions/genres, and news snapshots. Successfully cached content is reused after restart rather than silently replaced when Steam changes it.

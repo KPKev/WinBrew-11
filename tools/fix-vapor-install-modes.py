@@ -10,7 +10,8 @@ from pathlib import PurePosixPath
 
 APP = '/data/homebrew/PPSA77382'
 KIT = '/data/wine11/kits/playden-kit'
-APP_PIN = '933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be'
+APP_PIN = ('933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be',
+           'a712a3d69ad0eae2829415486053790ce38361156f4bab6442d2838e4a9b4c4c')
 KIT_PIN = '1cd63397e5c560fddbc0f3b8baea3bf87ace1e0ba997a46ee0ed4acf4dac8dfc'
 RUNTIME_PIN = 'd7cf3ed3221f8e8a7eb571522363efc21a5540699b6b20b3226cf30012732259'
 PREFIX = 'runtime/compatibility/steam-730-cs2-v1/'
@@ -40,7 +41,7 @@ class Client:
         raise RuntimeError('Completion unknown; inspect the file-manager task before retrying')
 
 def document(raw, pin):
-    if hashlib.sha256(raw).hexdigest()!=pin: raise ValueError('Installed manifest differs from this release; no permission changes')
+    if hashlib.sha256(raw).hexdigest() not in (pin if isinstance(pin, tuple) else (pin,)): raise ValueError('Installed manifest differs from this release; no permission changes')
     return json.loads(raw)
 
 def paths_and_directories(root, modes):

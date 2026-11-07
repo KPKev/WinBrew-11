@@ -4,6 +4,14 @@
 namespace ww::steam_integration {
 using namespace playden;
 using namespace playden::homebrew;
+namespace {
+// CS2 now selects a different immutable runtime. An old Ready publication is
+// still admissible, but must pass through the host's owned-title refresh before
+// launch. Other games retain their existing preparation behavior.
+bool SelectedRuntimeReady(const RuntimeInstallView& installed) {
+  return installed.runtime_number != 730 || installed.runtime_current;
+}
+}
 Preparation::Preparation(PreparationHost& host) : host_(host), thread_(std::this_thread::get_id()) {}
 bool Preparation::NeedsRegistration(std::uint32_t app) const {
   if (!app || std::this_thread::get_id() != thread_) return false;
@@ -34,7 +42,8 @@ bool Preparation::Request(RuntimePrepareRequest request, std::uint64_t account, 
     // The runtime host resumes the saved preparation/publication journal and
     // checks registration before taking any new effects. Do not strand an
     // otherwise matching game merely because that journal exists.
-    if (!installed.recovery_pending && installed.state == runtime::PreparationState::kReady && installed.admission == "ok") {
+    if (!installed.recovery_pending && installed.state == runtime::PreparationState::kReady && installed.admission == "ok" &&
+        SelectedRuntimeReady(installed)) {
       view_ = {PreparationState::ready, "Game is ready to play."}; return true;
     }
   }
@@ -55,7 +64,7 @@ void Preparation::Tick(std::uint64_t account, std::uint64_t generation) {
   if (PrepareQueued(*current, app_) || current->preparing_app == app_) return;
   for (const auto& installed : current->installs) {
     if (installed.game != GameId::Steam(app_) || installed.runtime_number != app_ || installed.install_path != root_) continue;
-    if (installed.state == runtime::PreparationState::kReady && installed.admission == "ok" &&
+    if (installed.state == runtime::PreparationState::kReady && installed.admission == "ok" && SelectedRuntimeReady(installed) &&
         !installed.awaiting_registration && !installed.recovery_pending && !installed.moving) {
       view_ = account_changed_ ? PreparationView{PreparationState::failed, "Steam account changed while preparing the game."}
                                : PreparationView{PreparationState::ready, "Game is ready to play."}; return;
