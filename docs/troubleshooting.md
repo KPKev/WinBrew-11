@@ -52,12 +52,25 @@ There is no published WinBrew firmware compatibility matrix proving this app on 
 ## The desktop opens, but Vapor will not sign in or load the library
 
 - Confirm the PS5 itself has Internet access; the computer's connection alone is not enough.
+- If the PS5's DNS is `127.0.0.1`, confirm [nanoDNS](https://github.com/drakmor/nanoDNS) or another DNS server is running on that address for this boot. Without it, Steam hostnames cannot resolve. A different working DNS setup does not require nanoDNS. See [payload and DNS prerequisites](getting-started.md#before-you-start).
 - Complete the Steam sign-in prompts, including Steam Guard when requested. Record the exact error if it fails.
 - If the error mentions certificates or TLS, check the PS5's date/time and that `assets/steam/cacert.pem` is present from the original app package. Do not disable certificate verification or substitute an unrelated file.
 - Check the complete app was copied. Desktop startup alone does not prove the Steam services initialized successfully.
 - If games are listed but artwork is missing, allow it to load or use **Refresh game cache** on the affected game's detail page. This does not repair authentication, change ownership, or reinstall the game.
 
 Keep saved account/sign-in data while diagnosing this. Hide passwords, Steam Guard codes, QR sign-in images, session tokens, and private account files before sharing a report.
+
+## Vapor signs in, but says "Install and launch not connected yet"
+
+This message does not identify one cause. Steam account/library access and the download/game services initialize separately; Vapor can retain account access when its game-storage folder cannot be opened. A saved login or cached library also does not prove the PS5 is currently online.
+
+1. Confirm kstuff, ShadowMountPlus, and elfldr (port 9021) are running for this boot. If DNS is `127.0.0.1`, confirm nanoDNS is running too. See [prerequisites](getting-started.md#before-you-start).
+2. Confirm Vapor has completed its current Steam sign-in and the PS5 can reach the Internet.
+3. Confirm you installed the complete matching app and base kit at `/data/homebrew/PPSA77382` and `/data/wine11/kits/playden-kit`, without an extra nested folder. Close WinBrew before repairing files and run the matching release's [permission check](getting-started.md#4-check-and-restore-file-permissions) with `--base-kit`.
+4. Reopen WinBrew after any repair and check the game page again. **Refresh game cache** updates game details/artwork; it does not reconnect the download service.
+5. If it persists, report your release/ZIP name, firmware, payload versions, exact message/screenshot, and permission-check output. Keep account files, games, bottles, and saves intact.
+
+The packaged permission checker covers app/base-kit files. It does not validate or repair every parent-folder ownership setting or private game-storage permission. A passing result can therefore still require a startup-log and storage-access investigation; do not recursively change `/data/wine11` permissions or delete it to try to reconnect downloads.
 
 ## Vapor works, but a game will not launch
 

@@ -7,7 +7,10 @@ Start with a **PS5 that already has its jailbreak running**. This guide explains
 ## Before you start
 
 - **Start your usual jailbreak and homebrew payloads.** A payload is a small program loaded by your jailbreak. After a full PS5 restart, you may need to start them again before homebrew apps will run.
+- **Load [kstuff](https://github.com/EchoStretch/kstuff-lite)** for game execution. Start it again after a full console restart if your jailbreak loader does not do so automatically.
+- **Keep [elfldr](https://github.com/ps5-payload-dev/elfldr) running on port 9021.** It runs the privileged helper used to give the app/runtime access to files. Many jailbreak loaders start it automatically; a successful Steam login does not prove this helper is available.
 - **Have a homebrew loader that adds apps from `/data/homebrew` to Home.** Adding the tile is called registration. This project's installation history uses ShadowMountPlus. If you need it, follow the [ShadowMountPlus instructions](https://github.com/drakmor/ShadowMountPlus) for your firmware and its required payloads. Its compatibility list does not prove WinBrew works on every listed firmware.
+- **Check the PS5's DNS settings.** Open **Settings → Network → Settings → Set Up Internet Connection**, open the options for your connected network, and look under **Advanced Settings → DNS Settings**. If DNS points to **`127.0.0.1`**, load **[nanoDNS](https://github.com/drakmor/nanoDNS)** or another local DNS server before opening Vapor. That address points to the PS5 itself; without a DNS server listening there, Steam addresses cannot resolve. If another working DNS server is already configured, nanoDNS is not inherently required. Follow your jailbreak setup's networking instructions rather than changing DNS blindly.
 - **Use a computer on the same local network as the PS5.** You need a browser and a ZIP extractor. Avoid isolated guest Wi-Fi, which can stop devices from reaching each other.
 - **Run [PS5 Web File Manager](https://github.com/owendswang/ps5-web-file-manager) on the PS5.** Follow that project's instructions to load its payload. This walkthrough uses its browser upload feature. FTP can copy files instead, but the permission helper below still needs this Web File Manager running.
 - **Install Python 3 on your computer** for the permission helper. Download it from [python.org](https://www.python.org/downloads/). On Windows, enable the installer's PATH option if offered, then open a new terminal and type `python --version`. Try `py` on Windows or `python3` on Linux/macOS if `python` is not found. Use that working command in place of `python` below. No extra Python packages are needed.
@@ -15,6 +18,8 @@ Start with a **PS5 that already has its jailbreak running**. This guide explains
 - **Have your own Steam account and Internet access on the PS5** for sign-in, library access, and downloads. Own any paid game you intend to download. Games, accounts, and saves are not included.
 
 You do not need to install the separate Playden app for this release. The complete app includes WinBrew's helper; the base-kit download supplies its shared game runtime. Keep any existing Playden installation separate.
+
+These console prerequisites also appear in the [upstream Playden requirements](https://github.com/leolobato/playden-ps5#requirements). Use payload versions appropriate for your firmware; upstream testing is not a WinBrew firmware compatibility guarantee. After a full restart, reload the jailbreak, kstuff, ShadowMountPlus, elfldr, and nanoDNS if your DNS setup uses it. Then launch WinBrew/Vapor. Copying the app or seeing an existing Home tile does not start these payloads.
 
 ## Connect to your PS5 first
 
