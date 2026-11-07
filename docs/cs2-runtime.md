@@ -1,5 +1,7 @@
 # Automatic CS2 runtime
 
+Current combined app: **PPSA77382 / 01.016.000**, installed and startup-verified November 7, 2026. Start with [getting started](getting-started.md), [current verification](current-status.md), and the [compatibility matrix](compatibility.md). The release also contains the persistent game cache and desktop/Vapor efficiency fixes.
+
 Use the **Vapor-CS2-019.1.zip** application from the `cs2-runtime-v1` GitHub release. Keep the entire app folder together: the fixed runtime is inside it. Copying only `eboot.bin` does not install this feature.
 
 On a supported homebrew-enabled PS5, install the app folder as `/data/homebrew/PPSA77382`. Existing Vapor users keep their existing app account/state and base kit. New users also need the release's `Vapor-base-kit-0.13.zip`, extracted so its `playden-kit/manifest.json` is at `/data/wine11/kits/playden-kit/manifest.json`. Preserve archive file modes (directories 0755; individual files 0644/0755 as recorded in the kit manifest). Use a homebrew installer/extractor that preserves Unix modes; a plain FTP copy may require correcting modes. Do not replace another application's `/data/playden` kit. The normal PS5 homebrew loader, its supported system version and payload prerequisites still apply.
@@ -15,6 +17,8 @@ The default shared kit remains 0.13. Other Steam games and local imports retain 
 The matched runtime is Playden kit 0.19's Wine directory, with one derived `ntdll.prx`. The newer matched runtime resolves the startup file-descriptor exhaustion. The derived module rejects guest fixed virtual-address hints overlapping the PS5's 32–64 GiB system band, allowing Wine/V8's existing retry path, and checks that a fixed reservation actually returned the requested address. It does not rewrite CS2 executables.
 
 The owner confirmed CS2 offline gameplay with bots on this runtime. **Online Steam authentication/matchmaking remains unsupported by the in-game runtime.** Vapor's Steam login is used for its library/download services and does not supply an authenticated Steam client to the game.
+
+LAN/local multiplayer may work but has not been tried. LAN-over-Internet projects are research leads, not verified CS2/PS5 support. The tested game is CS2/app 730, not a separately tested legacy CS:GO executable. Schedule I is also owner-reported working; see the compatibility guide for the exact scope of these reports.
 
 `assets/cs2-runtime/manifest.json` pins every runtime file. Its digest and file list are compiled into `src/steam_integration/cs2_runtime_files.hpp`. The actual installer uses scoped mappings, verifies source layout/mode/size and copied bytes, and records the selected runtime's inventory identity. It uses the same controlled publication and recovery path as ordinary installation.
 

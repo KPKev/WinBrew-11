@@ -1,0 +1,26 @@
+{
+  "updated": "2026-11-07",
+  "application": {
+    "title_id": "PPSA77382",
+    "version": "01.016.000",
+    "verified_package_files": 1856,
+    "executable_sha256": "2d322963599fc2d159a7458254a5a674f791cdbd1813e196c0bcc8c851b2736c",
+    "manifest_sha256": "933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be",
+    "installed_readback_verified": true,
+    "startup_and_input_initialization_verified": true,
+    "further_combined_update_owner_testing": "pending"
+  },
+  "games": {
+    "schedule_i": {"status": "owner-reported working", "multiplayer": "not established"},
+    "cs2_app_730": {
+      "status": "owner-confirmed offline gameplay with bots",
+      "lan_local_play": "untested",
+      "internet_tunneling": "untested",
+      "in_game_steam_authentication_and_official_matchmaking": "unsupported",
+      "legacy_csgo_separately_tested": false
+    }
+  },
+  "owner_shadow_fix_feedback": "Smooth now",
+  "hardware_fps_measured": false,
+  "owner_game_reinstalled_for_combined_app_update": false
+}

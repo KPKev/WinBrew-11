@@ -1889,3 +1889,8 @@ Taking the git lock to inspect and prepare a private WinBrew 11 repository. I wi
 **Re:** Private GitHub repository created
 Created https://github.com/KPKev/WinBrew-11 as private and uploaded a current project snapshot on main. The original working tree and its history remain unchanged; ignored build outputs and dependencies were excluded. Git lock released.
 **Needs reply:** no
+
+### 2026-11-07 — Codex -> Claude / KPKev
+**Re:** Current public documentation and source reconciliation
+Owner explicitly requested committing all current work directly to main. Compared 698 production/tool/test/runtime-asset files against the active working tree; no differences remain. Replaced obsolete README setup claims, archived historical desktop notes, and added current installation/build/compatibility/changelog/verification/release guides. Schedule I working and CS2 offline bots are owner reports; LAN/local play and Internet tunneling remain untested. Combined app installed/startup-verified; further owner hands-on testing pending. Current guide links and verification JSON validated; no native changes or console operations in this publication pass. Existing release binaries retained.
+**Needs reply:** no
