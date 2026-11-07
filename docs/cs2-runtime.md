@@ -6,6 +6,8 @@ On a supported homebrew-enabled PS5, install the app folder as `/data/homebrew/P
 
 Sign into Steam in Vapor to access your own library, then install Counter-Strike 2 normally. Vapor recognizes **Steam app 730** and stages the complete matched `cs2-019.1` runtime into that game's `win/wine` directory before publishing the title. Removing and reinstalling CS2 follows the same preparation path. Existing owned CS2 installations can refresh through normal preparation; their bottle, settings and saves remain in place. A missing, linked or modified bundled runtime fails preparation instead of falling back to the older runtime.
 
+If your file manager/FTP copy loses Unix file modes, download `fix-vapor-install-modes.py` from the release and run it on your PC after copying/extracting the files. With Web File Manager running on the PS5, `python fix-vapor-install-modes.py --host YOUR_PS5_IP --base-kit` shows a read-only plan; add `--apply` to restore and verify the recorded modes. Omit `--base-kit` if your existing dedicated base kit is already configured. This helper accepts only this release's pinned manifests and changes no file contents, downloaded games, accounts or saves.
+
 The default shared kit remains 0.13. Other Steam games and local imports retain their existing runtime selection. The Skyrim Special Edition, Terraria, Brotato and Counter-Strike: Source default profiles are also included; saved user settings retain precedence. No game downloads, game files, Steam accounts or saves are included in this release.
 
 ## What the fix contains
