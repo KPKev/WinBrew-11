@@ -4,7 +4,7 @@
 | --- | --- | --- | --- |
 | console | (free) | | |
 | build | (free) | | |
-| git | Codex | 2026-11-07 | Create private GitHub repository |
+| git | (free) | | |
 
 
 | file:src/steam_integration/controller_layouts.* | (free) | | |
@@ -77,4 +77,5 @@
 | file:src/steam_integration/vapor_game_cleanup_protocol.hpp | (free) | | |
 | file:src/steam_integration/owner_payload_cleanup_probe.* | (free) | | |
 | file:src/steam_integration/owner_blender_play.* | (free) | | |
+
 
