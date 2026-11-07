@@ -1,0 +1,39 @@
+--- a/dlls/ntdll/unix/virtual.c
++++ b/dlls/ntdll/unix/virtual.c
+@@ -849,6 +849,7 @@
+ #define PS5_HIGH_BASE        ((void *)0x1000000000)
+ #define PS5_HIGH_RESERVE     ((size_t)16 << 30)
+ #define PS5_HIGH_RESERVE_MAX ((size_t)512 << 30)
++#include "pw_ps5_fixed_hint.h"
+ #endif
+ 
+ static void *anon_mmap_tryfixed( void *start, size_t size, int prot, int flags )
+@@ -860,11 +861,28 @@
+ #elif defined(MAP_TRYFIXED)
+     ptr = mmap( start, size, prot, MAP_TRYFIXED | MAP_PRIVATE | MAP_ANON | flags, -1, 0 );
+ #elif defined(__PROSPERO__)
++    /* A bare reservation in the system band cannot later be backed with
++     * direct memory. Refuse the guest hint before any kernel side effect,
++     * so callers can retry in the normal user area. */
++    if (!pw_ps5_fixed_hint_allowed((uintptr_t)start, size))
++    {
++        TRACE("PS5 fixed hint refused system band or overflow, base %p size %08lx\n", start, size);
++        errno = EEXIST;
++        return MAP_FAILED;
++    }
+     /* The kernel ignores MAP_EXCL, so claim the range with a reservation
+      * that refuses to overwrite, then map over it if needed. */
+     ptr = start;
+     if (sceKernelReserveVirtualRange( &ptr, size, PS5_MAP_FIXED | PS5_MAP_NO_OVERWRITE, host_page_size ))
+     {
++        errno = EEXIST;
++        return MAP_FAILED;
++    }
++    if (ptr != start)
++    {
++        /* A successful NO_OVERWRITE reservation is newly owned. Release
++         * its actual returned range, never the requested unowned address. */
++        munmap(ptr, size);
+         errno = EEXIST;
+         return MAP_FAILED;
+     }

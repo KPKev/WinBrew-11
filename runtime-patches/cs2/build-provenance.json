@@ -1,0 +1,131 @@
+{
+  "sources": [
+    {
+      "path": "evidence\\cs2-prospero7537-source.tar.gz",
+      "url": "https://codeload.github.com/leolobato/prospero-win/tar.gz/7537eb0113b438e8dc0730e594fa0743203bc7c9",
+      "size": 3508635,
+      "sha256": "d65c459759f1c4757ef6ab82ce74235c7d1b8f295afc2af35c5db2920f7db569"
+    },
+    {
+      "path": "evidence\\cs2-wine490-source.tar.gz",
+      "url": "https://codeload.github.com/wine-mirror/wine/tar.gz/490f6d5dcbb2a5047345b8af88d114bbcaad69a8",
+      "size": 75633669,
+      "sha256": "c40c03637f90ede4fe60ffc4162473870038dc2324cd1d67d186ad72212a70d5"
+    },
+    {
+      "path": "foundation-305975-source.tar",
+      "revision": "30597512539e7edfde079cbcaf4a626bc0a948c5",
+      "size": 24985600,
+      "sha256": "9212c6c8768311e1ec45a1c744eaaec811ae50e4f28e7f026351df0ee46809ef"
+    }
+  ],
+  "repair": {
+    "apply-fix.py": {
+      "sha256": "be0b92f07072169250bf82f38dba156adaf3c9b3b4a3f5776b4835f5ced63aba",
+      "bytes": 2287
+    },
+    "audit-ntdll.py": {
+      "sha256": "c81cfe82b121c9ea0a72c9f79cb4c04db061d3ed0e0bca57acfc76c833573849",
+      "bytes": 4131
+    },
+    "build-host-tools.sh": {
+      "sha256": "d70bef7b3e6e32d6355f1ac6f4c74d5ed7b475e8edb96a15086aa2c701506a62",
+      "bytes": 559
+    },
+    "build-ntdll-unix.sh": {
+      "sha256": "9c8b7d55192d2901972283c9cc42e494d0c35694d5129b4a967b8f0c6b2cbc78",
+      "bytes": 2233
+    },
+    "build-tool-and-test.sh": {
+      "sha256": "c545a04070bc43d2d082d9cac32207df8cd7524c384263ba8ba754e782db738b",
+      "bytes": 925
+    },
+    "host-configure.log": {
+      "sha256": "9359d6d77338b32c12d0f3e082a8c3d54c523c04eed1a5c1bb5f031995aecc60",
+      "bytes": 13783
+    },
+    "host-tools.log": {
+      "sha256": "28ca5bfe57c04b1fc3cef367a694ba729d6e294a2ddb3c59c9f59ab94d6b9ee7",
+      "bytes": 63738
+    },
+    "link-ntdll-prx.sh": {
+      "sha256": "508fad5ccfec1c39b03fd480cd7ae3973496a8a318054d949b2fec372fbb2f02",
+      "bytes": 3948
+    },
+    "ntdll-audit.json": {
+      "sha256": "60df8faa15a7c0b3466217c78c0d9424421638a9d45f75b6e9db96e90333475c",
+      "bytes": 1431
+    },
+    "ntdll-make.log": {
+      "sha256": "64b97c5db1e3c73b81bc451227f9ed8305b1d36c0f8590bf9907e9594b74ab7c",
+      "bytes": 3760
+    },
+    "ntdll-objects.txt": {
+      "sha256": "56f04d2abc3fa6edb19c74acef74bdb88eccef3857930b4219a588094fdc7ffd",
+      "bytes": 620
+    },
+    "ntdll-prx-link.log": {
+      "sha256": "dc457bc17ab50d15c62577921e77ac3a3ba54a72cf4ebc83731c61fd3cb87341",
+      "bytes": 301
+    },
+    "ntdll.prx": {
+      "sha256": "4f9f9fd45c65be0320794186f94bc2611be0d223199955a06d1e984cd295d94b",
+      "bytes": 747170
+    },
+    "ntdll.release019.before.prx": {
+      "sha256": "ac249ad6d13e9818f7a28f0ba0c2b489df31064610c91f13ea20cee6194dfbe5",
+      "bytes": 746658
+    },
+    "ntdll_desc.c": {
+      "sha256": "714891c5ee912627b89379393e258ce61857e0b122ab6aeb6775abbc254ab876",
+      "bytes": 5597
+    },
+    "patches-applied.log": {
+      "sha256": "c0da1edfecc5628233ada73f48abe4d5af65e01d75ba5dadb2a46ff06d562cf4",
+      "bytes": 15222
+    },
+    "prepare-source.py": {
+      "sha256": "290195bddcf675e346ff12844d4485ef53428291c245d403c37bcf98b5d13040",
+      "bytes": 1619
+    },
+    "prepare-tools.sh": {
+      "sha256": "28ab03d6efd5654e5222e28271e727b30bfbb196a7c44bc2821f202b93f95b40",
+      "bytes": 334
+    },
+    "ps5-config-status.log": {
+      "sha256": "5212e746df66fb440cac742d419af4291cc4ee63b5a2295bc26f48264074d5ce",
+      "bytes": 179
+    },
+    "ps5-config.h": {
+      "sha256": "78a480a2633cdd35446beb0b6d482a0dde789f86d8cd5a04d3439d3b40ef6f7a",
+      "bytes": 27209
+    },
+    "ps5-configure.log": {
+      "sha256": "239ae516c65088fb4534da30cb879c1bd333457a971a4dc336c27c8286c4ca7a",
+      "bytes": 18413
+    },
+    "ps5-fixed-hint-system-band.patch": {
+      "sha256": "89b58f09641db919c9d9bf153a0de920006526adb0725aa681cf25ddd1773371",
+      "bytes": 1572
+    },
+    "pw_ps5_fixed_hint.h": {
+      "sha256": "351fa9e210635de88ed41f9895bc1bf16235795087a3b98cf66b4f92ba8080ee",
+      "bytes": 769
+    },
+    "README.md": {
+      "sha256": "b46188254663f40973753b57d8cbe0c44ea1722786c2926467def90154cc5e42",
+      "bytes": 3663
+    },
+    "test_fixed_hint.c": {
+      "sha256": "7e706639bcee0e3fa7c9c736302688966dc38966647d4bdb91150889de76d0b0",
+      "bytes": 941
+    },
+    "virtual-fixed.c": {
+      "sha256": "a30ff984c195b5ee99b5ab941ed25dab9b08ea98a19e7e63e96e5297188acaa4",
+      "bytes": 291433
+    }
+  },
+  "ubuntu_local_tool_packages": [],
+  "source_fix_scope": "Wine Unix virtual-memory fixed guest hints only; no other runtime modules rebuilt",
+  "console_actions_by_builder": false
+}

@@ -38,3 +38,16 @@ https://store.cloudflare.steamstatic.com/public/shared/images/responsive/header_
 The Steam name and logo belong to Valve Corporation; their inclusion does not
 imply Valve endorsement of Vapor.
 
+## CS2 compatibility runtime
+
+Steam app 730 uses a complete matched Wine directory derived from Playden kit
+0.19 (prospero-win 7537eb0113b438e8dc0730e594fa0743203bc7c9; Wine
+490f6d5dcbb2a5047345b8af88d114bbcaad69a8), with KPKev's narrow fixed-hint
+repair to ntdll. Wine/prospero notices and all upstream component source
+references accompany the app in runtime/compatibility-notices/cs2-019.1.
+Corresponding source for the modified module is offered with the same release:
+https://github.com/KPKev/WinBrew-11/releases/tag/cs2-runtime-v1 . The patch,
+LGPL helper, build scripts and exact file manifest are in runtime-patches/cs2
+and assets/cs2-runtime in the repository. See docs/cs2-runtime.md for scope and
+rebuilding. Other games retain the base runtime.
+

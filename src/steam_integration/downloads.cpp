@@ -43,6 +43,11 @@ bool DownloadCoordinator::DismissCompleted(std::uint32_t app) { return Submit(Ki
 playden::installs::InstallSnapshot DownloadCoordinator::Snapshot() const {
   std::lock_guard<std::mutex> lock(mutex_); return snapshot_;
 }
+bool DownloadCoordinator::SnapshotIfChanged(playden::installs::InstallSnapshot& out, std::uint64_t& generation) const {
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (generation == snapshot_generation_) return false;
+  out = snapshot_; generation = snapshot_generation_; return true;
+}
 bool DownloadCoordinator::Busy() const {
   std::lock_guard<std::mutex> lock(mutex_);
   if (failed_ || frozen_ || !ready_ || in_flight_ || !commands_.empty() || !snapshot_.jobs.empty()) return true;
@@ -145,7 +150,7 @@ void DownloadCoordinator::Run() {
       if (!found) rejected = true;
     }
     { std::lock_guard<std::mutex> lock(mutex_);
-      snapshot_ = std::move(current); in_flight_ = false; ready_ = true;
+      snapshot_ = std::move(current); ++snapshot_generation_; in_flight_ = false; ready_ = true;
       if (rejected && command.sequence == sequence_) error_ = "The download could not be queued.";
     }
     } catch (...) {

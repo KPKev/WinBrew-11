@@ -79,6 +79,11 @@ class SteamUi {
   virtual void tick() = 0;
   virtual SteamStatus status() const = 0;
   virtual bool game(std::size_t index, SteamGame&) const = 0;
+  // Lightweight display fields; no runtime admission/management checks.
+  virtual bool game_summary(std::size_t index, SteamGame& out) const { return game(index, out); }
+  virtual bool reset_game_cache(std::uint32_t) { return false; }
+  // Providers may bound background library scans while input remains frame-paced.
+  virtual std::uint32_t library_poll_interval_ms() const { return 0; }
   // Game artwork is public, optional, and fetched asynchronously.
   virtual void request_artwork(std::uint32_t) {}
   virtual bool take_artwork(std::uint32_t, SteamArtwork&) { return false; }

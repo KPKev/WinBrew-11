@@ -9,6 +9,12 @@
 #include <filesystem>
 #include <utility>
 struct FakeSteam final : ww::SteamUi {
+  mutable int full_game_reads = 0, summary_reads = 0;
+  std::uint32_t poll_interval = 0;
+  std::uint32_t library_poll_interval_ms() const override { return poll_interval; }
+  bool game_summary(std::size_t i, ww::SteamGame& out) const override {
+    ++summary_reads; const bool result = game(i, out); --full_game_reads; return result;
+  }
   ww::SteamStatus state{}; int scans = 0, canceled = 0, signed_out = 0, refreshed = 0;
   unsigned special_app = 0; bool special_playable = false; int played = 0, resolved = 0, skipped = 0; bool chose_cloud = false;
   bool failed = false; int retried = 0; std::string failure_text;
@@ -19,6 +25,8 @@ struct FakeSteam final : ww::SteamUi {
   bool queue_fixture = false, allow_cancel = true; unsigned last_resumed = 0, last_canceled_download = 0; int queue_shift = 0;
   ww::SteamDownload fake_download{}; int paused = 0; unsigned last_paused = 0;
   std::uint32_t artwork_requested = 0; std::vector<std::uint8_t> artwork_bytes, logo_bytes;
+  std::uint32_t reset_app = 0;
+  bool reset_game_cache(std::uint32_t app) override { reset_app = app; return true; }
   bool news_ready = false; ww::SteamArtwork news_update;
   std::vector<std::uint8_t> icon_bytes;
   std::vector<std::uint8_t> cover_bytes, portrait_bytes;
@@ -26,6 +34,7 @@ struct FakeSteam final : ww::SteamUi {
   void tick() override {}
   ww::SteamStatus status() const override { return state; }
   bool game(std::size_t i, ww::SteamGame& game) const override {
+    ++full_game_reads;
     if (i >= state.game_count) return false;
     game.app_id = i == 0 && special_app ? special_app : unsigned(swap_library && i < 2 ? 2 - i : i + 1);
     if (game.app_id == removed_app) return false;
@@ -870,5 +879,34 @@ int main(int argc, char**) {
   std::filesystem::remove(settings_path + ".icons");
   std::filesystem::remove(shortcut_dir / "vapor-shortcuts.txt");
   std::filesystem::remove(shortcut_dir);
+  steam.state.account = ww::SteamAccount::online; steam.state.game_count = 2;
+  steam.removed_app = 0; steam.swap_library = false; steam.sort_fixture = false;
+  shell.file_games = true; shell.window = 1; shell.library_downloads = false; shell.steam_panel = false;
+  shell.steam_selection = 0; shell.steam_selected_app = steam.special_app ? steam.special_app : 1;
+  shell.steam_art_app = shell.steam_selected_app;
+  shell.steam_description = "old description";
+  shell.vapor_game_icons.push_back({shell.steam_selected_app});
+  const auto reset_target = shell.steam_selected_app;
+  const int reads_before = steam.full_game_reads;
+  shell.draw();
+  assert(steam.full_game_reads - reads_before == 1); // Only the selected game's full admission checks.
+  shell.steam_selection = -1; shell.steam_selected_app = 0;
+  const int home_reads = steam.full_game_reads;
+  shell.draw(); assert(steam.full_game_reads == home_reads);
+  steam.state.game_count = 3; shell.draw(); // Discovery still updates the displayed rows.
+  assert(shell.steam_rows.size() == 3);
+  shell.steam_selection = 0; shell.steam_selected_app = reset_target;
+
+  shell.draw(); assert(find(shell, 1172).w > 0);
+  click(shell, 1172);
+  assert(steam.reset_app == reset_target && shell.steam_description.empty());
+  for (const auto& icon : shell.vapor_game_icons) assert(icon.app != reset_target);
+  steam.poll_interval = 60000; steam.state.game_count = 1000;
+  shell.steam_rows_next_scan_ms = 0; shell.draw();
+  const int summaries_before = steam.summary_reads;
+  shell.draw();
+  assert(steam.summary_reads - summaries_before < 100); // No full-library scan while moving pointer.
+  steam.state.game_count = 1001; shell.draw();
+  assert(shell.steam_rows.size() == 1001); // Newly detected games bypass the scan timer.
   std::puts("PASS: Steam account, library scrolling, selection, refresh and sign-out UI");
 }

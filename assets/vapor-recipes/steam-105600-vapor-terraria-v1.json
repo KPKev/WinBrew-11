@@ -1,0 +1,24 @@
+{
+  "recipe_id": "steam-105600-vapor-terraria-v1",
+  "recipe_version": 1,
+  "app_id": 105600,
+  "name": "Terraria",
+  "launch_entries": [
+    {
+      "id": "game",
+      "label": "Terraria",
+      "executable": "Terraria.exe"
+    }
+  ],
+  "arguments": "",
+  "resolution_arguments": "",
+  "dll_overrides": "",
+  "architecture": "pe32",
+  "runtime": "wine-wow64",
+  "prefix": "game",
+  "graphics": "opengl",
+  "defaults": {
+    "steam_features": "emulate"
+  },
+  "locked": []
+}

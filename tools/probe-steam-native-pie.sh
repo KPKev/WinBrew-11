@@ -126,7 +126,9 @@ if [[ "${WINE11_USE_SNAPSHOT:-0}" == 1 ]]; then
 from pathlib import Path
 import sys
 sys.path.insert(0, 'tools')
-from prepare_vapor_title_trash import transform
+from prepare_vapor_title_trash import transform as title_trash
+from prepare_cs2_runtime_installer import runtime_host
+def transform(source): return runtime_host(title_trash(source))
 source = Path(sys.argv[1]).read_text()
 old = 'const auto cache = HostPath(config_.package_paths.console_data_root + "/playden/redist").string();'
 new = 'const auto cache = (config_.state_root / "redist").string();'

@@ -86,8 +86,34 @@ void HidInput::mouse(Shell &shell, const uint8_t *records, int count,
       mouse(shell, records, 1, now);
       return;
     }
-    for (int i = 0; i < used; ++i)
-      mouse(shell, records + order[i] * 40, 1, now);
+    for (int i = 0; i < used;) {
+      const auto* first = records + order[i] * 40;
+      int end = i + 1;
+      const auto mask = value<uint32_t>(first + 12) & 7;
+      // Stationary edges and wheel routing remain in chronological order.
+      // Painting needs intermediate positions; preserve every stroke sample.
+      if (!mask && mask == buttons && shell.window != 5 && !value<int32_t>(first + 24)) {
+        while (end < used) {
+          const auto* next = records + order[end] * 40;
+          if ((value<uint32_t>(next + 12) & 7) != mask || value<int32_t>(next + 24)) break;
+          ++end;
+        }
+      }
+      if (end == i + 1) mouse(shell, first, 1, now);
+      else {
+        uint8_t combined[40]; std::memcpy(combined, first, sizeof(combined));
+        int64_t dx = 0, dy = 0;
+        for (int j = i; j < end; ++j) {
+          dx += value<int32_t>(records + order[j] * 40 + 16);
+          dy += value<int32_t>(records + order[j] * 40 + 20);
+        }
+        const int32_t x = int32_t(dx < -4096 ? -4096 : dx > 4096 ? 4096 : dx);
+        const int32_t y = int32_t(dy < -4096 ? -4096 : dy > 4096 ? 4096 : dy);
+        std::memcpy(combined + 16, &x, sizeof(x)); std::memcpy(combined + 20, &y, sizeof(y));
+        mouse(shell, combined, 1, now);
+      }
+      i = end;
+    }
     return;
   }
   // sceMouseRead drains queued reports. A timestamp is not an event ID:

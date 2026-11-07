@@ -26,6 +26,9 @@ class UiAdapter final : public SteamUi {
   void tick() override;
   SteamStatus status() const override;
   bool game(std::size_t, SteamGame&) const override;
+  bool game_summary(std::size_t, SteamGame&) const override;
+  bool reset_game_cache(std::uint32_t) override;
+  std::uint32_t library_poll_interval_ms() const override { return 250; }
   void request_artwork(std::uint32_t) override;
   bool take_artwork(std::uint32_t, SteamArtwork&) override;
   void request_game_icon(std::uint32_t) override;
@@ -126,6 +129,7 @@ class UiAdapter final : public SteamUi {
   std::string pending_root_;
   std::string message_;
   playden::installs::InstallSnapshot download_snapshot_;
+  std::uint64_t download_snapshot_generation_ = 0;
   traffic::Sampler network_sampler_;
   std::uint32_t network_app_ = 0;
   std::optional<std::uint64_t> network_rate_;

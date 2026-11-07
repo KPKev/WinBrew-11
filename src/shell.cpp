@@ -68,6 +68,16 @@ bool Shell::init(const char *root, uint32_t *frame, uint32_t *background,
     return false;
   ok = ok && std::fread(font, 1, AtlasBytes, f) == AtlasBytes;
   std::fclose(f);
+  // Immutable glyph coverage is measured once, rather than scanning the empty
+  // 48x55 atlas cell around every letter on every frame.
+  if (ok) for (int index = 0; index < 3 * 96; ++index) {
+    auto& bounds = glyph_bounds[index];
+    const auto* glyph = font + index * 48 * 56;
+    for (int gy = 1; gy < 56; ++gy) for (int gx = 0; gx < 48; ++gx) if (glyph[gy * 48 + gx]) {
+      bounds.left = std::min(int(bounds.left), gx); bounds.right = std::max(int(bounds.right), gx + 1);
+      bounds.top = std::min(int(bounds.top), gy); bounds.bottom = std::max(int(bounds.bottom), gy + 1);
+    }
+  }
   std::snprintf(path, sizeof(path), "%s/steam-header-logo.png", root);
   if (FILE* logo = std::fopen(path, "rb")) {
     std::vector<unsigned char> bytes(65536);
@@ -120,15 +130,18 @@ void Shell::load_web_history() {
 }
 static int find_steam_game(SteamUi *steam, std::uint32_t app) {
   if (!steam || !app) return -1;
-  for (std::size_t i = 0; i < steam->status().game_count; ++i) {
+  const auto count = steam->status().game_count;
+  for (std::size_t i = 0; i < count; ++i) {
     SteamGame game;
-    if (steam->game(i, game) && game.app_id == app) return int(i);
+    if (steam->game_summary(i, game) && game.app_id == app) return int(i);
   }
   return -1;
 }
 void Shell::sync_steam_selection() {
   if (steam_selection < 0) { steam_selected_app = 0; return; }
   if (steam_selected_app) {
+    SteamGame current;
+    if (steam && steam->game_summary(std::size_t(steam_selection), current) && current.app_id == steam_selected_app) return;
     steam_selection = find_steam_game(steam, steam_selected_app);
     if (steam_selection < 0) steam_selected_app = 0;
   }
@@ -256,12 +269,18 @@ int Shell::width(const char *s, int size) {
 void Shell::text(int x, int y, const char *s, int size, uint32_t c) {
   while (*s) {
     unsigned ch = atlas_character(s);
-    auto *g = font + (size * 96 + ch - 32) * 48 * 56;
-    for (int gy = 1; gy < 56; gy++)
-      for (int gx = 0; gx < 48; gx++) {
-        int px = x + gx, py = y + gy - 1;
-        if (px >= 0 && px < W && py >= 0 && py < H && g[gy * 48 + gx])
-          pixels[py * W + px] = mix(pixels[py * W + px], c, g[gy * 48 + gx]);
+    const int index = size * 96 + ch - 32;
+    const auto *g = font + index * 48 * 56;
+    const auto& bounds = glyph_bounds[index];
+    const int left = std::max(int(bounds.left), -x), right = std::min(int(bounds.right), W - x);
+    const int top = std::max(int(bounds.top), 1 - y), bottom = std::min(int(bounds.bottom), H + 1 - y);
+    for (int gy = top; gy < bottom; ++gy)
+      for (int gx = left; gx < right; ++gx) {
+        const unsigned alpha = g[gy * 48 + gx];
+        if (alpha) {
+          auto& destination = pixels[(y + gy - 1) * W + x + gx];
+          destination = alpha == 255 ? c | 0xff000000u : mix(destination, c, alpha);
+        }
       }
     x += g[0];
   }
@@ -286,8 +305,30 @@ void Shell::button(Rect r, int id, const char *s, int size) {
   center(r.x, r.y + (r.h - (size ? 30 : 24)) / 2, r.w, s, size, ink());
 }
 void Shell::panel(Rect r) {
-  for (int i = 18; i > 0; i--)
-    round({r.x - i, r.y - i + 8, r.w + 2 * i, r.h + 2 * i}, 12, 0x03000000);
+  // The opaque window below completely covers this rectangle. Previously
+  // every shadow layer blended the entire window interior before overwriting
+  // it: a maximized window meant tens of millions of wasted pixel blends.
+  const Rect covered{r.x - 1, r.y - 1, r.w + 2, r.h + 2};
+  for (int i = 18; i > 0; i--) {
+    const Rect shadow{r.x - i, r.y - i + 8, r.w + 2 * i, r.h + 2 * i};
+    for (int row = 0; row < shadow.h; ++row) {
+      const int d = row < 12 ? 11 - row : row >= shadow.h - 12 ? row - (shadow.h - 12) : 0;
+      const int inset = d ? 12 - int(std::sqrt(float(144 - d * d))) : 0;
+      const int left = shadow.x + inset, right = shadow.x + shadow.w - inset;
+      const int y = shadow.y + row;
+      if (covered.w > 0 && covered.h > 0 && y >= covered.y && y < covered.y + covered.h) {
+        const int cy = y - covered.y;
+        const int cd = cy < 11 ? 10 - cy : cy >= covered.h - 11 ? cy - (covered.h - 11) : 0;
+        const int cut = cd ? 11 - int(std::sqrt(float(121 - cd * cd))) : 0;
+        const int opaque_left = covered.x + cut, opaque_right = covered.x + covered.w - cut;
+        if (opaque_right > opaque_left) {
+          rect({left, y, std::max(0, std::min(right, opaque_left) - left), 1}, 0x03000000);
+          const int start = std::max(left, opaque_right);
+          rect({start, y, std::max(0, right - start), 1}, 0x03000000);
+        } else rect({left, y, right - left, 1}, 0x03000000);
+      } else rect({left, y, right - left, 1}, 0x03000000);
+    }
+  }
   round({r.x - 1, r.y - 1, r.w + 2, r.h + 2}, 11,
         dark ? rgb(76, 81, 92) : rgb(210, 218, 228));
   round(r, 10, surface());
@@ -393,7 +434,24 @@ void Shell::activate(int id) {
     }
     return;
   }
-  if (id == 1152 && file_games) {
+  if (id == 1172 && steam && file_games && !library_downloads && !steam_panel && steam_selection >= 0) {
+    SteamGame selected;
+    if (steam->game_summary(std::size_t(steam_selection), selected) && selected.app_id == steam_selected_app &&
+        steam->reset_game_cache(selected.app_id)) {
+      const auto app = selected.app_id;
+      vapor_game_icons.erase(std::remove_if(vapor_game_icons.begin(), vapor_game_icons.end(),
+          [app](const auto& entry) { return entry.app == app; }), vapor_game_icons.end());
+      for (auto* images : {&vapor_game_covers, &vapor_game_portraits})
+        images->erase(std::remove_if(images->begin(), images->end(),
+            [app](const auto& entry) { return entry.app == app; }), images->end());
+      // Reset already queued the new detail request; keep its generation.
+      steam_art_app = app; steam_art_width = steam_art_height = 0;
+      steam_logo_width = steam_logo_height = 0; steam_art_fallback = false;
+      steam_description.clear(); steam_genres.clear();
+      steam_news_state = SteamNewsState::pending; steam_news_title.clear();
+      steam_news_feed.clear(); steam_news_description.clear(); steam_news_published = 0;
+    }
+  } else if (id == 1152 && file_games) {
     begin_text(TextTarget::vapor_search);
   } else if (id == 1153 && file_games) {
     vapor_search[0] = 0; steam_scroll = 0; steam_home_row = 0; steam_recent_offset = 0;

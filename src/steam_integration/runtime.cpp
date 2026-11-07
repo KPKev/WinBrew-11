@@ -114,7 +114,21 @@ class Runtime::Impl {
         entitled(owned, library_cm), details_source(details_cm), info_source(info_cm), cache(storage),
         auth_service(auth, auth_sessions), library_service(entitled, library_sessions, &cache),
         details_service(details_source, details_sessions), info_service(info_source, info_sessions), controller(auth_service, library_service),
-        launch_details(details_service), artwork(ca), ui(controller) {
+        launch_details(details_service), artwork(ca, [] { return std::chrono::steady_clock::now(); }, {
+          [this](const std::string& key, std::size_t maximum) {
+            const auto uid = playden::ps5::HoldEffectiveUid();
+            auto bytes = storage.Read(key, maximum);
+            return bytes.ok() ? std::move(bytes.value()) : playden::Bytes{};
+          },
+          [this](const std::string& key, const playden::Bytes& bytes) {
+            const auto uid = playden::ps5::HoldEffectiveUid();
+            if (storage.EnsureRootDirectory().ok()) (void)storage.WriteAtomic(key, bytes);
+          },
+          [this](const std::string& key) {
+            const auto uid = playden::ps5::HoldEffectiveUid();
+            (void)storage.Remove(key);
+          }
+        }), ui(controller) {
     auth_cm.SetOwner("wine11-auth");
     library_cm.SetOwner("wine11-library");
     details_cm.SetOwner("wine11-details");

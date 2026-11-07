@@ -90,9 +90,71 @@ SteamArtwork parse_news(std::uint32_t app, const std::vector<std::uint8_t>& byte
   return result;
 }
 }
-ArtworkService::ArtworkService(std::string ca_bundle, Clock clock) : ca_(std::move(ca_bundle)), clock_(std::move(clock)), worker_([this] { Run(); }),
+ArtworkService::ArtworkService(std::string ca_bundle, Clock clock, ArtworkCache cache) : cache_(std::move(cache)), ca_(std::move(ca_bundle)), clock_(std::move(clock)), worker_([this] { Run(); }),
     icon_worker_a_([this] { RunIcons(); }), icon_worker_b_([this] { RunIcons(); }),
     cover_worker_a_([this] { RunCovers(); }), cover_worker_b_([this] { RunCovers(); }) {}
+namespace {
+std::string cache_key(std::uint32_t app, const char* kind) {
+  return "vapor-steam-" + std::to_string(app) + "-" + kind + "-v1.cache";
+}
+}
+void ArtworkService::RejectCache(std::uint32_t app, const char* kind) {
+  // Called with mutex_ held. Actual disk removal is deferred to a worker.
+  rejected_cache_.insert(cache_key(app, kind));
+}
+void ArtworkService::Reset(std::uint32_t app) {
+  if (!app) return;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    ++cache_epoch_; // old in-flight responses cannot refill a reset cache
+    for (const char* kind : {"hero", "logo", "details", "news", "icon", "cover", "portrait"})
+      RejectCache(app, kind);
+    if (icon_results_.erase(app)) icon_requested_.erase(app);
+    if (cover_results_.erase(app)) cover_requested_.erase(app);
+    if (portrait_results_.erase(app)) portrait_requested_.erase(app);
+    icon_result_source_.erase(app); cover_result_source_.erase(app); portrait_result_source_.erase(app);
+    for (auto* order : {&icon_result_order_, &cover_result_order_, &portrait_result_order_})
+      order->erase(std::remove(order->begin(), order->end(), app), order->end());
+    icon_retry_after_.erase(app); cover_retry_after_.erase(app); portrait_retry_after_.erase(app);
+    icon_next_source_.erase(app); cover_next_source_.erase(app); portrait_next_source_.erase(app);
+  }
+  Request(app);
+}
+playden::steam::HttpResponse ArtworkService::Fetch(playden::steam::HttpClient& client,
+    const playden::steam::HttpRequest& request, const std::atomic<bool>& cancel,
+    std::uint32_t app, const char* kind, std::uint64_t epoch) {
+  const auto key = cache_key(app, kind);
+  auto valid = [app, kind](const playden::steam::HttpResponse& response) {
+    if (!response.ok() || response.status_code != 200) return false;
+    if (std::string(kind) == "details")
+      return bool(playden::steam::ParseStoreDetails(app, std::string(response.body.begin(), response.body.end())));
+    if (std::string(kind) == "news")
+      return parse_news(app, response.body).news_state != SteamNewsState::unavailable;
+    return image_response(response);
+  };
+  bool reject = false;
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    reject = rejected_cache_.erase(key) != 0;
+  }
+  {
+    std::lock_guard<std::mutex> disk(cache_mutex_);
+    if (reject && cache_.remove) cache_.remove(key);
+    if (!reject && cache_.read && epoch == cache_epoch_) {
+      playden::steam::HttpResponse cached;
+      cached.status_code = 200;
+      // Fallback artwork can be larger than the primary endpoint.
+      cached.body = cache_.read(key, 2 * 1024 * 1024);
+      if (valid(cached)) return cached;
+    }
+  }
+  auto response = client.Perform(request, cancel);
+  if (!cancel && epoch == cache_epoch_ && valid(response) && cache_.write) {
+    std::lock_guard<std::mutex> disk(cache_mutex_);
+    if (epoch == cache_epoch_) cache_.write(key, response.body);
+  }
+  return response;
+}
 ArtworkService::~ArtworkService() {
   stopping_ = true;
   { std::lock_guard<std::mutex> lock(mutex_); if (active_detail_cancel_) *active_detail_cancel_ = true; }
@@ -124,6 +186,7 @@ void ArtworkService::RejectCover(std::uint32_t app) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (cover_retry_after_.size() >= 512 && !cover_retry_after_.count(app)) cover_retry_after_.erase(cover_retry_after_.begin());
   cover_retry_after_[app] = clock_() + std::chrono::seconds(60);
+  RejectCache(app, "cover");
   const auto last = cover_last_source_.find(app);
   if (last != cover_last_source_.end()) {
     if (cover_next_source_.size() >= 512 && !cover_next_source_.count(app)) cover_next_source_.erase(cover_next_source_.begin());
@@ -151,6 +214,7 @@ void ArtworkService::RejectPortrait(std::uint32_t app) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (portrait_retry_after_.size() >= 512 && !portrait_retry_after_.count(app)) portrait_retry_after_.erase(portrait_retry_after_.begin());
   portrait_retry_after_[app] = clock_() + std::chrono::seconds(60);
+  RejectCache(app, "portrait");
   const auto last = portrait_last_source_.find(app);
   if (last != portrait_last_source_.end()) {
     if (portrait_next_source_.size() >= 512 && !portrait_next_source_.count(app)) portrait_next_source_.erase(portrait_next_source_.begin());
@@ -175,17 +239,21 @@ void ArtworkService::RunCovers() {
         const auto next = cover_next_source_.find(app); if (next != cover_next_source_.end()) preferred = next->second;
       }
     }
+    const auto epoch = cache_epoch_.load();
     if (portrait) {
       playden::steam::HttpRequest image;
       const auto cdn = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + std::to_string(app) + "/";
       image.url = cdn + (preferred == 1 ? "library_600x900.jpg" : "header.jpg");
       image.timeout_ms = 5000; image.max_response_bytes = 2 * 1024 * 1024;
-      auto response = client.Perform(image, stopping_);
+      auto response = Fetch(client, image, stopping_, app, "portrait", epoch);
       if (!image_response(response) && !stopping_) {
         image.url = cdn + (preferred == 1 ? "header.jpg" : "library_600x900.jpg");
-        response = client.Perform(image, stopping_);
+        response = Fetch(client, image, stopping_, app, "portrait", epoch);
       }
       std::lock_guard<std::mutex> lock(mutex_);
+      if (epoch != cache_epoch_) {
+        portrait_requested_.erase(app); continue;
+      }
       if (image_response(response)) {
         if (portrait_results_.size() >= 64) {
           const auto evicted = portrait_result_order_.front(); portrait_result_order_.pop_front();
@@ -205,13 +273,14 @@ void ArtworkService::RunCovers() {
     playden::steam::HttpRequest request;
     request.url = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + std::to_string(app) + (preferred == 2 ? "/library_hero.jpg" : "/header.jpg");
     request.timeout_ms = 5000; request.max_response_bytes = preferred == 2 ? 2 * 1024 * 1024 : 512 * 1024;
-    auto response = client.Perform(request, stopping_);
+    auto response = Fetch(client, request, stopping_, app, "cover", epoch);
     if (!image_response(response) && !stopping_) {
       request.url = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + std::to_string(app) + (preferred == 2 ? "/header.jpg" : "/library_hero.jpg");
       request.max_response_bytes = preferred == 2 ? 512 * 1024 : 2 * 1024 * 1024;
-      response = client.Perform(request, stopping_);
+      response = Fetch(client, request, stopping_, app, "cover", epoch);
     }
     std::lock_guard<std::mutex> lock(mutex_);
+    if (epoch != cache_epoch_) { cover_requested_.erase(app); continue; }
     if (image_response(response)) {
       if (cover_results_.size() >= 64) {
         const auto evicted = cover_result_order_.front(); cover_result_order_.pop_front();
@@ -256,6 +325,7 @@ void ArtworkService::RejectIcon(std::uint32_t app) {
   std::lock_guard<std::mutex> lock(mutex_);
   if (icon_retry_after_.size() >= 512 && !icon_retry_after_.count(app)) icon_retry_after_.erase(icon_retry_after_.begin());
   icon_retry_after_[app] = clock_() + std::chrono::seconds(60);
+  RejectCache(app, "icon");
   const auto last = icon_last_source_.find(app);
   if (last != icon_last_source_.end()) {
     if (icon_next_source_.size() >= 512 && !icon_next_source_.count(app)) icon_next_source_.erase(icon_next_source_.begin());
@@ -272,21 +342,23 @@ void ArtworkService::RunIcons() {
       if (stopping_) return;
       request = std::move(icon_queue_.front()); icon_queue_.pop_front();
     }
+    const auto epoch = cache_epoch_.load();
     playden::steam::HttpRequest http; http.url = request.second; http.timeout_ms = 5000;
     http.max_response_bytes = request.second.find("https://cdn.cloudflare.steamstatic.com/") == 0 ? 512 * 1024 : 128 * 1024;
-    auto response = client.Perform(http, stopping_);
+    auto response = Fetch(client, http, stopping_, request.first, "icon", epoch);
     const auto cdn = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + std::to_string(request.first) + "/";
     if (!image_response(response) && !stopping_ && http.url != cdn + "header.jpg") {
       http.url = cdn + "header.jpg";
       http.max_response_bytes = 512 * 1024;
-      response = client.Perform(http, stopping_);
+      response = Fetch(client, http, stopping_, request.first, "icon", epoch);
     }
     if (!image_response(response) && !stopping_) {
       http.url = cdn + "library_hero.jpg";
       http.max_response_bytes = 2 * 1024 * 1024;
-      response = client.Perform(http, stopping_);
+      response = Fetch(client, http, stopping_, request.first, "icon", epoch);
     }
     std::lock_guard<std::mutex> lock(mutex_);
+    if (epoch != cache_epoch_) { icon_requested_.erase(request.first); continue; }
     if (image_response(response)) {
       if (icon_results_.size() >= 128) {
         const auto evicted = icon_result_order_.front(); icon_result_order_.pop_front();
@@ -327,9 +399,19 @@ void ArtworkService::Run() {
       app = requested_; serial = working_serial_ = request_serial_;
       cancel = active_detail_cancel_ = std::make_shared<std::atomic<bool>>(false);
     }
-    auto publish = [this, app, serial](SteamArtwork&& part) {
+    std::set<std::string> invalidated;
+    {
       std::lock_guard<std::mutex> lock(mutex_);
-      if (requested_ != app || request_serial_ != serial) return;
+      invalidated.swap(rejected_cache_);
+    }
+    if (cache_.remove) {
+      std::lock_guard<std::mutex> disk(cache_mutex_);
+      for (const auto& key : invalidated) cache_.remove(key);
+    }
+    const auto epoch = cache_epoch_.load();
+    auto publish = [this, app, serial, epoch](SteamArtwork&& part) {
+      std::lock_guard<std::mutex> lock(mutex_);
+      if (requested_ != app || request_serial_ != serial || epoch != cache_epoch_) return;
       if (!part.hero.empty()) artwork_.hero = std::move(part.hero);
       if (!part.logo.empty()) artwork_.logo = std::move(part.logo);
       if (!part.description.empty()) artwork_.description = std::move(part.description);
@@ -343,8 +425,8 @@ void ArtworkService::Run() {
     };
     // Retry temporary failures once; a new selection or shutdown interrupts
     // every waiting request. Permanent errors and rate limits are not retried.
-    auto fetch = [this, &cancel](playden::steam::HttpClient& client, const playden::steam::HttpRequest& request) {
-      auto response = client.Perform(request, *cancel);
+    auto fetch = [this, &cancel, app, epoch](playden::steam::HttpClient& client, const playden::steam::HttpRequest& request, const char* kind) {
+      auto response = Fetch(client, request, *cancel, app, kind, epoch);
       const auto error = response.error;
       const bool transient = error == playden::steam::HttpError::kNameResolutionFailed ||
           error == playden::steam::HttpError::kConnectionFailed || error == playden::steam::HttpError::kTimeout ||
@@ -353,7 +435,7 @@ void ArtworkService::Run() {
         std::unique_lock<std::mutex> lock(mutex_);
         wake_.wait_for(lock, std::chrono::seconds(1), [&] { return stopping_ || *cancel; });
         lock.unlock();
-        if (!*cancel && !stopping_) response = client.Perform(request, *cancel);
+        if (!*cancel && !stopping_) response = Fetch(client, request, *cancel, app, kind, epoch);
       }
       return response;
     };
@@ -367,7 +449,7 @@ void ArtworkService::Run() {
       playden::steam::HttpRequest request;
       request.url = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + std::to_string(app) + "/" + image;
       request.timeout_ms = 8000; request.max_response_bytes = 2 * 1024 * 1024;
-      auto response = fetch(client, request);
+      auto response = fetch(client, request, "hero");
       if (image_response(response)) {
         artwork.hero = std::move(response.body); break;
       }
@@ -382,7 +464,7 @@ void ArtworkService::Run() {
       playden::steam::HttpRequest request;
       request.url = playden::steam::StoreDetailsUrl(app);
       request.timeout_ms = 8000; request.max_response_bytes = 2 * 1024 * 1024;
-      auto response = fetch(client, request);
+      auto response = fetch(client, request, "details");
       if (response.ok() && response.status_code == 200 && !*cancel) {
         const std::string body(response.body.begin(), response.body.end());
         if (auto details = playden::steam::ParseStoreDetails(app, body)) {
@@ -406,7 +488,7 @@ void ArtworkService::Run() {
       request.timeout_ms = 8000; request.max_response_bytes = 256 * 1024;
       SteamArtwork artwork; artwork.news_state = SteamNewsState::unavailable;
       if (!*cancel) {
-        auto response = fetch(client, request);
+        auto response = fetch(client, request, "news");
         if (response.ok() && response.status_code == 200 && !*cancel)
           artwork = parse_news(app, response.body);
         // Very large full posts may exceed the response or parser limits.
@@ -415,7 +497,7 @@ void ArtworkService::Run() {
                          (response.ok() && response.status_code == 200 && artwork.news_state == SteamNewsState::unavailable))) {
           request.url = "https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/?appid=" +
               std::to_string(app) + "&count=3&maxlength=300&format=json";
-          response = fetch(client, request);
+          response = fetch(client, request, "news");
           if (response.ok() && response.status_code == 200 && !*cancel)
             artwork = parse_news(app, response.body);
         }
@@ -428,7 +510,7 @@ void ArtworkService::Run() {
       playden::steam::HttpRequest logo;
       logo.url = "https://cdn.cloudflare.steamstatic.com/steam/apps/" + std::to_string(app) + "/logo.png";
       logo.timeout_ms = 4000; logo.max_response_bytes = 2 * 1024 * 1024;
-      auto response = fetch(client, logo);
+      auto response = fetch(client, logo, "logo");
       if (image_response(response)) artwork.logo = std::move(response.body);
       if (!artwork.logo.empty()) publish(std::move(artwork));
     }

@@ -26,6 +26,9 @@ class DownloadCoordinator {
   bool Cancel(std::uint32_t app);
   bool DismissCompleted(std::uint32_t app);
   playden::installs::InstallSnapshot Snapshot() const;
+  // Copy only a newly published worker view; commands and live safety checks
+  // retain their existing semantics and do not use this presentation cursor.
+  bool SnapshotIfChanged(playden::installs::InstallSnapshot&, std::uint64_t& generation) const;
   bool Busy() const;
   bool MaintenanceReady() const;
   bool SafeToExit() const;
@@ -48,7 +51,7 @@ class DownloadCoordinator {
   playden::installs::InstallSnapshot snapshot_;
   bool stopping_ = false, in_flight_ = false, ready_ = false, failed_ = false, frozen_ = false;
   std::string error_;
-  std::uint64_t sequence_ = 0;
+  std::uint64_t sequence_ = 0, snapshot_generation_ = 0;
   std::thread worker_;
 };
 }

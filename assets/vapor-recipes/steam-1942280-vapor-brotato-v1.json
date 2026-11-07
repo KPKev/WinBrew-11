@@ -1,0 +1,25 @@
+{
+  "recipe_id": "steam-1942280-vapor-brotato-v1",
+  "recipe_version": 1,
+  "app_id": 1942280,
+  "name": "Brotato",
+  "launch_entries": [
+    {
+      "id": "game",
+      "label": "Brotato",
+      "executable": "Brotato.exe"
+    }
+  ],
+  "arguments": "",
+  "resolution_arguments": "",
+  "dll_overrides": "",
+  "architecture": "pe64",
+  "runtime": "wine-wow64",
+  "prefix": "game",
+  "graphics": "opengl",
+  "defaults": {
+    "steam_features": "emulate",
+    "extra_arguments": "--rendering-driver opengl3"
+  },
+  "locked": []
+}

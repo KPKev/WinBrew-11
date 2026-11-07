@@ -31,11 +31,28 @@ int main() {
     ww::steam_integration::DownloadCoordinator coordinator(service);
     assert(!coordinator.Install(0)); assert(coordinator.Install(440));
     wait([&]{ auto s=coordinator.Snapshot(); return !s.jobs.empty() && s.jobs[0].done_bytes==30; });
+    playden::installs::InstallSnapshot presentation;
+    std::uint64_t generation = 0;
+    assert(coordinator.SnapshotIfChanged(presentation, generation));
+    assert(generation && !presentation.jobs.empty() && presentation.jobs[0].done_bytes == 30);
+    // A render-frame poll never deep-copies the same publication again.
+    bool unchanged_observed = false;
+    for (int i=0; i<50; ++i) {
+      const auto previous = generation;
+      presentation.default_volume_id = "unchanged-sentinel";
+      if (!coordinator.SnapshotIfChanged(presentation, generation)) {
+        assert(generation == previous && presentation.default_volume_id == "unchanged-sentinel");
+        unchanged_observed = true;
+      }
+    }
+    assert(unchanged_observed);
     assert(!coordinator.SafeToExit());
     assert(runner.started==1);
     assert(coordinator.Pause(440));
     wait([&]{ auto s=coordinator.Snapshot(); return !s.jobs.empty() && s.jobs[0].state==playden::installs::InstallJobState::kPaused; });
     wait([&]{ return coordinator.SafeToExit(); });
+    assert(coordinator.SnapshotIfChanged(presentation, generation));
+    assert(!presentation.jobs.empty() && presentation.jobs[0].state == playden::installs::InstallJobState::kPaused);
     assert(coordinator.Resume(440));
     wait([&]{ return runner.started >= 2; });
     assert(coordinator.Cancel(440));

@@ -58,6 +58,11 @@ struct Shell {
   uint32_t *wallpaper = nullptr;
   unsigned char *font = nullptr;
   bool owns_buffers = false;
+  struct GlyphBounds { std::uint8_t left = 48, top = 56, right = 0, bottom = 1; };
+  GlyphBounds glyph_bounds[3 * 96]{};
+  std::string desktop_shortcut_labels[VaporShortcuts::Capacity];
+  std::uint64_t shortcut_labels_context = 0, shortcut_labels_next_scan_ms = 0;
+  const SteamUi* shortcut_labels_source = nullptr;
   bool start = false, all = false, calendar = false, context = false,
        dialog = false, dark = false;
   int window = 0, restored = 0, focus = -1, hover = -1, mx = 1100, my = 650,
@@ -126,6 +131,10 @@ struct Shell {
   int steam_download_rows[5]{-1,-1,-1,-1,-1}, steam_active_download = -1, steam_queue_count = 0;
   SteamDownload steam_rendered_downloads[5]{}, steam_rendered_active{};
   std::vector<int> steam_rows, steam_library_rows, steam_home_rows;
+  std::uint64_t steam_rows_signature = 0, steam_rows_context = 0, steam_rows_next_scan_ms = 0;
+  std::size_t steam_favorite_count = 0;
+  struct SteamRecentGame { std::uint64_t played; std::uint32_t app; int index; };
+  std::vector<SteamRecentGame> steam_recent_games;
   bool vapor_favorites_only = false, vapor_favorites_collapsed = false, vapor_home_installed_only = false, vapor_home_recent_first = false;
   std::uint32_t vapor_transfer_app = 0;
   std::uint64_t vapor_transfer_rate = 0, vapor_transfer_peak = 0, vapor_transfer_tick_ms = 0;

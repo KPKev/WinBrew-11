@@ -1,0 +1,24 @@
+{
+  "recipe_id": "steam-489830-vapor-skyrimse-v1",
+  "recipe_version": 1,
+  "app_id": 489830,
+  "name": "The Elder Scrolls V: Skyrim Special Edition",
+  "launch_entries": [
+    {
+      "id": "game",
+      "label": "The Elder Scrolls V: Skyrim Special Edition",
+      "executable": "SkyrimSE.exe"
+    }
+  ],
+  "arguments": "",
+  "resolution_arguments": "",
+  "dll_overrides": "d3d8,d3d9,d3d10core,d3d11,dxgi=n",
+  "architecture": "pe64",
+  "runtime": "wine-wow64",
+  "prefix": "game",
+  "graphics": "dxvk",
+  "defaults": {
+    "steam_features": "emulate"
+  },
+  "locked": []
+}

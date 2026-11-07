@@ -1,0 +1,44 @@
+{
+  "schema": "vapor-recipe-overlay/1",
+  "reviewed_date": "2026-11-07",
+  "upstream_reference": "fb74dbfd6bb96fc19a96afc1f48a4e40a885216b",
+  "license": "CC0-1.0",
+  "recipes": [
+    {
+      "file": "steam-489830-vapor-skyrimse-v1.json",
+      "app_id": 489830,
+      "sha256": "c01ed99f9633bda28300c401429956090d661e1fbadb7467148bf9e615d8037b",
+      "source": "https://github.com/leolobato/playden-ps5/pull/408",
+      "tested_kit_upstream": "0.16",
+      "local_status": "untested",
+      "note": "Direct game executable reported by upstream; local Vapor play unverified. Runtime 0.16 was tested upstream; a recipe cannot supply missing runtime fixes."
+    },
+    {
+      "file": "steam-105600-vapor-terraria-v1.json",
+      "app_id": 105600,
+      "sha256": "8a884bdbd63116b210ad42181942eba132c2eac6da52549d9bf0662fe79c6871",
+      "source": "https://github.com/leolobato/playden-ps5/issues/151",
+      "tested_kit_upstream": "0.13",
+      "local_status": "untested",
+      "note": "Select the client, not TerrariaServer.exe. OpenGL follows pinned XNA detection defaults; local Vapor play unverified."
+    },
+    {
+      "file": "steam-1942280-vapor-brotato-v1.json",
+      "app_id": 1942280,
+      "sha256": "01044adb98266ba0fdb60ada35673c74f85a7d82c4c5aefbcee55f473e1acb16",
+      "source": "https://github.com/leolobato/playden-ps5/issues/345",
+      "tested_kit_upstream": "0.13",
+      "local_status": "untested",
+      "note": "Use the reported game executable and OpenGL driver flag; leave the extra arguments overridable. Local Vapor play unverified."
+    },
+    {
+      "file": "steam-240-vapor-cstrike-source-v1.json",
+      "app_id": 240,
+      "sha256": "42b1db3fb921c3a6af5af384036549a3bbf7e2b87ed7d0cfd8564ae77d021042",
+      "source": "https://github.com/leolobato/playden-ps5/issues/24",
+      "tested_kit_upstream": "H r8",
+      "local_status": "untested",
+      "note": "Upstream reports offline USB mouse/keyboard gameplay only; controller untested and online unavailable. Resolution arguments follow pinned Source detection defaults. This is Counter-Strike: Source, not Counter-Strike 2 (730). Local Vapor play unverified."
+    }
+  ]
+}

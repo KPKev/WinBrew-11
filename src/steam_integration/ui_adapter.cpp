@@ -19,7 +19,7 @@ bool UiAdapter::attach_downloads(DownloadCoordinator* downloads) {
   if (downloads_ && downloads_ != downloads && pending_play_) return false;
   if (downloads_ && downloads_ != downloads && downloads_->Busy()) return false;
   downloads_ = downloads;
-  download_snapshot_ = {};
+  download_snapshot_ = {}; download_snapshot_generation_ = 0;
   return true;
 }
 #if defined(WINE11_EXPERIMENT_UNINSTALL)
@@ -32,11 +32,11 @@ bool UiAdapter::detach_downloads_for_maintenance() {
   if (download_maintenance_ || !downloads_ || !downloads_->FrozenForMaintenance() || pending_play_ ||
       (preparation_ && preparation_->Busy()) || (launch_ && launch_->Busy()) ||
       (cloud_preflight_ && cloud_preflight_->Busy())) return false;
-  downloads_ = nullptr; download_snapshot_ = {}; download_maintenance_ = true; return true;
+  downloads_ = nullptr; download_snapshot_ = {}; download_snapshot_generation_ = 0; download_maintenance_ = true; return true;
 }
 bool UiAdapter::finish_download_maintenance(DownloadCoordinator* downloads) {
   if (!download_maintenance_ || !downloads || downloads_ || downloads->FrozenForMaintenance()) return false;
-  downloads_ = downloads; download_snapshot_ = {}; download_maintenance_ = false; download_recovery_ = false; return true;
+  downloads_ = downloads; download_snapshot_ = {}; download_snapshot_generation_ = 0; download_maintenance_ = false; download_recovery_ = false; return true;
 }
 bool UiAdapter::begin_download_recovery() {
   if (downloads_ || download_maintenance_) return false;
@@ -104,7 +104,7 @@ void UiAdapter::tick() {
     resolving_cloud_ = false;
   }
   if (downloads_) {
-    download_snapshot_ = downloads_->Snapshot();
+    (void)downloads_->SnapshotIfChanged(download_snapshot_, download_snapshot_generation_);
     network_app_ = 0;
     for (const auto& job : download_snapshot_.jobs)
       if (job.state == playden::installs::InstallJobState::kRunning) { network_app_ = job.id.steam_app().value_or(0); break; }
@@ -259,7 +259,9 @@ void UiAdapter::request_artwork(std::uint32_t app) {
   if (game_details_ && game_details_generation_) game_details_->Request(playden::GameId::Steam(app), game_details_generation_);
 }
 bool UiAdapter::take_artwork(std::uint32_t app, SteamArtwork& artwork) {
-  return artwork_ && owns(app) && artwork_->Take(app, artwork);
+  const bool received = artwork_ && owns(app) && artwork_->Take(app, artwork);
+  if (received && message_ == "Refreshing images and details for this game...") message_.clear();
+  return received;
 }
 void UiAdapter::request_game_icon(std::uint32_t app) {
   if (!artwork_ || !owns(app)) return;
@@ -301,7 +303,7 @@ bool UiAdapter::finish_setup(std::uint32_t app) {
   }
   return true;
 }
-bool UiAdapter::game(std::size_t index, SteamGame& out) const {
+bool UiAdapter::game_summary(std::size_t index, SteamGame& out) const {
   const auto& games = controller_.view().games;
   if (index >= games.size()) return false;
   const auto app = games[index].id.steam_app();
@@ -323,6 +325,26 @@ bool UiAdapter::game(std::size_t index, SteamGame& out) const {
       }
     }
   }
+  if (games[index].playtime_minutes) {
+    out.has_playtime = true; out.playtime_minutes = *games[index].playtime_minutes;
+  }
+  if (games[index].last_played_unix_seconds) {
+    out.has_last_played = true; out.last_played_unix_seconds = *games[index].last_played_unix_seconds;
+  }
+  std::snprintf(out.title, sizeof(out.title), "%s", games[index].title.c_str());
+  return true;
+}
+bool UiAdapter::reset_game_cache(std::uint32_t app) {
+  if (!artwork_ || !owns(app)) return false;
+  artwork_->Reset(app);
+  // Live install/depot/launch data remains owned by its existing services.
+  message_ = "Refreshing images and details for this game...";
+  return true;
+}
+bool UiAdapter::game(std::size_t index, SteamGame& out) const {
+  if (!game_summary(index, out)) return false;
+  const auto& games = controller_.view().games;
+  const auto app = games[index].id.steam_app();
   out.can_play = launch_ && out.install == SteamInstallState::installed && owns(*app);
   if (preparation_ && preparation_->NeedsRegistration(*app)) out.activity = SteamGameActivity::registration_required;
   else if (pending_play_ == *app || (preparation_ && preparation_->Busy() && preparation_->app() == *app)) out.activity = SteamGameActivity::preparing;
@@ -349,12 +371,6 @@ bool UiAdapter::game(std::size_t index, SteamGame& out) const {
     std::snprintf(out.management_reason, sizeof(out.management_reason), "%s", why);
   }
 #endif
-  if (games[index].playtime_minutes) {
-    out.has_playtime = true; out.playtime_minutes = *games[index].playtime_minutes;
-  }
-  if (games[index].last_played_unix_seconds) {
-    out.has_last_played = true; out.last_played_unix_seconds = *games[index].last_played_unix_seconds;
-  }
   const auto info = game_details_cache_.find(*app);
   if (info != game_details_cache_.end() && info->second.available) {
     if (info->second.install_bytes) { out.has_install_bytes = true; out.install_bytes = *info->second.install_bytes; }

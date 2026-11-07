@@ -14,13 +14,21 @@
 #include <deque>
 #include <map>
 #include <set>
+#include "steam/backend/http_client.h"
 
 namespace ww::steam_integration {
+// Public presentation data only. Callbacks run on workers, never during drawing.
+struct ArtworkCache {
+  std::function<std::vector<std::uint8_t>(const std::string&, std::size_t)> read;
+  std::function<void(const std::string&, const std::vector<std::uint8_t>&)> write;
+  std::function<void(const std::string&)> remove;
+};
 class ArtworkSource {
  public:
   virtual ~ArtworkSource() = default;
   virtual void Request(std::uint32_t app) = 0;
   virtual bool Take(std::uint32_t app, SteamArtwork& artwork) = 0;
+  virtual void Reset(std::uint32_t) {}
   virtual void RequestIcon(std::uint32_t, const std::string&) {}
   virtual bool TakeIcon(std::uint32_t, std::vector<std::uint8_t>&) { return false; }
   virtual void RejectIcon(std::uint32_t) {}
@@ -37,9 +45,10 @@ class ArtworkSource {
 class ArtworkService final : public ArtworkSource {
  public:
   using Clock = std::function<std::chrono::steady_clock::time_point()>;
-  explicit ArtworkService(std::string ca_bundle, Clock clock = [] { return std::chrono::steady_clock::now(); });
+  explicit ArtworkService(std::string ca_bundle, Clock clock = [] { return std::chrono::steady_clock::now(); }, ArtworkCache cache = {});
   ~ArtworkService();
   void Request(std::uint32_t app) override;
+  void Reset(std::uint32_t app) override;
   bool Take(std::uint32_t app, SteamArtwork& artwork) override;
   void RequestIcon(std::uint32_t app, const std::string& url) override;
   bool TakeIcon(std::uint32_t app, std::vector<std::uint8_t>& bytes) override;
@@ -54,6 +63,13 @@ class ArtworkService final : public ArtworkSource {
   void Run();
   void RunIcons();
   void RunCovers();
+  ArtworkCache cache_;
+  std::mutex cache_mutex_;
+  std::set<std::string> rejected_cache_;
+  std::atomic<std::uint64_t> cache_epoch_{0};
+  playden::steam::HttpResponse Fetch(playden::steam::HttpClient&, const playden::steam::HttpRequest&,
+      const std::atomic<bool>&, std::uint32_t app, const char* kind, std::uint64_t epoch);
+  void RejectCache(std::uint32_t app, const char* kind);
   std::string ca_;
   Clock clock_;
   std::mutex mutex_;

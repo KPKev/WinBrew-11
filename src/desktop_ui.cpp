@@ -5,6 +5,8 @@
 #include <cstdio>
 #include <cstring>
 #include <ctime>
+#include <chrono>
+#include <map>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
@@ -737,14 +739,30 @@ void Shell::desktop_ui() {
     }
   };
   for (auto &app : rendered_shortcut_apps) app = 0;
-  std::string shortcut_labels[VaporShortcuts::Capacity];
+  auto& shortcut_labels = desktop_shortcut_labels;
+  const auto desktop_state = steam ? steam->status() : SteamStatus{};
+  std::uint64_t label_context = 14695981039346656037ull;
+  auto label_hash = [&](std::uint64_t value) { label_context = (label_context ^ value) * 1099511628211ull; };
+  label_hash(desktop_state.game_count); label_hash(unsigned(desktop_state.account)); label_hash(vapor_shortcuts.count());
   for (std::size_t i = 0; i < vapor_shortcuts.count(); ++i) {
     const auto app = vapor_shortcuts.entries()[i].app;
-    rendered_shortcut_apps[i] = app;
-    shortcut_labels[i] = "Steam game " + std::to_string(app);
-    if (steam) for (std::size_t n = 0; n < steam->status().game_count; ++n) {
+    rendered_shortcut_apps[i] = app; label_hash(app);
+  }
+  const auto label_now = std::uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(
+      std::chrono::steady_clock::now().time_since_epoch()).count());
+  if (shortcut_labels_source != steam || shortcut_labels_context != label_context || label_now >= shortcut_labels_next_scan_ms) {
+    shortcut_labels_source = steam; shortcut_labels_context = label_context;
+    shortcut_labels_next_scan_ms = label_now + (steam ? steam->library_poll_interval_ms() : 250);
+    std::map<std::uint32_t, std::size_t> wanted;
+    for (std::size_t i = 0; i < vapor_shortcuts.count(); ++i) {
+      const auto app = vapor_shortcuts.entries()[i].app;
+      shortcut_labels[i] = "Steam game " + std::to_string(app); wanted.emplace(app, i);
+    }
+    if (steam) for (std::size_t n = 0; n < desktop_state.game_count && !wanted.empty(); ++n) {
       SteamGame game;
-      if (steam->game(n, game) && game.app_id == app) { shortcut_labels[i] = game.title; break; }
+      if (!steam->game_summary(n, game)) continue;
+      const auto found = wanted.find(game.app_id);
+      if (found != wanted.end()) { shortcut_labels[found->second] = game.title; wanted.erase(found); }
     }
   }
   const char *labels[] = {"This PC", "Recycle Bin", "Vapor",

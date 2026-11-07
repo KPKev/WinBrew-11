@@ -216,6 +216,20 @@ int main() {
   s.load_preferences();
   assert(s.dark && s.mouse_speed == 9);
   std::remove(file);
+  // High-rate pure motion is consumed in one batch, including newest-first input.
+  {
+    ww::HidInput batched;
+    s.window = 0; s.mouse_speed = 5; s.mx = 500; s.my = 500;
+    s.drag = false; s.steam_scroll_drag = s.steam_home_drag = s.steam_queue_drag = false;
+    uint8_t reports[64 * 40]{};
+    for (int i = 0; i < 64; ++i) {
+      auto* r = reports + i * 40; r[8] = 1;
+      put<uint64_t>(r, 1000000 + (63 - i) * 1000);
+      put<int32_t>(r + 16, 1);
+    }
+    batched.mouse(s, reports, 64, 2000000);
+    assert(s.mx == 564 && s.my == 500);
+  }
   std::puts(
       "PASS: mixed HID input, held-key repeat, caret/selection, controller "
       "touch keyboard, full-card clicks, mouse drag and persisted USB speed");

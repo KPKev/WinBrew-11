@@ -5,7 +5,12 @@
 #include <chrono>
 #include <cstdio>
 #include <thread>
+#include <filesystem>
+#include <fstream>
 
+static std::atomic<int> cache_network_calls{0};
+static std::atomic<bool> cache_test_mode{false}, cache_offline{false};
+static std::atomic<bool> cache_block_icon{false}, cache_icon_entered{false}, cache_release_icon{false};
 static std::atomic<bool> first_entered{false}, release_first{false}, news_blocked{false};
 static std::atomic<int> bulk_icon_calls{0};
 static std::atomic<int> reopened_hero{0}, reopened_details{0}, reopened_news{0};
@@ -20,6 +25,19 @@ class HttpClient::Impl {};
 HttpClient::HttpClient(std::string) : impl_(std::make_unique<Impl>()) {}
 HttpClient::~HttpClient() = default;
 HttpResponse HttpClient::Perform(const HttpRequest& request, const std::atomic<bool>& cancel) {
+  if (cache_test_mode) {
+    ++cache_network_calls;
+    if (cache_block_icon && request.url.find("/222/header.jpg") != std::string::npos) {
+      cache_icon_entered = true;
+      while (!cache_release_icon && !cancel) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      HttpResponse old; old.status_code = 200; old.body = {0xff, 0xd8, 0xff, 99}; return old;
+    }
+    if (cache_offline) { HttpResponse r; r.status_code = 404; return r; }
+    if (request.url.find("appid=222&") != std::string::npos) {
+      const std::string body = R"({"appnews":{"appid":222,"newsitems":[]}})";
+      HttpResponse r; r.status_code = 200; r.body.assign(body.begin(), body.end()); return r;
+    }
+  }
   if (request.url.find("https://api.steampowered.com/ISteamNews/GetNewsForApp/v2/") == 0) {
     const bool short_news = request.url.find("&maxlength=300&") != std::string::npos;
     assert(short_news || request.url.find("&maxlength=0&") != std::string::npos);
@@ -114,7 +132,108 @@ HttpResponse HttpClient::Perform(const HttpRequest& request, const std::atomic<b
   return response;
 }
 }
+static void persistent_cache_test() {
+  namespace fs = std::filesystem;
+  using ww::steam_integration::ArtworkService;
+  const auto root = fs::temp_directory_path() / ("winbrew-art-cache-" + std::to_string(
+      std::chrono::steady_clock::now().time_since_epoch().count()));
+  fs::create_directory(root);
+  ww::steam_integration::ArtworkCache cache{
+    [&](const std::string& key, std::size_t max) {
+      std::ifstream in(root / key, std::ios::binary | std::ios::ate);
+      if (!in || in.tellg() < 0 || std::size_t(in.tellg()) > max) return std::vector<std::uint8_t>{};
+      std::vector<std::uint8_t> bytes(std::size_t(in.tellg())); in.seekg(0);
+      if (!in.read(reinterpret_cast<char*>(bytes.data()), bytes.size())) return std::vector<std::uint8_t>{};
+      return bytes;
+    },
+    [&](const std::string& key, const std::vector<std::uint8_t>& bytes) {
+      std::ofstream out(root / key, std::ios::binary); out.write(reinterpret_cast<const char*>(bytes.data()), bytes.size());
+    },
+    [&](const std::string& key) { fs::remove(root / key); }
+  };
+  auto receive = [](ArtworkService& service) {
+    ww::SteamArtwork all;
+    for (int i = 0; i < 3000; ++i) {
+      ww::SteamArtwork part;
+      if (service.Take(222, part)) {
+        if (!part.hero.empty()) all.hero = std::move(part.hero);
+        if (!part.logo.empty()) all.logo = std::move(part.logo);
+        if (!part.description.empty()) all.description = std::move(part.description);
+        if (part.news_state != ww::SteamNewsState::pending) all.news_state = part.news_state;
+      }
+      if (!all.hero.empty() && !all.logo.empty() && !all.description.empty() && all.news_state == ww::SteamNewsState::empty) return;
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    assert(false && "cached details were not delivered");
+  };
+  auto receive_images = [](ArtworkService& service) {
+    std::vector<std::uint8_t> bytes; bool icon = false, cover = false, portrait = false;
+    service.RequestIcon(222, ""); service.RequestCover(222); service.RequestPortrait(222);
+    for (int i = 0; i < 3000; ++i) {
+      if (!icon) icon = service.TakeIcon(222, bytes);
+      if (!cover) cover = service.TakeCover(222, bytes);
+      if (!portrait) portrait = service.TakePortrait(222, bytes);
+      if (icon && cover && portrait) return;
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    assert(false && "cached images were not delivered");
+  };
+  cache_test_mode = true; cache_offline = false; cache_network_calls = 0;
+  {
+    ArtworkService service("synthetic-ca", [] { return std::chrono::steady_clock::now(); }, cache);
+    service.Request(222); receive(service); receive_images(service);
+  }
+  assert(cache_network_calls == 7);
+  // Simulate a restart and removed upstream assets: all seven channels still load.
+  cache_offline = true; cache_network_calls = 0;
+  {
+    ArtworkService service("synthetic-ca", [] { return std::chrono::steady_clock::now(); }, cache);
+    service.Request(222); receive(service); receive_images(service);
+    service.Request(222); receive(service);
+  }
+  assert(cache_network_calls == 0);
+  // Refresh removes just this game, then refetches it. Another game's cache survives.
+  { std::ofstream other(root / "vapor-steam-333-hero-v1.cache"); other << "keep"; }
+  cache_offline = false;
+  {
+    ArtworkService service("synthetic-ca", [] { return std::chrono::steady_clock::now(); }, cache);
+    service.Reset(222); receive(service); receive_images(service);
+  }
+  assert(cache_network_calls == 7 && fs::exists(root / "vapor-steam-333-hero-v1.cache"));
+  // A corrupt cached image is a miss and is replaced, rather than shown forever.
+  { std::ofstream bad(root / "vapor-steam-222-hero-v1.cache", std::ios::binary); bad << "invalid"; }
+  cache_network_calls = 0;
+  {
+    ArtworkService service("synthetic-ca", [] { return std::chrono::steady_clock::now(); }, cache);
+    service.Request(222); receive(service);
+  }
+  assert(cache_network_calls == 1);
+  // Reset while an icon is downloading: its old response must not repopulate disk or UI.
+  fs::remove(root / "vapor-steam-222-icon-v1.cache");
+  cache_block_icon = true; cache_icon_entered = false; cache_release_icon = false;
+  {
+    ArtworkService service("synthetic-ca", [] { return std::chrono::steady_clock::now(); }, cache);
+    service.RequestIcon(222, "");
+    for (int i = 0; i < 3000 && !cache_icon_entered; ++i) std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    assert(cache_icon_entered);
+    service.Reset(222); receive(service);
+    cache_block_icon = false; cache_release_icon = true;
+    std::vector<std::uint8_t> bytes; bool received = false;
+    for (int i = 0; i < 3000 && !received; ++i) {
+      service.RequestIcon(222, ""); received = service.TakeIcon(222, bytes);
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    assert(received && bytes.back() == 2);
+    // Also reset completed, unconsumed results: their requested-set entries must be released.
+    service.RequestCover(222);
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    service.Reset(222); receive(service); receive_images(service);
+  }
+  cache_test_mode = false; cache_offline = false;
+  fs::remove_all(root);
+}
 int main() {
+  persistent_cache_test();
   std::atomic<int> fake_seconds{0};
   ww::steam_integration::ArtworkService service("synthetic-ca", [&] {
     return std::chrono::steady_clock::time_point{} + std::chrono::seconds(fake_seconds.load());

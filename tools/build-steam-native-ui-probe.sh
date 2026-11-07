@@ -28,6 +28,16 @@ for name in ast.literal_eval(lists[0]):
 shutil.copyfile(root/'build/steam-native-experiment/ps5.cpp', dest/'ps5.cpp')
 for subtree in ('owner_admission', 'steam_integration'):
     source_root = root/'src'/subtree
+    target_root = dest/subtree
+    # A previous owner-only diagnostic may have been removed from the source.
+    # Trim isolated staging before copying so it cannot survive into a new app.
+    target_root.resolve().relative_to((root/'build/steam-native-experiment').resolve())
+    authoritative = {p.relative_to(source_root) for p in source_root.rglob('*') if p.is_file()}
+    if target_root.exists():
+        for stale in target_root.rglob('*'):
+            if stale.is_file() and stale.relative_to(target_root) not in authoritative:
+                if stale.is_symlink(): raise SystemExit('Unexpected staged source symlink')
+                stale.unlink()
     for source in source_root.rglob('*'):
         if source.is_file():
             target = dest/subtree/source.relative_to(source_root)

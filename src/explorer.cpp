@@ -5,6 +5,7 @@
 #include "vapor_game_details.hpp"
 #include "shell.hpp"
 #include <algorithm>
+#include <chrono>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -597,41 +598,97 @@ void Shell::explorer_ui(Rect wr) {
         Rect home{list.x + 8, list.y + 10, list.w - 16, 34};
         if (steam_selection < 0 || focus == 985 || hover == 985) rect(home, 0xff504238);
         add(home, 985); text(home.x + 12, home.y + 7, "Home", 0, white);
-        steam_rows.clear(); std::size_t favorites = 0;
-        std::vector<std::pair<std::string, int>> ordered_games;
-        ordered_games.reserve(state.game_count);
-        std::string search_key(vapor_search);
-        for (char& c : search_key) if (c >= 'A' && c <= 'Z') c = char(c + ('a' - 'A'));
-        for (std::size_t i = 0; i < state.game_count; ++i) {
-          SteamGame item;
-          if (!steam->game(i, item)) continue;
-          const bool favorite = (vapor_shortcuts.placements(item.app_id) & VaporShortcuts::Favorite) != 0;
-          if (favorite) ++favorites;
-          const bool installed = item.install == SteamInstallState::installed || item.install == SteamInstallState::unavailable;
-          if ((!vapor_favorites_only || favorite) && (!vapor_home_installed_only || installed)) {
-            std::string sort_key(item.title);
-            for (char& c : sort_key) if (c >= 'A' && c <= 'Z') c = char(c + ('a' - 'A'));
-            if (search_key.empty() || sort_key.find(search_key) != std::string::npos)
-              ordered_games.emplace_back(std::move(sort_key), int(i));
+        std::uint64_t signature = 14695981039346656037ull;
+        auto hash = [&](std::uint64_t value) { signature = (signature ^ value) * 1099511628211ull; };
+        hash(state.game_count);
+        hash(vapor_favorites_only); hash(vapor_home_installed_only); hash(vapor_favorites_collapsed); hash(vapor_home_recent_first);
+        for (const unsigned char* c = reinterpret_cast<const unsigned char*>(vapor_search); *c; ++c) hash(*c);
+        // Filters and discovery of additional games update immediately. Stable
+        // library content is checked at most four times a second by the native
+        // provider; mouse/controller rendering keeps its normal frame rate.
+        for (std::size_t i = 0; i < vapor_shortcuts.count(); ++i) {
+          hash(vapor_shortcuts.entries()[i].app); hash(vapor_shortcuts.entries()[i].placements);
+        }
+        const auto context = signature;
+        const auto now_ms = std::uint64_t(std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+        if (context != steam_rows_context || now_ms >= steam_rows_next_scan_ms) {
+          steam_rows_context = context;
+          steam_rows_next_scan_ms = now_ms + steam->library_poll_interval_ms();
+          for (std::size_t i = 0; i < state.game_count; ++i) {
+            SteamGame item;
+            if (!steam->game_summary(i, item)) { hash(0); continue; }
+            hash(item.app_id); hash(static_cast<unsigned>(item.install));
+            hash(item.has_last_played); hash(item.last_played_unix_seconds);
+            hash(vapor_shortcuts.placements(item.app_id));
+            for (const unsigned char* c = reinterpret_cast<const unsigned char*>(item.title); *c; ++c) hash(*c);
+          }
+          if (signature != steam_rows_signature) {
+            steam_rows.clear(); std::size_t favorites = 0;
+            std::vector<std::pair<std::string, int>> ordered_games;
+            ordered_games.reserve(state.game_count);
+            std::string search_key(vapor_search);
+            for (char& c : search_key) if (c >= 'A' && c <= 'Z') c = char(c + ('a' - 'A'));
+            for (std::size_t i = 0; i < state.game_count; ++i) {
+              SteamGame item;
+              if (!steam->game_summary(i, item)) continue;
+              const bool favorite = (vapor_shortcuts.placements(item.app_id) & VaporShortcuts::Favorite) != 0;
+              if (favorite) ++favorites;
+              const bool installed = item.install == SteamInstallState::installed || item.install == SteamInstallState::unavailable;
+              if ((!vapor_favorites_only || favorite) && (!vapor_home_installed_only || installed)) {
+                std::string sort_key(item.title);
+                for (char& c : sort_key) if (c >= 'A' && c <= 'Z') c = char(c + ('a' - 'A'));
+                if (search_key.empty() || sort_key.find(search_key) != std::string::npos)
+                  ordered_games.emplace_back(std::move(sort_key), int(i));
+              }
+            }
+            std::sort(ordered_games.begin(), ordered_games.end(), [](const auto& a, const auto& b) {
+              return a.first == b.first ? a.second < b.second : a.first < b.first;
+            });
+            for (const auto& entry : ordered_games) steam_rows.push_back(entry.second);
+            // Keep Home's All Games data unique. The sidebar has a separate visual
+            // Favorites section, followed by the complete alphabetical library.
+            steam_library_rows.clear();
+            if (!vapor_favorites_only && !vapor_favorites_collapsed && favorites) {
+              for (int index : steam_rows) {
+                SteamGame game;
+                if (steam->game_summary(std::size_t(index), game) &&
+                    (vapor_shortcuts.placements(game.app_id) & VaporShortcuts::Favorite))
+                  steam_library_rows.push_back(index);
+              }
+              if (!steam_library_rows.empty()) steam_library_rows.push_back(-1); // All Games divider.
+            }
+            steam_library_rows.insert(steam_library_rows.end(), steam_rows.begin(), steam_rows.end());
+            steam_home_rows.clear();
+            std::vector<std::pair<int, std::uint64_t>> home_order;
+            for (int index : steam_rows) {
+              SteamGame game;
+              if (!steam->game_summary(std::size_t(index), game)) continue;
+              if (!vapor_home_installed_only || game.install == SteamInstallState::installed ||
+                  game.install == SteamInstallState::unavailable) {
+                const auto played = game.has_last_played && game.last_played_unix_seconds > 0 &&
+                    game.last_played_unix_seconds < 4102444800ULL ? game.last_played_unix_seconds : 0;
+                home_order.emplace_back(index, played);
+              }
+            }
+            if (vapor_home_recent_first)
+              std::stable_sort(home_order.begin(), home_order.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
+            for (const auto& entry : home_order) steam_home_rows.push_back(entry.first);
+            steam_recent_games.clear();
+            for (int index : steam_rows) {
+              SteamGame game;
+              if (steam->game_summary(std::size_t(index), game) && game.app_id && game.has_last_played &&
+                  game.last_played_unix_seconds > 0 && game.last_played_unix_seconds < 4102444800ULL)
+                steam_recent_games.push_back({game.last_played_unix_seconds, game.app_id, index});
+            }
+            std::sort(steam_recent_games.begin(), steam_recent_games.end(), [](const SteamRecentGame &a, const SteamRecentGame &b) {
+              return a.played == b.played ? a.app < b.app : a.played > b.played;
+            });
+            steam_favorite_count = favorites;
+            steam_rows_signature = signature;
           }
         }
-        std::sort(ordered_games.begin(), ordered_games.end(), [](const auto& a, const auto& b) {
-          return a.first == b.first ? a.second < b.second : a.first < b.first;
-        });
-        for (const auto& entry : ordered_games) steam_rows.push_back(entry.second);
-        // Keep Home's All Games data unique. The sidebar has a separate visual
-        // Favorites section, followed by the complete alphabetical library.
-        steam_library_rows.clear();
-        if (!vapor_favorites_only && !vapor_favorites_collapsed && favorites) {
-          for (int index : steam_rows) {
-            SteamGame game;
-            if (steam->game(std::size_t(index), game) &&
-                (vapor_shortcuts.placements(game.app_id) & VaporShortcuts::Favorite))
-              steam_library_rows.push_back(index);
-          }
-          if (!steam_library_rows.empty()) steam_library_rows.push_back(-1); // All Games divider.
-        }
-        steam_library_rows.insert(steam_library_rows.end(), steam_rows.begin(), steam_rows.end());
+        const auto favorites = steam_favorite_count;
         Rect favorite_filter{list.x + 8, list.y + 46, list.w - 54, 28}; add(favorite_filter, 1150);
         if (vapor_favorites_only || hover == 1150 || focus == 1150) rect(favorite_filter, 0xff504238);
         char favorite_label[64]; std::snprintf(favorite_label, sizeof(favorite_label), "FAVORITES (%zu)", favorites);
@@ -674,7 +731,7 @@ void Shell::explorer_ui(Rect wr) {
             text_fit(list.x + 20, list.y + 183 + row * 32, list.w - 50, "ALL GAMES", 0, dim);
             continue;
           }
-          if (!steam->game(std::size_t(index), game)) continue;
+          if (!steam->game_summary(std::size_t(index), game)) continue;
           steam_rendered_rows[row] = game.app_id;
           Rect item{list.x + 8, list.y + 180 + row * 32, list.w - 30, 30};
           if (steam_selection == index) rect(item, 0xff665544);
@@ -815,6 +872,10 @@ void Shell::explorer_ui(Rect wr) {
             text_fit(dx + 200, y + 365, dw - 280, selected_progress.text, 0, white);
           // Per-game controller layout: a compact orange control under the facts
           // row, right of PLAY. The content below is laid out 25px lower for it.
+          Rect refresh_cache{dx + 30, y + 412, 158, 32};
+          add(refresh_cache, 1172);
+          round(refresh_cache, 4, (hover == 1172 || focus == 1172) ? 0xff74521d : 0xff594534);
+          center(refresh_cache.x, refresh_cache.y + 7, refresh_cache.w, "Refresh game cache", 0, white);
           SteamControls layout{};
           if (selected.can_play && steam->controls(selected.app_id, layout)) {
             Rect controls{dx + 200, y + 410, 260, 32};
@@ -863,17 +924,7 @@ void Shell::explorer_ui(Rect wr) {
           steam_art_app = 0; steam_art_width = steam_art_height = 0; steam_art_fallback = false; steam_logo_width = steam_logo_height = 0;
           steam_description.clear(); steam_genres.clear();
           steam_news_state = SteamNewsState::pending; steam_news_title.clear(); steam_news_feed.clear(); steam_news_description.clear(); steam_news_published = 0;
-          struct RecentGame { std::uint64_t played; std::uint32_t app; int index; };
-          std::vector<RecentGame> recent;
-          for (int index : steam_rows) {
-            SteamGame game;
-            if (steam->game(std::size_t(index), game) && game.app_id && game.has_last_played &&
-                game.last_played_unix_seconds > 0 && game.last_played_unix_seconds < 4102444800ULL)
-              recent.push_back({game.last_played_unix_seconds, game.app_id, index});
-          }
-          std::sort(recent.begin(), recent.end(), [](const RecentGame &a, const RecentGame &b) {
-            return a.played == b.played ? a.app < b.app : a.played > b.played;
-          });
+          const auto& recent = steam_recent_games;
           steam_recent_count = int(recent.size());
           steam_recent_offset = std::max(0, std::min(steam_recent_offset, std::max(0, steam_recent_count - 3)));
           for (auto &app : steam_rendered_recent) app = 0;
@@ -885,7 +936,7 @@ void Shell::explorer_ui(Rect wr) {
             const int recent_w = shelf_w / 3;
             for (int card = 0; card < 3 && steam_recent_offset + card < steam_recent_count; ++card) {
               const auto &entry = recent[std::size_t(steam_recent_offset + card)];
-              SteamGame game; if (!steam->game(std::size_t(entry.index), game) || game.app_id != entry.app) continue;
+              SteamGame game; if (!steam->game_summary(std::size_t(entry.index), game) || game.app_id != entry.app) continue;
               Rect tile{shelf_x + card * (recent_w + 15), y + 147, recent_w, 168};
               steam_rendered_recent[card] = entry.app; round(tile, 4, 0xff503a29); add(tile, 1040 + card);
               (void)vapor_game_cover(entry.app, tile);
@@ -909,21 +960,6 @@ void Shell::explorer_ui(Rect wr) {
           round(sort_button, 3, 0xff504238); add(sort_button, 1047);
           center(sort_button.x, sort_button.y + 6, sort_button.w,
                  vapor_home_recent_first ? "SORT: RECENT" : "SORT: A-Z", 0, white);
-          steam_home_rows.clear();
-          std::vector<std::pair<int, std::uint64_t>> home_order;
-          for (int index : steam_rows) {
-            SteamGame game;
-            if (!steam->game(std::size_t(index), game)) continue;
-            if (!vapor_home_installed_only || game.install == SteamInstallState::installed ||
-                game.install == SteamInstallState::unavailable) {
-              const auto played = game.has_last_played && game.last_played_unix_seconds > 0 &&
-                  game.last_played_unix_seconds < 4102444800ULL ? game.last_played_unix_seconds : 0;
-              home_order.emplace_back(index, played);
-            }
-          }
-          if (vapor_home_recent_first)
-            std::stable_sort(home_order.begin(), home_order.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
-          for (const auto& entry : home_order) steam_home_rows.push_back(entry.first);
           if (steam_home_rows.empty() && (vapor_search[0] || vapor_home_installed_only))
             text(dx + 32, y + 415 + home_notice_height,
                  vapor_home_installed_only ? "No installed games match your filters." : "No games match your search.", 0, dim);
@@ -942,7 +978,7 @@ void Shell::explorer_ui(Rect wr) {
             const int row_index = steam_home_row * steam_home_columns + card;
             if (std::size_t(row_index) >= steam_home_rows.size()) break;
             const int game_index = steam_home_rows[row_index];
-            if (!steam->game(std::size_t(game_index), game)) continue;
+            if (!steam->game_summary(std::size_t(game_index), game)) continue;
             steam_home_items[card] = game_index;
             steam_rendered_cards[card] = game.app_id;
             Rect tile{dx + 25 + card * (card_w + 12), y + 405 + home_notice_height, card_w, card_h};

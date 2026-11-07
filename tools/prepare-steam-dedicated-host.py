@@ -13,6 +13,7 @@ if target.exists():
 if not (source/'CMakeLists.txt').is_file():
     raise SystemExit('Build the isolated Wine 11 game-host source first')
 shutil.copytree(source, target)
+shutil.copy2(root/'src/steam_integration/cs2_runtime_files.hpp', target/'src/cs2_runtime_files.hpp')
 changes = {
     'src/runtime/package_installer.h': ('/data/playden/title-rule/allow-list', '/data/wine11/title-rule/allow-list'),
     'src/runtime/kit_trust.h': ('/data/playden/kits/playden-kit', '/data/wine11/kits/playden-kit'),
@@ -31,8 +32,12 @@ for name, (old, new) in changes.items():
         raise SystemExit('Unexpected upstream source; refusing ambiguous path substitution: ' + name)
     path.write_text(text.replace(old, new))
 from prepare_vapor_title_permissions import transform as title_permissions
+import prepare_cs2_runtime_installer as cs2
 installer = target/'src/runtime/package_installer.cpp'
-installer.write_text(title_permissions(installer.read_text()))
+installer.write_text(cs2.package_source(title_permissions(installer.read_text())))
+for name, transform in [('package_installer.h', cs2.package_header), ('install_service.h', cs2.install_service_header)]:
+    path = target/'src/runtime'/name
+    path.write_text(transform(path.read_text()))
 from prepare_vapor_publication_permissions import transform as publication_permissions, transform_coordinator
 publication = target/'src/runtime/settings_publication.cpp'
 publication.write_text(publication_permissions(publication.read_text()))
@@ -40,5 +45,5 @@ coordinator = target/'src/platform/ps5/native_coordinator.cpp'
 coordinator.write_text(transform_coordinator(coordinator.read_text()))
 from prepare_vapor_title_trash import transform as title_trash
 runtime = target/'src/homebrew/runtime_host.cpp'
-runtime.write_text(title_trash(runtime.read_text()))
+runtime.write_text(cs2.runtime_host(title_trash(runtime.read_text())))
 print('Prepared isolated host source for a Wine 11-owned kit and title list; not deployable.')

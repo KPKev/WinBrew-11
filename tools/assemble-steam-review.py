@@ -62,7 +62,9 @@ def verify_assets(module=None) -> dict:
     if receipt.get("source_revision") != module.REVISION or not isinstance(receipt.get("files"), dict): raise ValueError("Invalid asset receipt")
     actual = {p.relative_to(ASSETS).as_posix() for p in ASSETS.rglob("*") if p.is_file() and p.name != "runtime-assets.json"}
     if any(p.is_symlink() for p in ASSETS.rglob("*")) or actual != set(receipt["files"]): raise ValueError("Asset file set differs")
-    pinned = dict(module.read_runtime_asset_lock())
+    if receipt.get("vapor_recipe_overlay_sha256") != module.VAPOR_RECIPE_MANIFEST_SHA256:
+        raise ValueError("Asset receipt lacks the current reviewed Vapor recipes; restage runtime assets")
+    pinned = dict(module.expected_runtime_asset_hashes())
     pinned["assets/steam/cacert.pem"] = module.CA_SHA256
     if actual != set(pinned): raise ValueError("Pinned asset set differs")
     for name in sorted(actual):
