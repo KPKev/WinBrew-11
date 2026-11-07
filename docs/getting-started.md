@@ -1,6 +1,6 @@
 # Install WinBrew 11 and Vapor
 
-Current release line: **cs2-runtime-v1.1 / cs2-019.1**, November 7, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
+Current release line: **combined-blender-v1 / Blender 019.1 + CS2 019.1**, November 7, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
 
 Start with a **PS5 that already has its jailbreak running**. This guide explains how to install the ready-made app. You do not need to compile code or install Windows. WinBrew 11 is the desktop; Vapor is the Steam library inside it.
 
@@ -32,16 +32,16 @@ Web File Manager starts looking for a free port at **8888** and can choose **888
 
 ## 1. Download the right files
 
-On your computer, open the [cs2-runtime-v1.1 release](https://github.com/KPKev/WinBrew-11/releases/tag/cs2-runtime-v1.1). Expand **Assets** and save these four files into one new folder:
+On your computer, open the [combined-blender-v1 release](https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1). Expand **Assets** and save these four files into one new folder:
 
 | File | What it is for |
 | --- | --- |
-| `Vapor-CS2-019.1.zip` | The complete app, including the fixed CS2 runtime. |
+| `Vapor-Combined-Blender-019.1.zip` | The complete app, including the fixed CS2 and Blender runtimes. |
 | `Vapor-base-kit-0.13.zip` | The shared game runtime needed for a first installation. |
 | `SHA256SUMS.txt` | Expected download fingerprints, used to check the files. |
 | `fix-vapor-install-modes.py` | Checks/restores file permissions after copying. |
 
-Leave the other assets alone for a normal installation. The separate runtime ZIP and `ntdll` module are already included in the complete app. **Source code (zip)**, **Source code (tar.gz)**, and **Code → Download ZIP** are developer files, not the ready-made console app.
+Leave the other assets alone for a normal installation. The separate Blender runtime ZIP and compatibility modules are already included in the complete app. **Source code (zip)**, **Source code (tar.gz)**, and **Code → Download ZIP** are developer files, not the ready-made console app.
 
 ### Check the downloads
 
@@ -50,7 +50,7 @@ A SHA-256 checksum is a file's fingerprint. Checking it catches incomplete or ch
 On Windows, open the download folder, right-click empty space, and choose **Open in Terminal**. In PowerShell run:
 
 ```powershell
-Get-FileHash .\Vapor-CS2-019.1.zip -Algorithm SHA256
+Get-FileHash .\Vapor-Combined-Blender-019.1.zip -Algorithm SHA256
 Get-FileHash .\Vapor-base-kit-0.13.zip -Algorithm SHA256
 Get-FileHash .\fix-vapor-install-modes.py -Algorithm SHA256
 ```
@@ -61,7 +61,7 @@ On Linux, use `sha256sum FILENAME`; on macOS, use `shasum -a 256 FILENAME`. Repl
 
 ## 2. Extract both ZIPs on your computer
 
-1. Right-click `Vapor-CS2-019.1.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
+1. Right-click `Vapor-Combined-Blender-019.1.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
 2. Extract `Vapor-base-kit-0.13.zip` separately. Find the **playden-kit** folder.
 3. Check that `PPSA77382` contains `eboot.bin`, `manifest.json`, `sce_sys`, and `runtime`. Check that `playden-kit` contains `manifest.json` and its runtime files.
 
@@ -82,6 +82,7 @@ In Web File Manager on your computer:
 /data/homebrew/PPSA77382/manifest.json
 /data/homebrew/PPSA77382/sce_sys/param.json
 /data/homebrew/PPSA77382/runtime/compatibility/steam-730-cs2-v1/vapor-runtime.json
+/data/homebrew/PPSA77382/runtime/compatibility/steam-365670-blender-v1/vapor-runtime.json
 /data/wine11/kits/playden-kit/manifest.json
 ```
 
@@ -173,8 +174,8 @@ To roll back, close WinBrew and restore the backed-up app folder and its recorde
 
 - New games are detected by the live library service. Downloaded artwork/details are saved per game and reused.
 - Use **Refresh game cache** on a game's detail page to request updated artwork, descriptions, and news. This is a presentation refresh, not a game reinstall.
-- Steam app 730 automatically receives the complete bundled fixed runtime through normal preparation, including first installation/reinstallation. Other games retain their runtime selection and saved player settings.
-- The owner reports **Schedule I working** and **CS2 offline bots working**. LAN/local multiplayer and Internet tunneling are untested. See [compatibility](compatibility.md).
+- Steam app 730 automatically receives the complete bundled fixed runtime through normal preparation, including first installation/reinstallation. Blender (Steam app 365670) also receives its pinned runtime and launcher through normal preparation. Other games retain their runtime selection and saved player settings.
+- The owner reports Schedule I, CS2 offline bots, Skyrim Special Edition, Blackjack 21: The Blackjackiest, Golf With Your Friends and Quake II RTX working. Online play is unavailable for the listed games; official online support is not pursued and co-op is deferred. See [compatibility](compatibility.md).
 
 ## Source updates
 

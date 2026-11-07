@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """Create a distributable Vapor app ZIP with verified bytes and Unix modes."""
-import argparse, hashlib, json, zipfile
+import argparse, hashlib, json, re, zipfile
+from urllib.parse import urljoin
 from pathlib import Path
 import prepare_cs2_runtime as cs2
 import prepare_blender_runtime as blender
 
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+def document(name):
+    text = (cs2.ROOT/'docs'/name).read_text(encoding='utf-8')
+    base = 'https://github.com/KPKev/WinBrew-11/blob/combined-blender-v1/docs/'
+    return re.sub(r'(\]\()([^)]+)(\))',
+                  lambda m: m[1] + urljoin(base, m[2]) + m[3], text).encode('utf-8')
 def package(app, output):
     app, output = Path(app), Path(output)
     manifest = json.loads((app/'manifest.json').read_bytes())
@@ -34,9 +40,10 @@ def package(app, output):
             info.external_attr=(0o40755 if path.is_dir() else 0o100000|modes.get(rel,0o644))<<16
             info.compress_type=zipfile.ZIP_DEFLATED
             bundle.writestr(info,b'' if path.is_dir() else path.read_bytes())
-        bundle.writestr('INSTALL.txt',(cs2.ROOT/'docs/cs2-runtime.md').read_bytes())
-        bundle.writestr('BLENDER.txt',(cs2.ROOT/'docs/blender-runtime.md').read_bytes())
-        bundle.writestr('RELEASE-NOTES.txt',(cs2.ROOT/'docs/release-notes-next.md').read_bytes())
+        bundle.writestr('INSTALL.txt',document('getting-started.md'))
+        bundle.writestr('CS2.txt',document('cs2-runtime.md'))
+        bundle.writestr('BLENDER.txt',document('blender-runtime.md'))
+        bundle.writestr('RELEASE-NOTES.txt',document('release-notes-next.md'))
     print('PASS:',len(manifest['files']),'verified app files; ZIP SHA256',sha(output))
 
 if __name__=='__main__':

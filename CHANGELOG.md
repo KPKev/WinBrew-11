@@ -1,6 +1,6 @@
 # Changelog
 
-## Prepared combined update
+## November 7, 2026 — combined-blender-v1 release
 
 - Blender: pinned installer/reinstall bundle, Vulkan defaults, independent cursor updates, mouse-wheel forwarding, loading-indicator fix and numbered sandbox discovery.
 - Preserve CS2 offline compatibility; official online unsupported and not pursued.

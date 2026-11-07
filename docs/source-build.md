@@ -1,6 +1,6 @@
 # Current source and build entry points
 
-The default **main** branch is the current source tree. The `cs2-runtime-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
+The default **main** branch is the current source tree. The `combined-blender-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
 
 **Only want to install it on your jailbroken PS5? Follow [the installation walkthrough](getting-started.md).** You do not need this page, Git, a compiler, or a PS5 SDK to use the ready-made release. This page is for developers rebuilding the app.
 
@@ -57,7 +57,7 @@ Check a prepared network snapshot with `python3 tools/verify-steam-tested-inputs
 
 For the Windows preview, the current `tools/build-preview.cmd` calls Visual Studio 2022 Professional's `vcvars64.bat` at a fixed path. If you use another edition/location, adjust that local toolchain path first. The preview cannot verify PS5 installation, console payloads, or game compatibility.
 
-For the prepared combined update, also obtain the matching `blender-runtime-019.1.zip` release asset (or the local preparation output) and verify/unpack it with `python3 tools/prepare-blender-runtime.py --archive /path/to/blender-runtime-019.1.zip`. The payload has not been uploaded by this preparation task; its source and output pins are documented in [Blender runtime details](blender-runtime.md).
+For the combined update, run `python3 tools/prepare-blender-runtime.py` to download and verify the matching published `blender-runtime-019.1.zip` asset. A local copy is accepted with `--archive /path/to/blender-runtime-019.1.zip`. Its source and output pins are documented in [Blender runtime details](blender-runtime.md).
 
 Once prerequisites exist:
 

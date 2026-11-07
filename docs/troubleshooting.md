@@ -2,13 +2,13 @@
 
 ## CS2 says runtime bundle is unavailable
 
-Update the complete app to [cs2-runtime-v1.1](https://github.com/KPKev/WinBrew-11/releases/tag/cs2-runtime-v1.1), then press Play in Vapor and let preparation finish. The original automatic-runtime release could skip preparation for an older CS2 installation still marked Ready. The hotfix checks its selected runtime before allowing that shortcut.
+Update the complete app to [combined-blender-v1](https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1), then press Play in Vapor and let preparation finish. The original automatic-runtime release could skip preparation for an older CS2 installation still marked Ready. The hotfix checks its selected runtime before allowing that shortcut.
 
 If preparation says a title file could not be replaced after a manual Wine-folder replacement, check runtime-folder ownership. The file manager can create folders owned by UID 0 while Vapor's title belongs to UID 1. On the owner's installation, correcting ownership of 29 runtime folders allowed the managed refresh to finish, preserving the launcher, fixed module, profiles and saves. The app/base-kit permission helper does not change ownership of installed game titles. This legacy case needs a scoped repair bound to the title's owner marker, rather than a game reinstall or blanket permissions change. Normal Vapor installs create runtime folders under the app's user.
 
 See the [verified repair and installed-title audit](reports/cs2-handoff-20261107.md). Other titles retain their existing runtime selection and profiles.
 
-These checks match **cs2-runtime-v1.1 / PPSA77382**. Start with the [installation guide](getting-started.md) if you have not copied the complete app and dedicated base kit yet.
+These checks match **combined-blender-v1 / PPSA77382**. Start with the [installation guide](getting-started.md) if you have not copied the complete app and dedicated base kit yet.
 
 ## The computer cannot open the PS5 file manager
 
@@ -100,8 +100,8 @@ Open [WinBrew-11 Issues](https://github.com/KPKev/WinBrew-11/issues) and include
 - Last working step: Home tile, desktop, input, Vapor sign-in, library, download/preparation, or game launch.
 - Exact error text, a screenshot with private information hidden, and what you tried. For a game issue, include its name and Steam app ID.
 
-## Prepared Blender repair
+## Blender repair
 
-The next combined update supplies the pinned Blender launcher and runtime during normal installation/reinstallation. It includes Vulkan defaults, independent cursor updates, wheel forwarding and relaunch-folder discovery. Confirmed scope is interactive workspace/pointer/menus/zoom, not large-scene or render/export stability. The owner confirms the earlier unexpected exit was resolved by the cursor repair. See [Blender runtime details](blender-runtime.md).
+The combined release supplies the pinned Blender launcher and runtime during normal installation/reinstallation. It includes Vulkan defaults, independent cursor updates, wheel forwarding and relaunch-folder discovery. Confirmed scope is interactive workspace/pointer/menus/zoom, not large-scene or render/export stability. The owner confirms the earlier unexpected exit was resolved by the cursor repair. See [Blender runtime details](blender-runtime.md).
 
 Counter-Strike's working result is offline play. Splitgate currently stops at server authentication; Kane's Wrath reaches only its first splash screen. Official online work is outside the scope, and co-op testing is deferred.

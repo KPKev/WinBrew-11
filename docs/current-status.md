@@ -1,6 +1,6 @@
 # Current verification — November 7, 2026
 
-The combined WinBrew 11 / Vapor application is installed on the owner's PS5 as **PPSA77382**, version **01.016.000**. Its full 1,856-file package was checked after installation. Startup reached Steam-ready state and initialized keyboard, mouse, and controller input. The owner will perform further hands-on testing of the combined update.
+The previous CS2 combined WinBrew 11 / Vapor application is installed on the owner's PS5 as **PPSA77382**, version **01.016.000**. Its full 1,856-file package was checked after installation. Startup reached Steam-ready state and initialized keyboard, mouse, and controller input. The owner will perform further hands-on testing of the combined update.
 
 ## Gameplay reports
 
@@ -14,13 +14,13 @@ The combined WinBrew 11 / Vapor application is installed on the owner's PS5 as *
 
 See [compatibility](compatibility.md) for limits and research links.
 
-## Prepared Blender and game-status update
+## Published Blender and game-status update
 
-The next combined release adds the [Blender compatibility bundle](blender-runtime.md) to normal installation and reinstallation. The owner's repaired copy confirmed stable workspace visibility, smooth pointer/menus and responsive wheel zoom. The owner confirms the earlier automatic exit was resolved by the cursor repair; large-scene/render/export coverage remains separate. Release delivery verification is recorded separately from console acceptance of the owner's per-title fixes.
+The [combined-blender-v1 release](https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1) adds the [Blender compatibility bundle](blender-runtime.md) to normal installation and reinstallation. The owner's repaired copy confirmed stable workspace visibility, smooth pointer/menus and responsive wheel zoom. The owner confirms the earlier automatic exit was resolved by the cursor repair; large-scene/render/export coverage remains separate. Release delivery verification is recorded separately from console acceptance of the owner's per-title fixes.
 
 Kane's Wrath currently reaches only the first splash screen. Splitgate reaches login but cannot proceed through server authentication. Neither is listed as working gameplay. Counter-Strike remains confirmed for offline play; official online play is unsupported and is not being pursued. Online is unavailable for the listed games. Co-op may be researched later with other GitHub projects, but co-op/multiplayer work is deferred while the priority is making games function locally.
 
-See the [prepared release notes](release-notes-next.md). No later package has been published or installed by this release-preparation task.
+See the [release notes](release-notes-next.md). The 3,674-file combined package is published for download. Its build, installer fixtures and archive checks passed; it has not been installed or console-tested by this publication task.
 
 ## Cache behavior
 

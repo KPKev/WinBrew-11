@@ -2,7 +2,7 @@
 
 A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created by **KPKev** with AI development assistance. Supported Windows games use Playden's Wine-based PS5 runtime. WinBrew 11 is an independent homebrew application; it does not install Microsoft Windows.
 
-**Updated November 7, 2026:** hotfix **cs2-runtime-v1.1** is installed on the owner's PS5, and the owner confirmed CS2 opens through Vapor after its managed runtime refresh. The current application is **PPSA77382**, version **01.016.000**. This repository contains its current source, tests, runtime-selection logic, and build tools.
+**Updated November 7, 2026:** the [combined Blender release](https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1) supplies the complete **PPSA77382** application with the existing CS2 repair and new automatic Blender compatibility bundle. The 3,674-file package passed build, installer and archive verification. Owner acceptance applies to the repaired Blender installation; this combined package has not been console-tested.
 
 ## Working games
 
@@ -17,11 +17,11 @@ A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created b
 
 The tested Counter-Strike installation is CS2/app 730, not a separately tested legacy CS:GO executable. See the [compatibility matrix](docs/compatibility.md).
 
-## Prepared for the next combined release
+## Combined Blender release
 
-The Blender compatibility changes are integrated into normal installation/reinstallation. The owner confirmed workspace visibility, smooth pointer/menus and responsive wheel zoom; the owner confirms the earlier unexpected exit was resolved by the cursor repair. Kane's Wrath currently reaches only its first splash screen. Splitgate reaches login and is blocked by server authentication. See [compatibility](docs/compatibility.md), [Blender runtime details](docs/blender-runtime.md), and the [prepared release notes](docs/release-notes-next.md).
+The Blender compatibility changes are integrated into normal installation/reinstallation. The owner confirmed workspace visibility, smooth pointer/menus and responsive wheel zoom; the owner confirms the earlier unexpected exit was resolved by the cursor repair. Kane's Wrath currently reaches only its first splash screen. Splitgate reaches login and is blocked by server authentication. See [compatibility](docs/compatibility.md), [Blender runtime details](docs/blender-runtime.md), and the [release notes](docs/release-notes-next.md).
 
-Counter-Strike's confirmed result is offline play. Online play does not work for the listed games and official online support is not being pursued. Co-op may be investigated later using other GitHub projects, but it remains unimplemented and untested. That work is deferred; the current priority is making the games function locally. The prepared update has not replaced the published downloads below.
+Counter-Strike's confirmed result is offline play. Online play does not work for the listed games and official online support is not being pursued. Co-op may be investigated later using other GitHub projects, but it remains unimplemented and untested. That work is deferred; the current priority is making the games function locally. The complete combined download is linked below.
 
 ## Get the latest runnable version
 
@@ -40,13 +40,13 @@ Vapor uses Playden's underlying runtime, so the console still needs its supporti
 
 ### Download and install
 
-1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/cs2-runtime-v1.1). Under **Assets**, download **Vapor-CS2-019.1.zip**, **Vapor-base-kit-0.13.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. The base kit is needed for a first installation.
+1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1). Under **Assets**, download **Vapor-Combined-Blender-019.1.zip**, **Vapor-base-kit-0.13.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. The base kit is needed for a first installation.
 2. Extract the ZIPs on your computer. Copy the complete **PPSA77382** folder to **`/data/homebrew/PPSA77382`** on the PS5. Copy **playden-kit** to **`/data/wine11/kits/playden-kit`**. Keep every file and subfolder; copying only `eboot.bin` is incomplete.
 3. Check the copied files' permissions using the supplied helper, let your homebrew loader scan the app folder, then launch **WinBrew 11** from Home. Open **Vapor** inside it and sign into your own Steam account.
 
 **Follow the [step-by-step installation guide](docs/getting-started.md) for the full walkthrough**, including download checks, exact folder layouts, permission commands, and first-launch checks. Already installed? Use its [update steps](docs/getting-started.md#updating-an-existing-installation). Stuck? See [troubleshooting](docs/troubleshooting.md).
 
-The downloads above are for the documented `cs2-runtime-v1.1` release. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
+The downloads above are for the documented `combined-blender-v1` release. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
 
 Clone or pull **main** for current code and documentation. SDKs, downloaded runtimes, and generated outputs are separate from Git. The [source-build guide](docs/source-build.md) explains the prerequisites and full target, `tools/build-vapor-cs2.sh`. The historical desktop-only `build-ps5.sh` is not the complete current Steam/Vapor application.
 
@@ -60,11 +60,11 @@ The v1.1 hotfix sends an existing Ready CS2 installation through preparation whe
 - Mouse, USB keyboard, and controller input; desktop/Start/taskbar shortcuts; favorites and library search; download controls and per-game controller settings; Paint, Notepad, and a system-browser launcher.
 - The window-shadow fix that the owner confirmed made Vapor smooth: hidden window pixels are no longer blended 18 times per frame. Further improvements cache glyph coverage, Recent Games ordering, shortcut labels, and download-view updates.
 - Automatic complete **cs2-019.1** runtime selection for Steam app 730, including the tested derived `ntdll.prx`. Other games retain their configured/base runtime.
-- Unlocked default profiles for Skyrim Special Edition, Terraria, Brotato, and Counter-Strike: Source. Profiles do not establish gameplay compatibility, and saved player settings retain precedence.
+- Unlocked default profiles for Skyrim Special Edition, Terraria, Brotato, Counter-Strike: Source, and Blender. Profiles do not establish gameplay compatibility, and saved player settings retain precedence.
 
 ## Verification
 
-The combined installed package has **1,856 files**. Application/runtime contents, applicable file modes, and the final manifest were verified against pinned hashes. The app reopened successfully and its Steam startup and input initialization passed. Tests cover cache persistence/reset, pixel-identical text/shadows, library discovery, input, downloads, save-preserving migration, and complete CS2 runtime first-install/reinstall paths.
+The previous installed CS2 package had **1,856 files**; the new downloadable combined package has **3,674 files**. The new archive's application/runtime contents, Unix file modes, CRCs and final manifest were verified against pinned hashes. Console startup acceptance belongs to the earlier installed package and repaired Blender copy. Tests cover cache persistence/reset, pixel-identical text/shadows, library discovery, input, downloads, save-preserving migration, and complete CS2 runtime first-install/reinstall paths.
 
 Owner gameplay reports are separate from host tests and startup checks. Local rendering benchmarks are **not PS5 FPS measurements**. A fixture reinstall is not a claim that the owner's entire CS2 download was repeated. See [current verification](docs/current-status.md) and the [changelog](CHANGELOG.md).
 

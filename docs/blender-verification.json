@@ -1,8 +1,7 @@
 {
   "date": "2026-11-07",
-  "status": "prepared locally for later combined publication",
+  "status": "combined-blender-v1 build and package verification",
   "console_deployment_performed": false,
-  "github_publication_performed": false,
   "runtime_revision": "blender-019.1",
   "steam_app_id": 365670,
   "payload_archive_sha256": "e26970ea6270afcf16a5bad8b3ed05fbadbbf338cb995c106773c1e41911ee84",
@@ -46,6 +45,10 @@
   "earlier_exit_status": "resolved, owner-confirmed; credited to cursor repair",
   "combined_app_file_count": 3674,
   "combined_app_manifest_sha256": "e245bfab1cc296be9e586bac86bd61160073b6ba99c22faf84da71c2ea203f12",
-  "combined_app_archive_sha256": "8a60c9055dd67694da1e0f7edc7bfa489a78915a05ffd20952d98b9bd33b72e0",
-  "combined_app_eboot_sha256": "d73723ad561a6d0a89765d235c2e58ec5f2ff47c735a0ddca0640d95b3a43fbf"
+  "combined_app_archive_sha256": "0e48cb31567c2c3cebee3c65292711cbb337f1b11946d98952c7fd23f0824343",
+  "combined_app_eboot_sha256": "d73723ad561a6d0a89765d235c2e58ec5f2ff47c735a0ddca0640d95b3a43fbf",
+  "release_tag": "combined-blender-v1",
+  "release_url": "https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1",
+  "compiled_application_source_commit": "9c4d70cc7241da1559d67467dadb02ebf896cb1a",
+  "publication_changes": "Installation/release documents and pinned runtime download URL; compiled application/runtime bytes unchanged"
 }

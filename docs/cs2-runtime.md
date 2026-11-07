@@ -1,8 +1,8 @@
 # Automatic CS2 runtime
 
-Current combined app: **PPSA77382 / 01.016.000**, installed and startup-verified November 7, 2026. Start with [getting started](getting-started.md), [current verification](current-status.md), and the [compatibility matrix](compatibility.md). The release also contains the persistent game cache and desktop/Vapor efficiency fixes.
+Current downloadable combined app: **PPSA77382**, released November 7, 2026. The earlier CS2 installation was startup-verified; the new combined package passed local build/installer/archive checks and has not been console-tested. Start with [getting started](getting-started.md), [current verification](current-status.md), and the [compatibility matrix](compatibility.md). The release also contains the persistent game cache and desktop/Vapor efficiency fixes.
 
-Use the **Vapor-CS2-019.1.zip** application from the `cs2-runtime-v1.1` GitHub release. Keep the entire app folder together: the fixed runtime is inside it. Copying only `eboot.bin` does not install this feature.
+Use the **Vapor-Combined-Blender-019.1.zip** application from the `combined-blender-v1` GitHub release. Keep the entire app folder together: the fixed runtime is inside it. Copying only `eboot.bin` does not install this feature.
 
 On a supported homebrew-enabled PS5, install the app folder as `/data/homebrew/PPSA77382`. Existing Vapor users keep their existing app account/state and base kit. New users also need the release's `Vapor-base-kit-0.13.zip`, extracted so its `playden-kit/manifest.json` is at `/data/wine11/kits/playden-kit/manifest.json`. Preserve archive file modes (directories 0755; individual files 0644/0755 as recorded in the kit manifest). Use a homebrew installer/extractor that preserves Unix modes; a plain FTP copy may require correcting modes. Do not replace another application's `/data/playden` kit. The normal PS5 homebrew loader, its supported system version and payload prerequisites still apply.
 
@@ -24,7 +24,7 @@ LAN/local multiplayer may work but has not been tried. LAN-over-Internet project
 
 ## Downloads and source
 
-- `Vapor-CS2-019.1.zip`: complete application, including the fixed runtime and license notices.
+- `Vapor-Combined-Blender-019.1.zip`: complete application, including the fixed runtime and license notices.
 - `Vapor-base-kit-0.13.zip`: dedicated base kit needed on a new Vapor setup; existing installations need no base-kit change.
 - `cs2-runtime-019.1.zip`: independently verifiable runtime payload for source builds. Already included in the application download.
 - `ntdll-cs2-019.1.prx`: exact derived module for inspection/rebuilding; no manual replacement is required when using the application download.
@@ -39,6 +39,6 @@ For the runtime change, start with the corresponding-source archive and `runtime
 
 The real filesystem installer suite covers first installation, removal/reinstallation, migration with a saved file preserved, other Steam apps, local imports and missing/corrupt/symlink rejection. Runtime assets and compiled pins are checked again by package assembly. The PS5-native host and complete app are separately compiled and linked. Offline gameplay acceptance applies to the tested runtime, rather than claiming a fresh 75 GB game download was repeated on the owner's console.
 
-## Prepared combined update
+## Combined Blender update
 
-The later combined update also selects a separate [Blender compatibility bundle](blender-runtime.md). CS2 retains its existing runtime and confirmed offline behavior. Official online play remains unsupported and is not being pursued. Co-op and multiplayer testing are deferred while game functionality is the priority. The published CS2 assets described above remain unchanged until the combined update is published.
+The combined update also selects a separate [Blender compatibility bundle](blender-runtime.md). CS2 retains its existing runtime and confirmed offline behavior. Official online play remains unsupported and is not being pursued. Co-op and multiplayer testing are deferred while game functionality is the priority. The previous CS2 release remains available for rollback; the combined archive includes the same CS2 runtime.
