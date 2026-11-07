@@ -42,6 +42,8 @@ class Recipes(unittest.TestCase):
                     review, "ASSETS", dest):
                 stage.stage(dest, bundle)
                 receipt = review.verify_assets(stage)
+                self.assertEqual((dest / "runtime/recipes/vapor-defaults-provenance.json").read_bytes(),
+                                 (stage.VAPOR_RECIPES / "manifest.json").read_bytes())
                 recipe_list = (dest / stage.RECIPE_LIST).read_text()
                 self.assertTrue(recipe_list.startswith((repo / stage.RECIPE_LIST).read_text()))
                 apps = set()

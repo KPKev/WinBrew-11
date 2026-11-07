@@ -91,6 +91,7 @@ def vapor_recipe_overlay(original_list: bytes) -> dict[str, bytes]:
     separator = b"" if not original_list or original_list.endswith(b"\n") else b"\n"
     result[RECIPE_LIST] = original_list + separator + b"# Reviewed Vapor defaults; provenance: assets/vapor-recipes/manifest.json\n" + (
         "\n".join(sorted(names)) + "\n").encode("utf-8")
+    result["runtime/recipes/vapor-defaults-provenance.json"] = raw
     return result
 
 
