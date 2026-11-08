@@ -2,6 +2,9 @@
 #pragma once
 #include <cstddef>
 #include <cstdint>
+#include <string>
+#include <array>
+#include "xlsx_codec.hpp"
 namespace ww {
 enum class DocumentResult {
   ok,
@@ -43,13 +46,15 @@ struct TextDocument {
   char text[Capacity + 1]{}, original[Capacity + 1]{}, path[1024]{};
   size_t length = 0, original_length = 0, caret = 0;
   unsigned mode = 0600;
-  bool active = false, read_only = false, bom = false;
+  bool active = false, read_only = false, bom = false, original_bom = false;
   enum class Newline { lf, crlf, cr } newline = Newline::lf;
   DocumentResult result = DocumentResult::ok;
   int error = 0;
   bool dirty() const;
   bool load(const char *, bool discard = false);
   bool save(const DocumentIo *io = nullptr);
+  bool save_as(const char *, const TextDocument *confirmed_target = nullptr,
+               const DocumentIo *io = nullptr);
   bool close(bool discard = false);
   bool insert(char);
   void erase(bool forward = false);
@@ -59,5 +64,32 @@ struct TextDocument {
   void end(bool whole_document = false);
   void vertical(int lines);
   bool fail(DocumentResult, int = 0);
+};
+// Portable spreadsheet model; CSV storage shares the editor's verified atomic I/O.
+struct SheetDocument {
+  static constexpr int Rows = 100, Columns = 26;
+  TextDocument storage;
+  xlsx::Workbook workbook;
+  bool xlsx_format = false;
+  int selected_sheet = 0;
+  std::array<std::string, Rows * Columns> cells{};
+  mutable std::array<std::string, Rows * Columns> calculated{};
+  mutable std::array<bool, Rows * Columns> cached{};
+  int row = 0, column = 0, first_row = 0, first_column = 0;
+  char edit[256]{}, status[180] = "Ready";
+  bool editing = false;
+  bool load(const char *);
+  bool set(int row, int column, const char *);
+  bool save(const DocumentIo *io = nullptr);
+  bool dirty() const { return storage.active && (xlsx_format ? workbook.changed : storage.dirty()); }
+  static bool supports(const char *);
+  bool load_xlsx(const char *);
+  bool save_xlsx(const DocumentIo *);
+  bool export_xlsx(const char *);
+  bool select_sheet(int);
+  bool add_sheet();
+  bool editable() const;
+  std::string display(int row, int column) const;
+  double number(int row, int column, int depth, int &budget, std::string &error) const;
 };
 } // namespace ww

@@ -9,7 +9,11 @@ void Shell::keyboard_ui() {
   add(panel_rect, 89);
   text(487, 644, "Touch keyboard", 1, ink());
   text(680, 646,
-       text_target == TextTarget::document  ? "Notepad"
+       text_target == TextTarget::file_address ? "Folder address"
+       : text_target == TextTarget::file_search ? "Search files"
+       : text_target == TextTarget::file_rename ? "Rename item"
+       : text_target == TextTarget::filename ? "File name"
+       : text_target == TextTarget::document  ? "Notepad"
        : text_target == TextTarget::address ? "Web address"
        : text_target == TextTarget::vapor_search ? "Search games"
                                             : "Search apps",

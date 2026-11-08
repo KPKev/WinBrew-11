@@ -5,6 +5,7 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <cmath>
 namespace ww {
 namespace {
 // Fixed BSS storage. No image-sized arrays live on the stack or CRT heap.
@@ -62,7 +63,7 @@ Rect window_rect(const Shell &shell) {
                          : Rect{shell.wx, shell.wy, 1200, 780};
 }
 void stamp(Paint &paint, int x, int y) {
-  const int radius = paint.brush / 2;
+  const int radius = paint.tool == Paint::Tool::pencil ? 0 : paint.brush / 2;
   for (int dy = -radius; dy <= radius; ++dy)
     for (int dx = -radius; dx <= radius; ++dx) {
       if (dx * dx + dy * dy > radius * radius)
@@ -318,6 +319,7 @@ void Paint::stroke(int x, int y, bool begin) {
     blank();
   if (x < 0 || y < 0 || x >= width || y >= height)
     return;
+  if (tool == Tool::picker) { color = pixel(x,y); return; }
   if (begin || !stroke_open) {
     end_stroke();
     int result = image::allocate_history(undo_storage);
@@ -331,14 +333,21 @@ void Paint::stroke(int x, int y, bool begin) {
     std::memcpy(history, canvas, size_t(width) * height * 4);
     undo_revision = revision;
     revision = next_revision++;
-    previous_x = x;
-    previous_y = y;
+    previous_x = origin_x = x;
+    previous_y = origin_y = y;
     stroke_open = true;
     stroke_left = width;
     stroke_top = height;
     stroke_right = stroke_bottom = 0;
   }
-  int radius = brush / 2;
+  int radius = tool == Tool::pencil ? 0 : brush / 2;
+  const bool shape = tool==Tool::line || tool==Tool::rectangle || tool==Tool::ellipse;
+  if (shape) {
+    // Restore only the earlier preview's bounds; history remains one undo step.
+    for(int row=stroke_top;row<stroke_bottom;++row)
+      if(stroke_right>stroke_left) std::memcpy(canvas+size_t(row)*width+stroke_left,history+size_t(row)*width+stroke_left,size_t(stroke_right-stroke_left)*4);
+    previous_x=origin_x;previous_y=origin_y;
+  }
   stroke_left =
       std::max(0, std::min(stroke_left, std::min(previous_x, x) - radius));
   stroke_top =
@@ -347,6 +356,13 @@ void Paint::stroke(int x, int y, bool begin) {
       width, std::max(stroke_right, std::max(previous_x, x) + radius + 1));
   stroke_bottom = std::min(
       height, std::max(stroke_bottom, std::max(previous_y, y) + radius + 1));
+  if (shape) {
+    auto segment=[&](int ax,int ay,int bx,int by){int n=std::max(std::abs(bx-ax),std::abs(by-ay));for(int i=0;i<=n;++i)stamp(*this,ax+(bx-ax)*i/(n?n:1),ay+(by-ay)*i/(n?n:1));};
+    if(tool==Tool::line)segment(origin_x,origin_y,x,y);
+    else if(tool==Tool::rectangle){segment(origin_x,origin_y,x,origin_y);segment(x,origin_y,x,y);segment(x,y,origin_x,y);segment(origin_x,y,origin_x,origin_y);}
+    else {double cx=(origin_x+x)*.5,cy=(origin_y+y)*.5,rx=std::abs(x-origin_x)*.5,ry=std::abs(y-origin_y)*.5;int n=std::max(24,int(std::max(rx,ry)*7));for(int i=0;i<=n;++i){double t=i*6.283185307179586/n;stamp(*this,int(std::lround(cx+rx*std::cos(t))),int(std::lround(cy+ry*std::sin(t))));}}
+    return;
+  }
   int dx = x - previous_x, dy = y - previous_y,
       steps = std::max(std::abs(dx), std::abs(dy));
   for (int at = 0; at <= steps; ++at)
@@ -648,6 +664,9 @@ bool Paint::activate(Shell &shell, int id) {
     undo();
   else if (id == 731)
     redo();
+  else if (id >= 732 && id <= 736) {
+    end_stroke();tool = id==732?Tool::line:id==733?Tool::rectangle:id==734?Tool::ellipse:id==735?Tool::picker:Tool::pencil;
+  }
   else if (id == 704 || id == 705)
     tool = id == 704 ? Tool::brush : Tool::eraser;
   else if (id >= 706 && id <= 708)
@@ -700,7 +719,7 @@ void Paint::draw(Shell &shell, Rect wr) {
     end_stroke();
   const int x = wr.x, y = wr.y;
   shell.rect({x + 1, y + 43, wr.w - 2, wr.h - 44},
-             shell.dark ? 0xff242321 : 0xfff7f5f2);
+             shell.dark ? 0xff272727 : 0xfff3f3f3);
   shell.button({x + 16, y + 54, 74, 38}, 700, "New");
   shell.button({x + 94, y + 54, 80, 38}, 701, "Open");
   shell.button({x + 181, y + 54, 116, 38}, 702, "Save copy");
@@ -710,7 +729,7 @@ void Paint::draw(Shell &shell, Rect wr) {
   shell.text_fit(x + 650, y + 66, wr.w - 676,
                  path[0] ? basename(path) : "Untitled", 0, shell.muted());
   shell.round({x + 12, y + 104, wr.w - 24, 138}, 8,
-              shell.dark ? 0xff35322f : 0xffffffff);
+              shell.dark ? 0xff303030 : 0xffffffff);
   auto choice = [&](Rect r, int id, const char *label, bool chosen) {
     if (chosen)
       shell.round(r, 5, shell.dark ? 0xff51463c : 0xfff4e9de);
@@ -743,13 +762,18 @@ void Paint::draw(Shell &shell, Rect wr) {
     shell.round(r, 15, chosen ? shell.accent_color() : shell.muted());
     shell.round({r.x + 3, r.y + 3, 25, 25}, 12, palette[i]);
   }
-  shell.text(x + 796, y + 127, "Paint", 1, shell.ink());
-  shell.text(x + 796, y + 166, "PNG / JPEG / BMP up to 4K", 0, shell.muted());
+  shell.text(x + 796, y + 115, "Shapes", 0, shell.muted());
+  choice({x+786,y+144,100,36},732,"Line",tool==Tool::line);
+  choice({x+890,y+144,128,36},733,"Rectangle",tool==Tool::rectangle);
+  choice({x+1022,y+144,125,36},734,"Ellipse",tool==Tool::ellipse);
+  choice({x+786,y+189,100,36},736,"Pencil",tool==Tool::pencil);
+  choice({x+890,y+189,170,36},735,"Color picker",tool==Tool::picker);
+
   char available[70];
   std::snprintf(available, sizeof(available),
                 "Undo %d  |  Redo %d  |  Limit 20", undo_cursor,
                 undo_count - undo_cursor);
-  shell.text(x + 796, y + 201, available, 0, shell.muted());
+
   const auto r = canvas_rect(wr);
   shell.round({r.x - 2, r.y - 2, r.w + 4, r.h + 4}, 2, shell.muted());
   shell.add(r, 730);

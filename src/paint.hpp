@@ -6,14 +6,14 @@ namespace ww {
 struct Shell;
 struct Rect;
 struct Paint {
-  enum class Tool { brush, eraser };
+  enum class Tool { brush, eraser, line, rectangle, ellipse, picker, pencil };
   enum class Pending { none, blank, open, close, action };
   int width = 800, height = 500, brush = 6;
   Tool tool = Tool::brush;
   uint32_t color = 0xff232323;
   bool initialized = false, painting = false, undo_ready = false,
        undo_is_redo = false;
-  int previous_x = 0, previous_y = 0;
+  int previous_x = 0, previous_y = 0, origin_x = 0, origin_y = 0;
   uint64_t revision = 1, saved_revision = 1, undo_revision = 0,
            next_revision = 2;
   struct UndoStep {

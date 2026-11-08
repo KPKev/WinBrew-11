@@ -153,6 +153,13 @@ void Shell::vapor_icon(int x, int y, int size, bool backdrop) {
   }
 }
 void Shell::icon(int x, int y, int size, int kind) {
+  if(kind>=17&&kind<=19) {
+    auto box=[&](int a,int b,int w,int h,uint32_t color){rect({x+a*size/48,y+b*size/48,std::max(1,w*size/48),std::max(1,h*size/48)},color);};
+    if(kind==17){box(8,3,32,42,0xffe8b857);box(12,7,24,35,0xfffdfdfd);for(int i=0;i<5;++i)box(16,13+i*5,17,1,0xffb3a38e);box(8,3,5,42,0xffd69d42);}
+    else if(kind==18){round({x+3*size/48,y+8*size/48,42*size/48,33*size/48},size/3,0xffcce5f2);const uint32_t colors[]={0xff4444db,0xff00b9f0,0xff62ad30,0xffdc9038};for(int i=0;i<4;++i)round({x+(9+i*8)*size/48,y+(14+(i%2)*14)*size/48,std::max(2,size/7),std::max(2,size/7)},std::max(1,size/14),colors[i]);box(34,26,5,18,0xff487dab);}
+    else {box(15,4,29,40,0xff498c2b);box(19,8,21,32,0xffdef1e5);for(int i=0;i<4;++i)box(19,14+i*7,21,1,0xff83b792);for(int i=0;i<3;++i)box(23+i*7,8,1,32,0xff83b792);box(3,14,23,23,0xff3c6e1c);line(x+9*size/48,y+20*size/48,x+20*size/48,y+31*size/48,0xffffffff);line(x+20*size/48,y+20*size/48,x+9*size/48,y+31*size/48,0xffffffff);}
+    return;
+  }
   if (kind == 16 && !vapor_mark_pixels.empty()) {
     vapor_icon(x, y, size, true);
     return;

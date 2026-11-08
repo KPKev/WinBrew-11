@@ -58,7 +58,7 @@ void Shell::move_stick(int lx, int ly, float seconds) {
   if (dx || dy) {
     input_device = InputDevice::controller;
     focus = -1;
-    pointer(mx + dx, my + dy, false, drag);
+    pointer(mx + dx, my + dy, false, drag||(pad_touch_drag_locked&&(file_drag_pending||file_drag_active)));
   }
 }
 void Shell::touchpad_focus() {
@@ -185,15 +185,14 @@ void Shell::touchpad_input(bool connected, unsigned fingers, int x, int y, int f
             pad_touch_icon_dx = mx - hit.r.x; pad_touch_icon_dy = my - hit.r.y;
             set_desktop_icon_position(pad_touch_icon_key, hit.r.x, hit.r.y);
             pad_touch_drag_locked = true;
-          } else if (id >= 500 && id < 510 && window == 1 && !file_games) {
-            dialog = true; focus = 60;
-            std::snprintf(message, sizeof(message), "Moving files and folders by dragging is not available yet.");
+          } else if (id >= 500 && id < 580 && window == 1 && !file_games) {
+            draggable=true;
           } else draggable = id == 90 && !maximized;
           break;
         }
       if (draggable) {
         pointer(mx, my, true, true);
-        pad_touch_drag_locked = drag || steam_scroll_drag || steam_home_drag || steam_queue_drag;
+        pad_touch_drag_locked = drag || steam_scroll_drag || steam_home_drag || steam_queue_drag || file_drag_pending || file_drag_active;
       }
     }
   }

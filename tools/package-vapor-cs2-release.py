@@ -9,7 +9,7 @@ import prepare_blender_runtime as blender
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 def document(name):
     text = (cs2.ROOT/'docs'/name).read_text(encoding='utf-8')
-    base = 'https://github.com/KPKev/WinBrew-11/blob/combined-blender-v1/docs/'
+    base = 'https://github.com/KPKev/WinBrew-11/blob/desktop-storage-dev-v1/docs/'
     return re.sub(r'(\]\()([^)]+)(\))',
                   lambda m: m[1] + urljoin(base, m[2]) + m[3], text).encode('utf-8')
 def package(app, output):
@@ -31,6 +31,8 @@ def package(app, output):
     modes = {cs2.PREFIX+f['path']: int(f['mode'],8) for f in cs2.entries()}
     modes.update({blender.PREFIX+f['path']: int(f['mode'],8) for f in blender.entries()})
     modes.update({name:0o755 for name in ['eboot.bin','lapy.elf','vapor-title-remover.elf']})
+    modes.update({name:0o755 for name in manifest['files']
+                  if name.startswith('sce_module/') and name.endswith('.prx')})
     with zipfile.ZipFile(output,'x',zipfile.ZIP_DEFLATED,compresslevel=6) as bundle:
         paths=[app]+sorted(app.rglob('*'))
         for path in paths:

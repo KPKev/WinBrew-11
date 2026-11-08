@@ -7,13 +7,66 @@
 #include <ctime>
 #include <chrono>
 #include <map>
+#include <string>
+#include <vector>
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
 #include <windows.h>
 #endif
 namespace ww {
 static uint32_t color(int r, int g, int b) {
   return 0xff000000u | uint32_t(b) << 16 | uint32_t(g) << 8 | r;
+}
+static std::vector<std::string> dialog_lines(Shell &shell, const char *value,
+                                             int available) {
+  std::vector<std::string> lines;
+  std::string line;
+  auto emit = [&] {
+    while (!line.empty() && line.back() == ' ') line.pop_back();
+    lines.push_back(line);
+    line.clear();
+  };
+  for (const char *p = value; *p; ++p) {
+    if (*p == '\r') {
+      if (p[1] == '\n') continue;
+      emit();
+      continue;
+    }
+    if (*p == '\n') { emit(); continue; }
+    std::string character(1, *p == '\t' ? ' ' : *p);
+    // Keep UTF-8 characters together when a long filename needs a hard break.
+    if (static_cast<unsigned char>(*p) >= 0xc2 &&
+        static_cast<unsigned char>(*p) <= 0xf4) {
+      while (character.size() < 4 &&
+             (static_cast<unsigned char>(p[1]) & 0xc0) == 0x80)
+        character += *++p;
+    }
+    if (line.empty() && character == " ") continue;
+    const auto previous = line.size();
+    line += character;
+    if (shell.width(line.c_str()) <= available) continue;
+    const auto space = line.find_last_of(' ');
+    if (space != std::string::npos) {
+      const auto remainder = line.substr(space + 1);
+      line.resize(space);
+      emit();
+      line = remainder;
+    } else {
+      // Paths and other long tokens still stay inside the message body.
+      line.resize(previous);
+      emit();
+      line += character;
+    }
+  }
+  if (!line.empty() || lines.empty()) emit();
+  if (lines.size() > 24) {
+    // Excessive explicit breaks must not push the dialog off screen.
+    std::string paragraph(value);
+    for (auto &c : paragraph) if (c == '\n' || c == '\r') c = ' ';
+    return dialog_lines(shell, paragraph.c_str(), available);
+  }
+  return lines;
 }
 static void taskbar_start_icon(Shell &shell, int x, int y) {
   constexpr int pane = 14;
@@ -71,6 +124,13 @@ static void menu_text(Shell &shell, int x, int y, const char *value,
     }
     advance += glyph[0];
   }
+}
+void Shell::small_text(int x,int y,const char *value,uint32_t c,int scale){menu_text(*this,x,y,value,c,scale);}
+int Shell::small_width(const char *value,int scale) const {return menu_text_width(*this,value,scale);}
+void Shell::small_fit(int x,int y,int available,const char *value,uint32_t c,int scale){
+  std::string shown(value);if(available<0)return;
+  if(small_width(shown.c_str(),scale)>available){while(!shown.empty()&&small_width((shown+"...").c_str(),scale)>available)shown.pop_back();shown+="...";}
+  small_text(x,y,shown.c_str(),c,scale);
 }
 uint32_t Shell::surface() const {
   return dark ? color(32, 34, 40) : color(243, 246, 251);
@@ -614,22 +674,23 @@ static void desktop_context_ui(Shell &shell) {
   };
   panel(menu);
   shell.add(menu, 89);
-  const char *modern[] = {"View", "Sort by", "Refresh", "Undo Rename", "New", "Display settings",
+  const char *modern[] = {"View", "Sort by", "Refresh", "Paste", "New", "Display settings",
                           "Personalize", "Open in Terminal", "Show more options"};
-  const int modern_ids[] = {1400, 1401, 1402, -1, 1404, 1405, 1406, -1, 1408};
+  const int modern_ids[] = {1400, 1401, 1402, 1409, 1404, 1405, 1406, -1, 1408};
   const char *classic_names[] = {"View", "Sort by", "Refresh", "Paste", "Undo Rename", "Open in Terminal",
       "Open with Visual Studio", "Open with Cursor", "PDF24", "NVIDIA App", "NVIDIA Control Panel",
       "New", "Display settings", "Personalize"};
-  const int classic_ids[] = {1400, 1401, 1402, -1, -1, -1, -1, -1, -1, -1, -1, 1404, 1405, 1406};
+  const int classic_ids[] = {1400, 1401, 1402, 1409, -1, -1, -1, -1, -1, -1, -1, 1404, 1405, 1406};
   const int *offsets = classic ? classic_offsets : modern_offsets;
   const int rows = classic ? 14 : 9, height = classic ? classic_row_height : modern_row_height;
   for (int index = 0; index < rows; ++index) {
-    const int id = classic ? classic_ids[index] : modern_ids[index];
+    int id = classic ? classic_ids[index] : modern_ids[index];
+    if(id==1409 && !shell.file_clipboard.ready)id=-1;
     const bool arrow = id == 1400 || id == 1401 || id == 1404;
     const bool expanded = shell.context_submenu &&
         ((id == 1400 && shell.context_submenu == 1) || (id == 1401 && shell.context_submenu == 2) ||
          (id == 1404 && shell.context_submenu == 3));
-    const char *shortcut = ((!classic && index == 3) || (classic && index == 4)) ? "Ctrl+Z" : nullptr;
+    const char *shortcut = (classic && index == 4) ? "Ctrl+Z" : nullptr;
     const Rect area{menu.x + 4, menu.y + offsets[index], menu.w - 8, height};
     row(area, id, classic ? classic_names[index] : modern[index], id >= 0,
         classic ? 32 : 39, shortcut, arrow, expanded);
@@ -717,7 +778,8 @@ static void desktop_context_ui(Shell &shell) {
     for (int index = 0; index < 12; ++index) {
       const int top = classic ? 4 + index * 24 + (index >= 2 ? 4 : 0) : 4 + index * 32;
       const Rect area{sub.x + 4, sub.y + top, sub.w - 8, height};
-      row(area, -1, names[index], false, classic ? 33 : 38, nullptr, false);
+      const int action = index == 0 ? 1420 : index == 4 ? 1422 : index == 9 ? 1421 : index == 10 ? 1423 : index == 5 ? 1424 : -1;
+      row(area, action, index == 4 ? "PNG image" : index == 10 ? "Excel Workbook (.xlsx)" : index == 5 ? "CSV spreadsheet" : names[index], action >= 0, classic ? 33 : 38, nullptr, false);
       file_icon(index, sub.x + 13, area.y + (height - 16) / 2);
     }
     if (classic) shell.rect({sub.x + 4, sub.y + 54, sub.w - 8, 1}, separator);
@@ -766,10 +828,11 @@ void Shell::desktop_ui() {
     }
   }
   const char *labels[] = {"This PC", "Recycle Bin", "Vapor",
-                          "Quake II RTX", "Web"};
-  int kinds[] = {1, 2, 16, 4, 8}, ids[] = {10, 11, 35, 13, 34};
+                          "Quake II RTX", "Web", "Notepad", "Paint", "Spreadsheet"};
+  int kinds[] = {1, 2, 16, 4, 8, 17, 18, 19}, ids[] = {10, 11, 35, 13, 34, 36, 37, 38};
   if (show_icons)
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 8; ++i) {
+      if(desktop_hidden & (std::uint64_t(1)<<ids[i]))continue;
       int spacing = icon_size == 2 ? 134 : icon_size == 1 ? 112 : 94;
       int s = icon_size == 2 ? 64 : icon_size == 1 ? 46 : 36;
       Rect r = desktop_icon_position(std::uint64_t(ids[i]), {12, 18 + i * spacing, 108, spacing - 5});
@@ -780,29 +843,40 @@ void Shell::desktop_ui() {
       center(r.x + 1, r.y + s + 15, r.w, labels[i], 0, color(10, 30, 55));
       center(r.x, r.y + s + 14, r.w, labels[i], 0, 0xffffffff);
     }
+  if(label_now>=desktop_files_next_scan)desktop_files_refresh();
   if (show_icons) {
     int row = 0, spacing = icon_size == 2 ? 134 : icon_size == 1 ? 112 : 94;
     int size = icon_size == 2 ? 64 : icon_size == 1 ? 46 : 36;
     for (std::size_t i = 0; i < vapor_shortcuts.count(); ++i) {
       if (!(vapor_shortcuts.entries()[i].placements & VaporShortcuts::Desktop)) continue;
       Rect r = desktop_icon_position(0x100000000ULL | vapor_shortcuts.entries()[i].app,
-                                    {12, 18 + (5 + row++) * spacing, 108, spacing - 5});
+                                    {12+((8+row)/std::max(1,(H-80)/spacing))*120,18+((8+row++)%std::max(1,(H-80)/spacing))*spacing,108,spacing-5});
       add(r, 1200 + int(i));
       if (hover == 1200 + int(i) || focus == 1200 + int(i)) round(r, 4, 0x406fabed);
       vapor_shortcut_icon(vapor_shortcuts.entries()[i].app, r.x + (r.w - size) / 2, r.y + 4, size, shortcut_labels[i].c_str());
       text_fit(r.x + 2, r.y + size + 14, r.w - 4, shortcut_labels[i].c_str(), 0, 0xffffffff);
     }
   }
+  if(show_icons){int spacing=icon_size==2?134:icon_size==1?112:94;int per_column=std::max(1,(H-80)/spacing),size=icon_size==2?64:icon_size==1?46:36,game_count=0;
+    for(std::size_t i=0;i<vapor_shortcuts.count();++i)if(vapor_shortcuts.entries()[i].placements&VaporShortcuts::Desktop)++game_count;
+    for(int i=0;i<desktop_file_count;++i){int index=8+game_count+i;Rect r{12+(index/per_column)*120,18+(index%per_column)*spacing,108,spacing-5};if(r.x+r.w>W)break;
+      int length=std::snprintf(desktop_rendered_paths[i],sizeof(desktop_rendered_paths[i]),"%s/%s",desktop_folder_path,desktop_files[i].name);if(length<0||length>=int(sizeof(desktop_rendered_paths[i]))){desktop_rendered_paths[i][0]=0;continue;}add(r,2000+i);
+      if(hover==2000+i||focus==2000+i)round(r,4,0x406fabed);
+      icon(r.x+(r.w-size)/2,r.y+4,size,desktop_files[i].directory?5:SheetDocument::supports(desktop_files[i].name)?19:Paint::supports(desktop_files[i].name)?18:17);
+      text_fit(r.x+3,r.y+size+14,r.w-6,desktop_files[i].name,0,0xffffffff);
+    }
+  }
   Rect wr = maximized ? Rect{0, 0, W, H - 54} : Rect{wx, wy, 1200, 780};
   if (window) {
     panel(wr);
     add(wr, 89);
-    icon(wr.x + 17, wr.y + 11, 22, window == 1 ? (file_games ? 16 : 5) : window == 2 ? 6 : 8);
+    icon(wr.x + 17, wr.y + 11, 22, window == 1 ? (file_games ? 16 : 5) : window == 2 ? 6 : window == 4 ? 17 : window == 5 ? 18 : window == 6 ? 19 : 8);
     text(wr.x + 50, wr.y + 12,
          window == 1   ? (file_games ? "Vapor" : "File Explorer")
          : window == 2 ? "Settings"
          : window == 4 ? "Notepad"
-         : window == 5 ? "WinBrew 11 Paint"
+         : window == 5 ? "Paint"
+         : window == 6 ? "Spreadsheet"
                        : "Web - New tab",
          0, ink());
     add({wr.x, wr.y, wr.w - 150, 42}, 90);
@@ -843,6 +917,8 @@ void Shell::desktop_ui() {
       notepad_ui(wr);
     else if (window == 5)
       paint.draw(*this, wr);
+    else if (window == 6)
+      sheet_ui(wr);
     else
       explorer_ui(wr);
   }
@@ -862,22 +938,22 @@ void Shell::desktop_ui() {
          1, ink());
     button({1090, 458, 130, 36}, 42, all ? "< Back" : "All apps >");
     const char *names[] = {"Quake II RTX", "Vapor", "File Explorer",
-                           "Settings", "Web"};
+                           "Settings", "Web", "Notepad", "Paint", "Spreadsheet"};
     const char *match[] = {"quake ii rtx", "vapor game library games",
                            "file explorer", "settings",
-                           "web chrome browser google"};
-    int k[] = {4, 16, 5, 6, 8}, id[] = {30, 35, 32, 33, 34};
+                           "web chrome browser google", "notepad text document", "paint drawing image", "spreadsheet excel worksheet csv"};
+    int k[] = {4, 16, 5, 6, 8, 17, 18, 19}, id[] = {30, 35, 32, 33, 34, 36, 37, 38};
     int row = 0;
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 8; ++i) {
       if (search[0] && !std::strstr(match[i], search))
         continue;
       if (all || search[0]) {
-        Rect b{692, 514 + row++ * 68, 536, 58};
+        Rect b{692, 510 + row++ * 50, 536, 46};
         add(b, id[i]);
         if (hover == id[i] || focus == id[i])
           round(b, 5, dark ? color(55, 60, 70) : color(223, 233, 246));
         icon(b.x + 18, b.y + 11, 34, k[i]);
-        text(b.x + 74, b.y + 19, names[i], 0, ink());
+        text(b.x + 74, b.y + 12, names[i], 0, ink());
       } else {
         Rect b{692 + (i % 3) * 178, 514 + (i / 3) * 115, 168, 102};
         add(b, id[i]);
@@ -890,20 +966,15 @@ void Shell::desktop_ui() {
     int pinned = 0;
     if (!all && !search[0]) for (std::size_t i = 0; i < vapor_shortcuts.count(); ++i) {
       if (!(vapor_shortcuts.entries()[i].placements & VaporShortcuts::Start)) continue;
-      int pos = 5 + pinned++;
+      int pos = 8 + pinned++;
+      if (pos >= 9) break;
       Rect b{692 + (pos % 3) * 178, 514 + (pos / 3) * 115, 168, 102};
       add(b, 1200 + int(i));
       if (hover == 1200 + int(i) || focus == 1200 + int(i)) round(b, 5, dark ? color(55, 60, 70) : color(223, 233, 246));
       vapor_shortcut_icon(vapor_shortcuts.entries()[i].app, b.x + 66, b.y + 9, 36, shortcut_labels[i].c_str());
       text_fit(b.x + 5, b.y + 61, b.w - 10, shortcut_labels[i].c_str(), 0, ink());
     }
-    if (!all && !search[0] && pinned <= 1) {
-      text(704, 777, "Recommended", 1, ink());
-      icon(708, 832, 34, 4);
-      text(762, 829, "Quake II RTX", 0, ink());
-      text(762, 858, "Continue playing", 0, muted());
-      add({692, 820, 536, 70}, 30);
-    } else if ((all || search[0]) && row == 0)
+    if ((all || search[0]) && row == 0)
       text(712, 548, "No apps found", 0, muted());
     rect({661, 935, 598, 1}, dark ? color(65, 69, 79) : color(216, 224, 235));
     brand_icon(705, 957, 30, true);
@@ -914,7 +985,12 @@ void Shell::desktop_ui() {
   rect({0, H - 54, W, 54}, dark ? color(31, 34, 42) : color(231, 239, 249));
   rect({0, H - 54, W, 1}, dark ? color(61, 67, 81) : color(253, 254, 255));
   int tx = left_taskbar ? 18 : 690;
+  const int current_app = window ? window : restored;
+  int next_task=273;
   auto task = [&](int dx, int kind, int id, bool active, const char *label, std::uint32_t game_app = 0) {
+    const bool running=id>=36&&id<=38&&current_app==id-32;
+    if(id!=40 && id<64 && (taskbar_hidden & (std::uint64_t(1)<<id)) && !active && !running)return;
+    if(id!=40){dx=next_task;next_task+=53;}
     Rect r{tx + dx, H - 49, 43, 43};
     add(r, id);
     describe(r, label);
@@ -938,10 +1014,11 @@ void Shell::desktop_ui() {
   task(379, 16, 35, window == 1 && file_games, "Vapor");
   task(432, 4, 30, false, "Quake II RTX");
   task(485, 6, 33, window == 2, "Settings");
+  for(int app=4;app<=6;++app)task(538,app==4?17:app==5?18:19,app+32,window==app,app==4?"Notepad":app==5?"Paint":"Spreadsheet");
   int task_pin = 0;
   for (std::size_t i = 0; i < vapor_shortcuts.count(); ++i) {
     if (vapor_shortcuts.entries()[i].placements & VaporShortcuts::Taskbar)
-      task(538 + 53 * task_pin++, vapor_shortcuts.entries()[i].app == 1089130 ? 4 : 16,
+      task((current_app>=4&&current_app<=6?591:538) + 53 * task_pin++, vapor_shortcuts.entries()[i].app == 1089130 ? 4 : 16,
            1200 + int(i), false, shortcut_labels[i].c_str(), vapor_shortcuts.entries()[i].app);
   }
   button({W - 339, H - 49, 38, 43}, 151, "^");
@@ -996,11 +1073,12 @@ void Shell::desktop_ui() {
     }
   }
   tray_ui();
-  keyboard_ui();
   notepad_prompt_ui();
-  file_actions_ui();
+  if(file_rename_prompt)file_actions_ui();
+  keyboard_ui();
+  if(!file_rename_prompt)file_actions_ui();
   if (hint && !dialog && !file_context && !file_properties &&
-      !file_transfer.busy() && !start && !context && !quick && !tray && !calendar &&
+      !files_busy() && !start && !context && !quick && !tray && !calendar &&
       !touch_keyboard && !drag) {
     int w = width(hint) + 28, x = hint_target.x + (hint_target.w - w) / 2;
     if (x < 8)
@@ -1018,7 +1096,12 @@ void Shell::desktop_ui() {
   }
   if (dialog) {
     rect({0, 0, W, H}, 0x38000000);
-    panel({560, 398, 800, 264});
+    const bool notice = !steam_manage_confirmation_app && !steam_setup_confirmation_app;
+    const auto lines = notice ? dialog_lines(*this, message, 728)
+                              : std::vector<std::string>{};
+    const int height = notice ? std::max(264, 181 + int(lines.size()) * 28) : 264;
+    const Rect bounds{560, 530 - height / 2, 800, height};
+    panel(bounds);
     if (steam_manage_confirmation_app) {
       text(596, 425, steam_manage_reinstall ? "Reinstall game" : "Remove game", 2, ink());
       text(596, 480, "The game and its PS5 Home entry will be removed.", 0, ink());
@@ -1032,11 +1115,19 @@ void Shell::desktop_ui() {
       button({1025, 589, 130, 42}, 60, "Cancel", 0);
       button({1170, 589, 150, 42}, 61, "Continue", 1);
     } else {
-      text(596, 425, "WinBrew 11", 2, ink());
-      text(596, 486, message, 0, ink());
-      button({1185, 589, 130, 42}, 60, "OK", 1);
+      text(bounds.x + 36, bounds.y + 27, recycle_confirmation ? "Empty Recycle Bin?" : "WinBrew 11", 2, ink());
+      int y = bounds.y + 88;
+      for (const auto &line : lines) {
+        text(bounds.x + 36, y, line.c_str(), 0, ink());
+        y += 28;
+      }
+      if(recycle_confirmation){
+        button({1005,bounds.y+bounds.h-73,130,42},60,"Cancel",0);
+        button({1150,bounds.y+bounds.h-73,170,42},61,"Delete forever",1);
+      }else button({1185, bounds.y + bounds.h - 73, 130, 42}, 60, "OK", 1);
     }
   }
+  if(file_drag_active&&!dialog){std::string label=std::to_string(file_drag_items.size())+" item"+(file_drag_items.size()==1?"":"s")+((file_modifiers&0x11)?" - Copy":" - Drop into a folder");int width=small_width(label.c_str())+30;int px=std::min(W-width-10,mx+22),py=std::min(H-90,my+24);round({px,py,width,38},5,dark?0xff303030:0xffffffff);small_text(px+12,py+11,label.c_str(),ink());}
   if (pad_touch_drag_locked && !dialog) {
     const char* label = "Dragging - hold touchpad to drop";
     const int w = width(label) + 20;

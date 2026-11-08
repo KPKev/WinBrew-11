@@ -3,7 +3,34 @@
 #include "steam_ui.hpp"
 #include <cstdio>
 #include <climits>
+#include <cmath>
 namespace ww {
+// The clock belongs to the renderer: no worker polling or fake percentage is
+// needed to make an indeterminate preparation visibly active.
+constexpr std::uint32_t kVaporStatusGold = 0xff64c0ff;
+struct VaporPlayFeedback {
+  bool busy = false;
+  std::uint32_t fill = 0xff2b9c66, rim = 0, halo = 0;
+};
+inline std::uint32_t vapor_mix_color(std::uint32_t a, std::uint32_t b, double amount) {
+  std::uint32_t result = 0xff000000;
+  for (int shift = 0; shift < 24; shift += 8) {
+    const int from = int((a >> shift) & 255), to = int((b >> shift) & 255);
+    result |= std::uint32_t(from + int((to - from) * amount)) << shift;
+  }
+  return result;
+}
+inline VaporPlayFeedback vapor_play_feedback(SteamGameActivity activity, std::uint64_t now_ms) {
+  VaporPlayFeedback feedback;
+  if (activity == SteamGameActivity::registration_required) feedback.fill = 0xffb5791a;
+  feedback.busy = activity == SteamGameActivity::preparing || activity == SteamGameActivity::starting;
+  if (!feedback.busy) return feedback;
+  const double pulse = (1.0 - std::cos(double(now_ms % 1800) * 6.283185307179586 / 1800.0)) * 0.5;
+  feedback.fill = vapor_mix_color(0xff2b9c66, 0xff49c98a, pulse);
+  feedback.rim = vapor_mix_color(0xff479b68, 0xff89e5b8, pulse);
+  feedback.halo = vapor_mix_color(0xff30261e, 0xff49c98a, 0.12 + pulse * 0.28);
+  return feedback;
+}
 // Format facts only when Steam supplied the underlying value. The view decides
 // when and where to display them.
 struct VaporGameFacts {

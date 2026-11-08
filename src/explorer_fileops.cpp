@@ -6,16 +6,29 @@
 #include <cstdio>
 #include <cstring>
 #include <fcntl.h>
+#include <chrono>
+#include <algorithm>
 #include <sys/stat.h>
+#include <limits>
+#ifdef __PROSPERO__
+#include <sys/mount.h>
+#elif !defined(_WIN32)
+#include <sys/statvfs.h>
+#ifdef __linux__
+#include <mntent.h>
+#endif
+#endif
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <io.h>
 #include <windows.h>
 #else
 #include <unistd.h>
+#include <dirent.h>
 #endif
 #ifdef __PROSPERO__
 extern "C" {
+int sceKernelDlsym(int, const char *, void **);
 int sceKernelOpen(const char *, int, int);
 int64_t sceKernelRead(int, void *, size_t);
 int64_t sceKernelWrite(int, const void *, size_t);
@@ -24,6 +37,7 @@ int sceKernelFstat(int, struct stat *);
 int sceKernelFchmod(int, unsigned);
 int sceKernelFsync(int);
 int sceKernelClose(int);
+int sceKernelGetdents(int, char *, int);
 }
 #endif
 namespace ww::fileops {
@@ -266,7 +280,7 @@ bool unchanged(const Info &a, const Info &b) {
 bool Clipboard::copy(const char *source, const Io *provided) {
   Info value{};
   error = inspect(source, value, provided);
-  if (error < 0 || !value.regular || !value.inode ||
+  if (error < 0 || (!value.regular && !value.directory) || !value.inode ||
       std::strlen(leaf(source)) > 255) {
     if (error >= 0)
       error = -ENOTSUP;
@@ -275,6 +289,7 @@ bool Clipboard::copy(const char *source, const Io *provided) {
   std::snprintf(path, sizeof(path), "%s", source);
   info = value;
   ready = true;
+  move = false;
   error = 0;
   return true;
 }
@@ -456,4 +471,427 @@ void Transfer::step() {
   state = State::complete;
   std::snprintf(stage, sizeof(stage), "Copy complete");
 }
+
+namespace {
+bool join_path(std::string &out, const std::string &base, const std::string &name) {
+  out = base + (base.empty() || base.back() != '/' ? "/" : "") + name;
+  return out.size() < 1024;
+}
+int make_directory(const char *path) {
+#ifdef _WIN32
+  if (CreateDirectoryA(path, nullptr)) return 0;
+  return GetLastError() == ERROR_ALREADY_EXISTS ? -EEXIST : -EACCES;
+#else
+  const int result=ww::privilege::run([&] { return ::mkdir(path, 0700); });
+  return result<0 ? -directory::error_or_io(errno) : 0;
+#endif
+}
+bool children(const char *path, std::vector<std::string> &names) {
+  auto add = [&](const char *name) {
+    if (!std::strcmp(name,".") || !std::strcmp(name,"..")) return true;
+    if (names.size() >= 4096 || std::strchr(name,'/') || std::strchr(name,'\\')) return false;
+    names.emplace_back(name); return true;
+  };
+#ifdef _WIN32
+  std::string pattern = std::string(path) + "/*";
+  WIN32_FIND_DATAA data{}; HANDLE h = FindFirstFileA(pattern.c_str(), &data);
+  if (h == INVALID_HANDLE_VALUE) return GetLastError() == ERROR_FILE_NOT_FOUND;
+  bool ok = true;
+  do { if (!add(data.cFileName)) {ok=false;break;} } while (FindNextFileA(h,&data));
+  if (ok && GetLastError()!=ERROR_NO_MORE_FILES) ok=false;
+  FindClose(h); return ok;
+#elif defined(__PROSPERO__)
+  const int fd = error_code(ww::privilege::run([&] {
+    return sceKernelOpen(path,O_RDONLY|O_DIRECTORY|O_NOFOLLOW,0);
+  }));
+  if(fd<0)return false;
+  // Console /data directories use 64 KiB records; a smaller buffer fails
+  // with EINVAL even for a folder containing just one file.
+  // Keep this off the caller's stack when scanning deeply nested folders.
+  std::vector<unsigned char> buffer(64*1024); bool ok=true;
+  while(ok) {
+    int n=sceKernelGetdents(fd,reinterpret_cast<char *>(buffer.data()),int(buffer.size()));
+    if(n<0 || n>int(buffer.size())){ok=false;break;} if(!n)break;
+    size_t at=0; directory::Record item{};
+    while(true) {
+      auto r=directory::next(buffer.data(),size_t(n),at,item);
+      if(r==directory::Read::end)break;
+      if(r==directory::Read::invalid){ok=false;break;}
+      if(item.inode && !add(item.name)){ok=false;break;}
+    }
+  }
+  if(close_file(nullptr,fd)<0)ok=false;
+  return ok;
+#else
+  DIR *d=opendir(path); if(!d)return false; bool ok=true;
+  while(true){errno=0;auto *entry=readdir(d);if(!entry){if(errno)ok=false;break;}if(!add(entry->d_name)){ok=false;break;}}
+  if(closedir(d)!=0)ok=false;
+  return ok;
+#endif
+}
+bool scan_tree(const std::string &root, const std::string &relative,
+               std::vector<TreeTransfer::Entry> &entries, unsigned depth=0,
+               bool recovery=false) {
+  if(depth>(recovery?64u:32u) || entries.size()>=(recovery?65536u:4096u))return false;
+  std::string path=root;
+  if(!relative.empty() && !join_path(path,root,relative))return false;
+  Info info{}; if(inspect(path.c_str(),info)<0 || (!info.regular&&!info.directory))return false;
+  entries.push_back({relative,info});
+  if(info.directory){
+    std::vector<std::string> names;if(!children(path.c_str(),names))return false;
+    std::sort(names.begin(),names.end());
+    for(const auto &name:names){
+      // Recovery stores are never recursively copied into new documents.
+      if(!recovery && name==".winbrew-trash")continue;
+      std::string next=relative.empty()?name:relative+"/"+name;
+      if(!scan_tree(root,next,entries,depth+1,recovery))return false;
+    }
+  }
+  Info after{};return inspect(path.c_str(),after)>=0 && unchanged(info,after);
+}
+bool same_tree(const std::vector<TreeTransfer::Entry>&a,const std::vector<TreeTransfer::Entry>&b){
+  if(a.size()!=b.size())return false;
+  for(size_t i=0;i<a.size();++i)if(a[i].relative!=b[i].relative || !unchanged(a[i].info,b[i].info))return false;
+  return true;
+}
+}
+bool trash(const char *path, const Info &expected, char *recovery, size_t capacity) {
+  if(!path || !*path)return false;
+  std::string source=path; while(source.size()>1 && source.back()=='/')source.pop_back();
+  auto slash=source.find_last_of("/\\");
+  if(slash==std::string::npos || source.substr(slash+1).empty() || source.substr(slash+1)==".winbrew-trash" || source.substr(slash+1)==".." || source.substr(slash+1)==".")return false;
+  Info actual{};if(inspect(source.c_str(),actual)<0 || !unchanged(expected,actual))return false;
+  std::string base=source.substr(0,slash)+"/.winbrew-trash";
+  int code=make_directory(base.c_str()); if(code<0 && code!=-EEXIST)return false;
+  Info store{}; if(inspect(base.c_str(),store)<0 || !store.directory || store.device!=actual.device)return false;
+  const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
+  for(unsigned i=0;i<100;++i){
+    std::string box=base+"/"+std::to_string(stamp)+"-"+std::to_string(i);
+    code=make_directory(box.c_str());if(code==-EEXIST)continue;if(code<0)return false;
+    std::string target=box+"/"+source.substr(slash+1);
+    if(target.size()>=capacity)return false;
+    if(inspect(source.c_str(),actual)<0 || !unchanged(expected,actual))return false;
+    if(ww::privilege::run([&]{return std::rename(source.c_str(),target.c_str());})!=0)return false;
+    Info moved{};if(inspect(target.c_str(),moved)<0 || !identity(expected,moved))return false;
+    std::snprintf(recovery,capacity,"%s",target.c_str());return true;
+  }
+  return false;
+}
+bool TreeTransfer::fail(const char *where,int code){
+  if(child && child->busy())child->cancel();
+  state=State::failed;error=code<0?-code:code;std::snprintf(stage,sizeof(stage),"%s",where);return false;
+}
+bool TreeTransfer::begin(const Clipboard &clip,const char *folder,bool recovery){
+  include_recovery=recovery;
+  if(busy())return false;
+  child.reset();entries.clear();outputs.clear();index=0;copied=verified=total=0;error=0;destination_created=false;moving=clip.move;
+  state=State::idle;destination[0]=0;
+  if(!clip.ready || !folder || std::strlen(folder)>=1024)return fail("Clipboard",EINVAL);
+  std::snprintf(source,sizeof(source),"%s",clip.path);std::snprintf(directory,sizeof(directory),"%s",folder);
+  Info now{},parent{};
+  if(inspect(source,now)<0 || !unchanged(now,clip.info))return fail("Source changed",EAGAIN);
+  if(inspect(folder,parent)<0 || !parent.directory)return fail("Destination folder",ENOTDIR);
+  // Reject a descendant destination by identity, including alternate spellings.
+  std::string ancestor=folder;
+  while(!ancestor.empty()){
+    Info p{};if(inspect(ancestor.c_str(),p)<0)return fail("Destination path",EACCES);
+    if(identity(p,now))return fail("Folder inside itself",EINVAL);
+    auto at=ancestor.find_last_of("/\\");if(at==std::string::npos || !at)break;ancestor.resize(at);
+  }
+  if(!scan_tree(source,"",entries,0,include_recovery))return fail("Scan (4096 items)",ENOTSUP);
+  for(const auto &e:entries)if(e.info.regular){if(e.info.size>Transfer::MaximumBytes)return fail("8 GB file limit",EFBIG);total+=e.info.size;}
+  if(now.directory){
+    int code=-EEXIST;
+    for(int n=0;n<100 && code==-EEXIST;++n){
+      if(!destination_name(destination,sizeof(destination),folder,leaf(source),n))return fail("Destination path",ENAMETOOLONG);
+      code=make_directory(destination);
+    }
+    if(code<0)return fail("Create folder",code);
+    Info created{};if(inspect(destination,created)<0 || !created.directory)return fail("Created folder",EIO);
+    outputs.push_back({destination,created});
+    destination_created=true;index=1;
+  }
+  state=State::copying;std::snprintf(stage,sizeof(stage),"Preparing copy");return true;
+}
+void TreeTransfer::cancel(){if(child)child->cancel();state=State::cancelled;}
+void TreeTransfer::step(){
+  if(!busy())return;
+  if(child){
+    const auto oldcopy=child->copied, oldverify=child->verified;
+    child->step();copied+=child->copied-oldcopy;verified+=child->verified-oldverify;
+    state=child->state==State::verifying?State::verifying:State::copying;
+    if(child->state==State::failed){fail(child->stage,child->error);return;}
+    if(child->state!=State::complete)return;
+    if(entries.size()==1 && entries[0].info.regular)std::snprintf(destination,sizeof(destination),"%s",child->destination);
+    Info written{};if(inspect(child->destination,written)<0 || !identity(child->created,written) || written.size!=child->total){fail("Destination changed",EAGAIN);return;}
+    outputs.push_back({child->destination,written});
+    child.reset();++index;return;
+  }
+  if(index<entries.size()){
+    const auto &e=entries[index];std::string src=source,dest=destination;
+    if(!e.relative.empty() && (!join_path(src,source,e.relative)||!join_path(dest,destination,e.relative))){fail("Path too long",ENAMETOOLONG);return;}
+    if(e.info.directory){int code=make_directory(dest.c_str());if(code<0){fail("Create subfolder",code);return;}Info created{};if(inspect(dest.c_str(),created)<0 || !created.directory){fail("Created subfolder",EIO);return;}outputs.push_back({dest,created});++index;return;}
+    Clipboard clip;clip.ready=true;clip.info=e.info;std::snprintf(clip.path,sizeof(clip.path),"%s",src.c_str());
+    std::string parent=index==0?directory:dest.substr(0,dest.find_last_of('/'));
+    child=std::make_unique<Transfer>();
+    if(!child->begin(clip,parent.c_str())){fail(child->stage,child->error);return;}
+    if(index!=0 && dest!=child->destination){fail("Destination collision",EEXIST);return;}
+    destination_created=true;
+    if(index==0 && entries[0].info.regular)std::snprintf(destination,sizeof(destination),"%s",child->destination);
+    return;
+  }
+  for(const auto &entry:outputs){Info actual{};if(inspect(entry.relative.c_str(),actual)<0 || !(entry.info.directory?identity(entry.info,actual):unchanged(entry.info,actual))){fail("Destination changed",EAGAIN);return;}}
+  std::vector<Entry> current;
+  if(!scan_tree(source,"",current,0,include_recovery)||!same_tree(entries,current)){fail("Source changed",EAGAIN);return;}
+  if(moving){char recovery[1024];if(!trash(source,entries[0].info,recovery,sizeof(recovery))){fail("Move source retained",EACCES);return;}}
+  state=State::complete;
+}
+
+bool recovery_location(const char *folder, char *out, size_t capacity) {
+  if (!folder || !*folder) return false;
+  std::string path(folder);
+  while (path.size()>1 && path.back()=='/') path.pop_back();
+  const std::string marker="/.winbrew-trash";
+  size_t at=0;
+  while ((at=path.find(marker,at))!=std::string::npos) {
+    const auto end=at+marker.size();
+    if(end==path.size() || path[end]=='/') {path.resize(end);break;}
+    at=end;
+  }
+  if(at==std::string::npos) path+=marker;
+  if(path.size()>=capacity)return false;
+  std::snprintf(out,capacity,"%s",path.c_str());return true;
+}
+namespace {
+#ifndef _WIN32
+int anchored_directory(const std::string &path, int anchor=-1) {
+  if(path.empty())return -EINVAL;
+  int fd=ww::privilege::run([&] {
+    return anchor<0 ? ::open(path.front()=='/'?"/":".",O_RDONLY|O_DIRECTORY|O_NOFOLLOW)
+                    : ::openat(anchor,".",O_RDONLY|O_DIRECTORY|O_NOFOLLOW);
+  });
+  if(fd<0)return -directory::error_or_io(errno);
+  size_t at=path.front()=='/'?1:0;
+  while(at<path.size()) {
+    auto end=path.find('/',at);if(end==std::string::npos)end=path.size();
+    auto part=path.substr(at,end-at);at=end+1;
+    if(part.empty())continue;
+    if(part==".." || part=="."){close_file(nullptr,fd);return -EINVAL;}
+    int next=ww::privilege::run([&]{return ::openat(fd,part.c_str(),O_RDONLY|O_DIRECTORY|O_NOFOLLOW);});
+    int error=errno;close_file(nullptr,fd);
+    if(next<0)return -directory::error_or_io(error);
+    fd=next;
+  }
+  return fd;
+}
+#endif
+}
+void Purge::close() {
+  if(root_fd>=0)close_file(nullptr,root_fd);
+  root_fd=-1;
+}
+bool Purge::fail(int code) {
+  error=code<0?-code:code;ready=false;state=State::failed;close();return false;
+}
+bool Purge::prepare(const char *path) {
+  if(busy())return false;
+  close();entries.clear();remaining=removed=0;bytes=0;error=0;ready=false;state=State::idle;
+  if(!path || std::strlen(path)>=1024)return fail(EINVAL);
+  root=path;while(root.size()>1 && root.back()=='/')root.pop_back();
+  const auto slash=root.find_last_of('/');
+  if(slash==std::string::npos || root.substr(slash+1)!=".winbrew-trash")return fail(EINVAL);
+#ifdef _WIN32
+  // Reject links/reparse points in every ancestor before opening the store.
+  for(size_t i=0;i<=root.size();++i)if(i==root.size() || (i>2 && root[i]=='/')){
+    Info ancestor{};const int code=inspect(root.substr(0,i).c_str(),ancestor);
+    if(code==-ENOENT && i==root.size()){state=State::complete;return true;}
+    if(code<0 || !ancestor.directory)return fail(EACCES);
+  }
+  root_fd=open_file(nullptr,root.c_str(),false);
+#else
+  root_fd=anchored_directory(root);
+#endif
+  if(root_fd<0){const int code=root_fd;root_fd=-1;if(code==-ENOENT){state=State::complete;return true;}return fail(code);}
+  if(metadata(nullptr,root_fd,root_info)<0 || !root_info.directory)return fail(EACCES);
+  if(!scan_tree(root,"",entries,0,true))return fail(ENOTSUP);
+  Info named{};
+  if(inspect(root.c_str(),named)<0 || !identity(root_info,named))return fail(EAGAIN);
+  remaining=entries.size()-1;
+  for(const auto &entry:entries)if(entry.info.regular)bytes+=entry.info.size;
+  ready=remaining>0;
+  if(!ready){state=State::complete;close();}
+  return true;
+}
+bool Purge::begin() {
+  if(!ready || busy())return false;
+  std::vector<TreeTransfer::Entry> current;
+  if(!scan_tree(root,"",current,0,true) || !same_tree(entries,current))return fail(EAGAIN);
+  Info held{};
+  if(metadata(nullptr,root_fd,held)<0 || !identity(root_info,held))return fail(EAGAIN);
+  ready=false;state=State::copying;return true;
+}
+void Purge::cancel(){ready=false;state=State::cancelled;close();}
+void Purge::step() {
+  if(!busy())return;
+  if(!remaining){state=State::complete;close();return;}
+  Info named_root{};
+  if(inspect(root.c_str(),named_root)<0 || !identity(root_info,named_root)){fail(EAGAIN);return;}
+  const auto &entry=entries[remaining];
+#ifdef _WIN32
+  const std::string path=root+"/"+entry.relative;
+  HANDLE handle=CreateFileA(path.c_str(),DELETE|FILE_READ_ATTRIBUTES,
+      FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,
+      FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_BACKUP_SEMANTICS,nullptr);
+  if(handle==INVALID_HANDLE_VALUE){fail(EACCES);return;}
+  int fd=_open_osfhandle(reinterpret_cast<intptr_t>(handle),_O_BINARY|_O_RDONLY);
+  if(fd<0){CloseHandle(handle);fail(EACCES);return;}
+  Info actual{};
+  const bool matches=metadata(nullptr,fd,actual)>=0 &&
+      (entry.info.directory?identity(entry.info,actual):unchanged(entry.info,actual));
+  FILE_DISPOSITION_INFO disposition{};disposition.DeleteFile=TRUE;
+  const bool erased=matches && SetFileInformationByHandle(handle,FileDispositionInfo,&disposition,sizeof(disposition));
+  close_file(nullptr,fd);
+  if(!erased){fail(EACCES);return;}
+#else
+  const auto slash=entry.relative.find_last_of('/');
+  const std::string name=slash==std::string::npos?entry.relative:entry.relative.substr(slash+1);
+  const std::string parent=slash==std::string::npos?"":entry.relative.substr(0,slash);
+  int directory_fd=parent.empty() ? ww::privilege::run([&]{return ::openat(root_fd,".",O_RDONLY|O_DIRECTORY|O_NOFOLLOW);}) : anchored_directory(parent,root_fd);
+  if(directory_fd<0){fail(EACCES);return;}
+  int target=ww::privilege::run([&]{return ::openat(directory_fd,name.c_str(),O_RDONLY|O_NOFOLLOW|O_NONBLOCK|(entry.info.directory?O_DIRECTORY:0));});
+  Info actual{};
+  const bool matches=target>=0 && metadata(nullptr,target,actual)>=0 &&
+      (entry.info.directory?identity(entry.info,actual):unchanged(entry.info,actual));
+  bool erased=false;
+  if(matches)erased=ww::privilege::run([&]{return ::unlinkat(directory_fd,name.c_str(),entry.info.directory?AT_REMOVEDIR:0);})==0;
+  if(target>=0)close_file(nullptr,target);
+  if(erased)ww::privilege::run([&]{return ::fsync(directory_fd);});
+  close_file(nullptr,directory_fd);
+  if(!erased){fail(matches?EACCES:EAGAIN);return;}
+#endif
+  --remaining;++removed;
+  if(!remaining){state=State::complete;close();}
+}
+
+bool ensure_folder(const char *path) {
+  if(!path || !*path || std::strlen(path)>=1024)return false;
+  int code=make_directory(path);
+  Info info{};return (code==0 || code==-EEXIST) && inspect(path,info)>=0 && info.directory;
+}
+bool list_folders(const char *path,std::vector<std::string>&out,size_t limit){
+  out.clear();std::vector<std::string> names;if(!children(path,names))return false;
+  std::sort(names.begin(),names.end());
+  for(const auto&name:names){if(name.empty()||name.front()=='.')continue;std::string child;if(!join_path(child,path,name))continue;Info info{};if(inspect(child.c_str(),info)>=0 && info.directory){out.push_back(name);if(out.size()>=limit)break;}}
+  return true;
+}
+bool rename_item(const char *path,const Info &expected,const char *name,int &error){
+  error=EINVAL;
+  if(!expected.regular&&!expected.directory){error=ENOTSUP;return false;}
+  if(!path||!name||!*name||std::strlen(name)>255||!std::strcmp(name,".")||!std::strcmp(name,"..")||[] (const char *value) { for(;*value;++value) if(std::strchr("/\\:*?\"<>|",*value)) return true; return false; }(name)||name[std::strlen(name)-1]==' '||name[std::strlen(name)-1]=='.')return false;
+  std::string source(path);auto slash=source.find_last_of("/\\");if(slash==std::string::npos)return false;
+  Info current{};if(inspect(path,current)<0||!unchanged(expected,current)){error=EAGAIN;return false;}
+  if(source.substr(slash+1)==name){error=0;return true;}
+  const std::string parent=source.substr(0,slash),target=parent+"/"+name;
+  if(target.size()>=1024){error=ENAMETOOLONG;return false;}
+  Info folder{};if(inspect(parent.c_str(),folder)<0||!folder.directory){error=EACCES;return false;}
+#ifdef _WIN32
+  if(!MoveFileExA(path,target.c_str(),MOVEFILE_WRITE_THROUGH)){error=GetLastError()==ERROR_ALREADY_EXISTS||GetLastError()==ERROR_FILE_EXISTS?EEXIST:EACCES;return false;}
+#else
+  // Reserve the destination exclusively; existing files/folders are refused.
+  Info reserved{};int fd=-1,code=0;
+  if(expected.directory)code=make_directory(target.c_str());
+  else {fd=open_file(nullptr,target.c_str(),true);if(fd<0)code=fd;}
+  if(code<0){error=-code;return false;}
+  if(fd>=0){metadata(nullptr,fd,reserved);close_file(nullptr,fd);}else inspect(target.c_str(),reserved);
+  auto release=[&]{Info actual{};if(inspect(target.c_str(),actual)>=0&&unchanged(reserved,actual))ww::privilege::run([&]{return std::remove(target.c_str());});};
+  Info source_now{},parent_now{},target_now{};
+  if(!reserved.inode||inspect(path,source_now)<0||!unchanged(expected,source_now)||inspect(parent.c_str(),parent_now)<0||!identity(folder,parent_now)||inspect(target.c_str(),target_now)<0||!unchanged(reserved,target_now)){release();error=EAGAIN;return false;}
+  if(ww::privilege::run([&]{return std::rename(path,target.c_str());})!=0){error=directory::error_or_io(errno);release();return false;}
+#endif
+  Info after{};if(inspect(target.c_str(),after)<0||!identity(expected,after)){error=EAGAIN;return false;}
+  error=0;return true;
+}
 } // namespace ww::fileops
+
+namespace ww::fileops {
+bool volume_mount_matches(const char *expected,const char *actual){
+ if(!expected||!actual||!*expected||!*actual)return false;
+ size_t a=std::strlen(expected),b=std::strlen(actual);while(a>1&&expected[a-1]=='/')--a;while(b>1&&actual[b-1]=='/')--b;
+ return a==b&&!std::memcmp(expected,actual,a);
+}
+bool volume_space(const char *path,uint64_t &total,uint64_t &available,const char *required_mount){
+ total=available=0;if(!path||!*path)return false;
+#ifdef __PROSPERO__
+ // Managed titles do not export ordinary statvfs/statfs/fstatfs. Match the
+ // backend's checked libkernel query instead of calling an unsupported import.
+ using Query=int(*)(int,struct statfs*);
+ static const Query query=[] {void*symbol=nullptr;if(sceKernelDlsym(0x2001,"_fstatfs",&symbol)!=0)return Query{};return reinterpret_cast<Query>(symbol);}();
+ if(!query)return false;
+ struct statfs info{};int status=ww::privilege::run([&]{int fd=sceKernelOpen(path,O_RDONLY|O_DIRECTORY,0);if(fd<0)return -1;int result=query(fd,&info);sceKernelClose(fd);return result;});
+ if(status!=0||!info.f_bsize||!info.f_blocks)return false;
+ if(required_mount&&(!std::memchr(info.f_mntonname,0,sizeof(info.f_mntonname))||!volume_mount_matches(required_mount,info.f_mntonname)))return false;
+ uint64_t block=info.f_bsize,blocks=info.f_blocks,free=info.f_bavail<0?0:uint64_t(info.f_bavail);
+#elif defined(_WIN32)
+ if(required_mount){char mounted[MAX_PATH]{};if(!GetVolumePathNameA(path,mounted,sizeof(mounted))||!volume_mount_matches(required_mount,mounted))return false;}
+ ULARGE_INTEGER freeBytes{},totalBytes{},availableBytes{};if(!GetDiskFreeSpaceExA(path,&availableBytes,&totalBytes,&freeBytes))return false;total=totalBytes.QuadPart;available=availableBytes.QuadPart;return total&&available<=total;
+#else
+ if(required_mount){
+#ifdef __linux__
+  bool matched=false;FILE*mounts=std::fopen("/proc/self/mounts","r");if(!mounts)return false;
+  while(auto item=getmntent(mounts))if(volume_mount_matches(required_mount,item->mnt_dir)){matched=true;break;}
+  std::fclose(mounts);if(!matched)return false;
+#else
+  return false;
+#endif
+ }
+ struct statvfs info{};if(ww::privilege::run([&]{return statvfs(path,&info);})!=0||!info.f_blocks)return false;
+ uint64_t block=info.f_frsize?info.f_frsize:info.f_bsize,blocks=info.f_blocks,free=info.f_bavail;
+#endif
+#ifndef _WIN32
+ if(!block||blocks>std::numeric_limits<uint64_t>::max()/block||free>blocks)return false;
+ total=blocks*block;available=free*block;return true;
+#endif
+}
+}
+
+namespace ww::fileops {
+namespace {
+const char *profile_folders[]={"Desktop","Downloads","Documents","Pictures","Music","Videos"};
+bool profile_path(const std::string&path){if(path.empty()||path[0]!='/'||path.size()>=900)return false;size_t at=1;while(at<path.size()){size_t end=path.find('/',at);if(end==std::string::npos)end=path.size();auto part=path.substr(at,end-at);if(part.empty()||part=="."||part=="..")return false;at=end+1;}return path.back()!='/';}
+bool profile_item_valid(const std::string&path){
+ // Personal file IO already uses the app's qualified root gate. Keep newly
+ // created entries owned by that creator: PS5 UID0 does not bypass UID1-only
+ // permissions, so chowning this store to UID1 would break the gated IO path.
+ Info info{};return inspect(path.c_str(),info)>=0&&(info.directory||info.regular);
+}
+bool profile_directory(const std::string&path,bool create){Info info{};int result=inspect(path.c_str(),info);if(result>=0)return info.directory;if(result!=-ENOENT||!create||make_directory(path.c_str())<0)return false;return profile_item_valid(path)&&inspect(path.c_str(),info)>=0&&info.directory;}
+bool profile_chain(const std::string&path,bool create){for(size_t at=1;at<=path.size();++at)if(at==path.size()||path[at]=='/')if(!profile_directory(path.substr(0,at),create))return false;return true;}
+bool profile_marker(const std::string&path,const std::string&value,bool write){const auto&io=system_io();int fd=io.open(io.context,path.c_str(),write);if(fd<0)return false;bool ok=true;if(write){size_t at=0;while(at<value.size()){auto n=io.write(io.context,fd,value.data()+at,value.size()-at);if(n<=0||uint64_t(n)>value.size()-at){ok=false;break;}at+=size_t(n);}if(ok)ok=io.sync(io.context,fd)==0;}else{char data[2048]{};auto n=io.read(io.context,fd,data,sizeof(data));ok=n==int64_t(value.size())&&!std::memcmp(data,value.data(),value.size());}if(io.close(io.context,fd)<0)ok=false;return ok;}
+bool profile_sync(const std::string&path){const auto&io=system_io();int fd=io.open(io.context,path.c_str(),false);if(fd<0)return false;bool ok=io.sync(io.context,fd)==0;if(io.close(io.context,fd)<0)ok=false;return ok;}
+}
+bool personal_files_snapshot(const char*legacy,std::vector<TreeTransfer::Entry>&entries){entries.clear();if(!legacy||!*legacy)return false;for(const char*name:profile_folders){std::string path=std::string(legacy)+"/"+name;Info info{};int result=inspect(path.c_str(),info);if(result==-ENOENT)continue;if(result<0||!info.directory||!scan_tree(legacy,name,entries,0,true))return false;}return true;}
+bool prepare_user_profile(const char*legacy_value,const char*console_value,const char*target_value,std::string&error){
+ error="Invalid profile path";if(!legacy_value||!console_value||!target_value)return false;
+ const std::string legacy=legacy_value,console=console_value,target=target_value;
+ if(!profile_path(legacy)||!profile_path(console)||!profile_path(target)||target.compare(0,console.size()+1,console+"/")!=0||target.compare(0,legacy.size()+1,legacy+"/")==0)return false;
+ if(!profile_chain(legacy,false)||!profile_chain(console,false)){error="Storage is unavailable";return false;}
+ const std::string marker="WINBREW_USER_PROFILE_V1\n"+target+"\n";Info existing{};
+ int target_status=inspect(target.c_str(),existing);
+ if(target_status>=0){if(!existing.directory||!profile_chain(target,false)||!profile_marker(target+"/.winbrew-profile-v1",marker,false)){error="Existing profile is not a verified WinBrew profile";return false;}for(const char*name:profile_folders)if(!profile_directory(target+"/"+name,true)){error="Personal folder is unavailable";return false;}error.clear();return true;}
+ if(target_status!=-ENOENT){error="Profile cannot be inspected";return false;}
+ std::vector<TreeTransfer::Entry> before;error="Personal files contain an unsupported or changing item";if(!personal_files_snapshot(legacy.c_str(),before))return false;
+ const std::string parent=target.substr(0,target.find_last_of('/')),stage=target+".migrating-v1";error="Profile staging area already exists or is unavailable";
+ if(!profile_chain(parent,true)||make_directory(stage.c_str())<0||!profile_item_valid(stage))return false;
+ for(const char*name:profile_folders){std::string source=legacy+"/"+name;Info info{};int status=inspect(source.c_str(),info);if(status==-ENOENT){if(!profile_directory(stage+"/"+name,true)){error="Cannot create personal folder";return false;}continue;}
+  Clipboard clip;if(status<0||!clip.copy(source.c_str())){error="Personal folder changed";return false;}
+  TreeTransfer transfer;if(!transfer.begin(clip,stage.c_str(),true)){error="Personal folder could not be copied";return false;}
+  for(size_t i=0;transfer.busy()&&i<2000000;++i)transfer.step();
+  if(transfer.state!=State::complete){if(transfer.busy())transfer.cancel();error=std::string("Personal copy failed: ")+transfer.stage;return false;}
+  for(const auto&entry:transfer.outputs)if(!profile_item_valid(entry.relative)){error="Copied personal item is unavailable";return false;}
+ }
+ std::vector<TreeTransfer::Entry> after;error="Original personal files changed during migration";if(!personal_files_snapshot(legacy.c_str(),after)||!same_tree(before,after))return false;
+ error="Profile verification marker failed";if(!profile_marker(stage+"/.winbrew-profile-v1",marker,true)||!profile_item_valid(stage+"/.winbrew-profile-v1")||!profile_marker(stage+"/.winbrew-profile-v1",marker,false)||!profile_sync(stage))return false;
+ Info ready{};int code=0;error="Verified profile could not be published";if(inspect(stage.c_str(),ready)<0||!rename_item(stage.c_str(),ready,target.substr(target.find_last_of('/')+1).c_str(),code)||!profile_sync(parent))return false;
+ error.clear();return true;
+}
+}

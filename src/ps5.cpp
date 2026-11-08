@@ -258,6 +258,10 @@ int main() {
   if (private_dir >= 0)
     close(private_dir);
   log("private directory rebound", private_bound ? 0 : 1);
+  if(elevated&&private_bound){
+    bool profile_ready=shell.configure_console_storage("/data","/data/WinBrew/Users/Default");
+    log("console C storage",profile_ready?0:1);
+  }
   shell.load_web_history();
   log("root proof", elevated ? 0 : 1);
   log("filesystem request status", unsigned(elevation_status));

@@ -298,7 +298,7 @@ int main() {
     assert(mkfifo(fifo.c_str(), 0600) == 0);
     assert(!unsafe.copy(fifo.string().c_str()));
     assert(std::remove(fifo.c_str()) == 0);
-    assert(!unsafe.copy(source.parent_path().string().c_str()));
+    assert(unsafe.copy(source.parent_path().string().c_str()));
     const auto dirlink = root / "directory-link";
     assert(symlink(fs::absolute(root / "destination").c_str(),
                    dirlink.c_str()) == 0);

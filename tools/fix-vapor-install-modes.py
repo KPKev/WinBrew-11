@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Restore release file modes after a PS5 file manager/FTP copy loses them.
 
-Standard-library-only helper for the cs2-runtime-v1/v1.1 releases. Default is a
+Standard-library-only helper for the pinned CS2, Blender and desktop/storage releases. Default is a
 read-only plan. --apply changes modes of manifest-listed app/base-kit files
 and their parent directories only; no game, account or save paths are used.
 """
@@ -12,7 +12,9 @@ APP = '/data/homebrew/PPSA77382'
 KIT = '/data/wine11/kits/playden-kit'
 APP_PIN = ('933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be',
            'a712a3d69ad0eae2829415486053790ce38361156f4bab6442d2838e4a9b4c4c',
-           'e245bfab1cc296be9e586bac86bd61160073b6ba99c22faf84da71c2ea203f12')
+           'e245bfab1cc296be9e586bac86bd61160073b6ba99c22faf84da71c2ea203f12',
+           '462020117c5fba9ce83b1a48b187183c5409b1a7c9ef56aaf4c3de49d3d2f5d2',
+           '8f83086ba79a152c6926140828c45e361c8cc57e2894dac5a19c9e3c03d2b4a8')
 KIT_PIN = '1cd63397e5c560fddbc0f3b8baea3bf87ace1e0ba997a46ee0ed4acf4dac8dfc'
 RUNTIME_PIN = 'd7cf3ed3221f8e8a7eb571522363efc21a5540699b6b20b3226cf30012732259'
 PREFIX = 'runtime/compatibility/steam-730-cs2-v1/'
@@ -62,6 +64,9 @@ def plan(client, include_kit=False):
     app=document(client.read(APP+'/manifest.json'),APP_PIN)
     runtime=document(client.read(APP+'/'+PREFIX+'vapor-runtime.json'),RUNTIME_PIN)
     modes={name:0o644 for name in app['files']}; modes['manifest.json']=0o644
+    # PS5 rtld rejects a native PRX without execute permission before main().
+    modes.update({name:0o755 for name in app['files']
+                  if name.startswith('sce_module/') and name.endswith('.prx')})
     for name in ['eboot.bin','lapy.elf','vapor-title-remover.elf']: modes[name]=0o755
     for entry in runtime['files']:
         name=PREFIX+entry['path']

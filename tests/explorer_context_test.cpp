@@ -54,6 +54,11 @@ void context(ww::Shell &s, const char *name) {
   s.open_context();
   assert(s.file_context && !s.context && s.file_selected == index);
 }
+void capture(ww::Shell &s,const char *path){
+  s.draw();FILE *f=std::fopen(path,"wb");assert(f);std::fprintf(f,"P6\n%d %d\n255\n",ww::W,ww::H);
+  for(int i=0;i<ww::W*ww::H;++i)assert(std::fwrite(s.pixels+i,1,3,f)==3);
+  assert(std::fclose(f)==0);
+}
 void click(ww::Shell &s, int id) {
   const auto r = hit(s, id);
   s.pointer(r.x + r.w - 3, r.y + r.h - 3, true);
@@ -78,7 +83,7 @@ int main() {
   assert(s.file_context_bounds.x == anchor.x &&
          s.file_context_bounds.y == anchor.y);
   assert(
-      !has_hit(s, 802)); // Cut is visibly disabled, without a fake action hit.
+      has_hit(s, 802)); // Cut is a functional action.
   click(s, 804);
   assert(s.file_properties && !s.file_context &&
          s.file_properties_info.regular &&
@@ -107,7 +112,7 @@ int main() {
   assert(get(root / "alpha - Copy.txt") == original &&
          get(root / "alpha.txt") == original);
   context(s, "Destination");
-  assert(!has_hit(s, 801));
+  assert(has_hit(s, 801));
   click(s, 804);
   assert(s.file_properties_info.directory);
   s.key(ww::Key::back);
@@ -124,9 +129,9 @@ int main() {
   assert(!s.file_context && s.window == 1);
   s.pointer(20, 20, false);
   s.open_context();
-  assert(s.context && !s.file_context);
+  assert(s.file_context && !s.context && s.shortcut_context_id==10);
   s.key(ww::Key::back);
-  assert(!s.context);
+  assert(!s.context && !s.file_context);
   // Controller focus selects the row even when the pointer is elsewhere.
   const int index = entry(s, "alpha.txt");
   s.file_page = index / 10;
@@ -157,6 +162,31 @@ int main() {
   assert(s.file_transfer.state == ww::fileops::State::cancelled && s.dialog);
   assert(fs::file_size(root / "large.bin") == ww::fileops::Transfer::Chunk * 4);
   assert(fs::exists(s.file_transfer.destination));
+  s.activate(60);s.window=0;
+  std::snprintf(s.preferences,sizeof(s.preferences),"%s/preferences",root.string().c_str());
+  fs::create_directories(root/"Desktop");put(root/"Desktop"/"note.txt","Desktop test");
+  s.desktop_files_next_scan=0;s.draw();
+  auto desktop=hit(s,2000);s.pointer(desktop.x+5,desktop.y+5,false);s.open_context();
+  assert(s.file_context&&s.file_context_item);click(s,801);assert(s.file_clipboard.ready);
+  s.draw();s.pointer(desktop.x+5,desktop.y+5,false);s.open_context();capture(s,"build/context-desktop-menu.ppm");click(s,809);
+  assert(!fs::exists(root/"Desktop"/"note.txt")&&s.dialog);s.activate(60);
+  s.draw();auto quake=hit(s,30);s.pointer(quake.x+5,quake.y+5,false);s.open_context();
+  assert(s.shortcut_context_id==30&&s.shortcut_context_taskbar);capture(s,"build/context-taskbar-menu.ppm");click(s,811);s.draw();
+  assert(!has_hit(s,30));
+  ww::Shell reloaded;std::snprintf(reloaded.preferences,sizeof(reloaded.preferences),"%s",s.preferences);reloaded.load_preferences();
+  assert(reloaded.taskbar_hidden & (1ULL<<30));assert(s.pending==ww::Action::none);
+  // Reopening a deleted item's stale menu cannot delete a replacement.
+  s.window=1;s.file_open(root.string().c_str());context(s,"alpha.txt");
+  put(root/"alpha.txt","replacement");click(s,809);assert(get(root/"alpha.txt")=="replacement");
+  s.activate(60);s.window=0;
+  assert(s.file_clipboard.copy((root/"alpha.txt").string().c_str()));s.draw();
+  s.pointer(600,300,false);s.open_context();assert(s.context);click(s,1409);
+  for(int i=0;s.file_transfer.busy()&&i<100;++i)s.tick();
+  assert(s.file_transfer.state==ww::fileops::State::complete && get(root/"Desktop"/"alpha.txt")=="replacement");
+  s.window=1;s.file_open(root.string().c_str());context(s,"Destination");click(s,802);assert(s.file_clipboard.move);
+  s.draw();s.pointer(s.file_content_bounds.x+s.file_content_bounds.w-20,s.file_content_bounds.y+s.file_content_bounds.h-100,false);s.open_context();click(s,803);
+  for(int i=0;s.file_transfer.busy()&&i<1000;++i)s.tick();
+  assert(s.file_transfer.state==ww::fileops::State::complete && !fs::exists(root/"Destination") && !s.file_clipboard.ready);
   std::puts(
       "PASS: anchored Explorer context, real Properties, Copy/Paste surfaces, "
       "controller focus, modal routing, progress/cancel and desktop isolation");

@@ -28,6 +28,7 @@ KeyboardReport parse_keyboard(const uint8_t *state) {
 void HidInput::keyboard(Shell &shell, const uint8_t *state, uint64_t now) {
   auto report = parse_keyboard(state);
   shell.keyboard_connected = report.connected;
+  shell.file_modifiers=report.modifiers;
   bool fresh = false;
   for (int i = 0; i < report.count; ++i) {
     bool existed = false;
@@ -163,7 +164,11 @@ void HidInput::mouse(Shell &shell, const uint8_t *records, int count,
   }
   shell.pointer(shell.mx + sx, shell.my + sy, (edge & 1) != 0,
                 (current & 1) != 0, double_click);
-  if (wheel && shell.steam_list_bounds.has(shell.mx, shell.my)) {
+  if(wheel&&shell.window==1&&!shell.file_games&&shell.file_nav_bounds.has(shell.mx,shell.my)){
+    const int steps=wheel<-64?-64:wheel>64?64:int(wheel);shell.file_nav_scroll_by(-3*steps);
+  }else if(wheel&&shell.window==1&&!shell.file_games&&shell.file_content_bounds.has(shell.mx,shell.my)){
+    const int steps=wheel<-64?-64:wheel>64?64:int(wheel);shell.file_scroll_by(-3*steps);
+  }else if (wheel && shell.steam_list_bounds.has(shell.mx, shell.my)) {
     // Several wheel reports can arrive together; preserve their distance
     // instead of treating an entire batch as a single notch.
     const int steps = wheel < -64 ? -64 : wheel > 64 ? 64 : int(wheel);

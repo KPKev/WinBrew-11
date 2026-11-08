@@ -81,14 +81,16 @@ void Shell::load_preferences() {
       color = 0, bg = 0, speed = 5, cs = 0, safe = 0, volume = 50, mute = 0,
       mouse = 5, deadzone = 22, right = 0, invert = 0, swap = 0,
       touch_deadzone = 4, touch_speed = 5, touch_acceleration = 5, touch_hold = 600;
+  unsigned long long hidden=(1ULL<<36)|(1ULL<<37)|(1ULL<<38), desktop=0;
   int fields = std::sscanf(
-      data, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d", &v, &d,
+      data, "%d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %llu %llu", &v, &d,
       &icons, &left, &clock, &pointer, &size, &color, &bg, &speed, &cs, &safe,
       &volume, &mute, &mouse, &deadzone, &right, &invert, &swap,
-      &touch_deadzone, &touch_speed, &touch_acceleration, &touch_hold);
+      &touch_deadzone, &touch_speed, &touch_acceleration, &touch_hold, &hidden, &desktop);
   if (!((v == 1 && fields == 9) || (v == 2 && fields == 14) ||
-        (v == 3 && fields == 15) || (v == 4 && fields == 19) || (v == 5 && fields == 23)))
+        (v == 3 && fields == 15) || (v == 4 && fields == 19) || (v == 5 && fields == 23) || (v == 6 && fields == 25)))
     return;
+  taskbar_hidden=hidden;desktop_hidden=desktop;
   dark = d == 1;
   show_icons = icons != 0;
   left_taskbar = left == 1;
@@ -121,12 +123,13 @@ bool Shell::save_preferences() {
   char data[256], temp[1050];
   int n =
       std::snprintf(data, sizeof(data),
-                    "5 %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d\n",
+                    "6 %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %llu %llu\n",
                     dark, show_icons, left_taskbar, clock24, large_pointer,
                     icon_size, accent, background, pointer_speed, cursor_size,
                     safe_area, ui_volume, ui_muted, mouse_speed, pad_deadzone,
                     pad_right_stick, pad_invert_y, pad_swap_confirm,
-                    touchpad_deadzone, touchpad_speed, touchpad_acceleration, touchpad_hold_ms);
+                    touchpad_deadzone, touchpad_speed, touchpad_acceleration, touchpad_hold_ms,
+                    static_cast<unsigned long long>(taskbar_hidden), static_cast<unsigned long long>(desktop_hidden));
   std::snprintf(temp, sizeof(temp), "%s.tmp", preferences);
   auto fail = [&](const char *stage, int code) {
     save_state = -1;

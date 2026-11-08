@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../src/shell.hpp"
 #include "../src/hid_input.hpp"
+#include "../src/vapor_game_details.hpp"
 #include <cassert>
 #include <climits>
 #include <cstdio>
@@ -641,6 +642,21 @@ int main(int argc, char**) {
   steam.special_app = 1089130; steam.special_playable = true; steam.state.game_count = 1;
   shell.steam_scroll = 0; shell.steam_selection = 0; shell.steam_selected_app = 1089130; shell.tick();
   click(shell, 979); assert(steam.played == 1 && shell.pending == ww::Action::none);
+  // Background work must remain visible and cannot submit another Play.
+  for (auto busy : {ww::SteamGameActivity::preparing, ww::SteamGameActivity::starting}) {
+    steam.activity = busy;
+    std::snprintf(steam.state.message, sizeof(steam.state.message), "Preparing game - please wait...");
+    shell.draw();
+    for (int i = 0; i < shell.count; ++i) assert(shell.hits[i].id != 979);
+    bool notice_visible = false;
+    const auto window = shell.file_window_bounds;
+    for (int yy = window.y + 454; yy < window.y + 478; ++yy)
+      for (int xx = window.x + 300; xx < window.x + window.w - 32; ++xx)
+        notice_visible |= shell.pixels[yy * ww::W + xx] == ww::kVaporStatusGold;
+    assert(notice_visible);
+  }
+  steam.activity = ww::SteamGameActivity::idle; steam.state.message[0] = 0;
+  assert(find(shell, 979).w == 150);
   // CONTROLS: shown for a playable game under the facts row, cycles the layout.
   shell.draw();
   assert(shell.steam_controls_app == 1089130);

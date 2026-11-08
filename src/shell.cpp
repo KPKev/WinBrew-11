@@ -289,7 +289,7 @@ void Shell::center(int x, int y, int w, const char *s, int size, uint32_t c) {
   text(x + (w - width(s, size)) / 2, y, s, size, c);
 }
 void Shell::add(Rect r, int id) {
-  if (count < 128) {
+  if (count < HitCapacity) {
     hits[count++] = {r, id};
     if (r.has(mx, my))
       hover = id;
@@ -336,6 +336,16 @@ void Shell::panel(Rect r) {
 void Shell::draw() { desktop_ui(); }
 void Shell::activate(int id) {
   sync_steam_selection();
+  if(dialog && recycle_confirmation){
+    if(id==60){recycle_confirmation=false;dialog=false;file_purge.cancel();}
+    else if(id==61){
+      recycle_confirmation=false;dialog=false;
+      if(!file_purge.begin()){
+        dialog=true;focus=60;std::snprintf(message,sizeof(message),"The Recycle Bin changed or could not be emptied. Nothing was deleted. Please review it and try again.");
+      }else focus=807;
+    }
+    return;
+  }
   if (dialog && steam_manage_confirmation_app) {
     if (id == 61) {
       const auto app = steam_manage_confirmation_app;
@@ -357,12 +367,42 @@ void Shell::activate(int id) {
     } else if (id == 60) { steam_setup_confirmation_app = 0; dialog = false; }
     return;
   }
-  if (file_transfer.busy() && id != 807 && id != 60) return;
+  if (files_busy() && id != 807 && id != 60) return;
   if (file_properties && id != 806 && id != 60) return;
+  if(file_rename_prompt&&!dialog){
+    if(id==2176||id==2177||id==2178){file_browser_action(id);return;}
+    if(!(touch_keyboard&&id>=200&&id<=248))return;
+  }
+  if(id>=2100&&id<3100){if(window==1&&!file_games)file_browser_action(id);return;}
+  if(notepad_modal() && !dialog && !notepad_modal_hit(id))return;
+  if (!sheet_guard(id)) return;
+  if(id>=2000&&id<2064){
+    if(!notepad_guard(800)||paint.defer_action(*this,800))return;
+    const char *path=desktop_rendered_paths[id-2000];fileops::Info info{};
+    if(!path[0])return;
+    if(desktop_files[id-2000].directory){window=1;start=context=false;std::snprintf(file_root,sizeof(file_root),"%s",desktop_folder_path);file_open(path);return;}
+    if(fileops::inspect(path,info)<0)return;
+    if(info.directory)file_open(path);else if(info.regular){if(SheetDocument::supports(path))sheet_open(path);else if(Paint::supports(path))paint.open(*this,path);else notepad_open(path);}return;
+  }
+  if (id >= 1530 && id <= 1532) { sheet_action(id); return; }
+  if(file_context&&(file_new||file_menu_kind==3)&&id>=1420&&id<=1424){
+    const bool naming=id==1420&&window==1&&!file_games;std::vector<std::string> before;for(const auto&e:files)before.push_back(e.name);
+    file_context=file_new=false;file_menu_kind=0;activate(id);
+    if(naming&&!dialog){for(int i=0;i<file_count;++i)if(files[i].directory&&std::find(before.begin(),before.end(),files[i].name)==before.end()){file_select_row(i);file_begin_rename();break;}}
+    return;
+  }
+  if (context && id >= 1420 && id <= 1431) {
+    context=false;
+    activate(id);
+    return;
+  }
   if (context && id >= 1400 && id <= 1416) {
     if (id == 1400 || id == 1401 || id == 1404) {
       context_submenu = id == 1400 ? 1 : id == 1401 ? 2 : 3;
       focus = id;
+    } else if (id == 1409) {
+      context=false;file_context=true;shortcut_context_id=0;file_context_item=false;
+      desktop_folder(file_context_folder,sizeof(file_context_folder));file_action(803);
     } else if (id == 1408) {
       context_classic = true;
       context_submenu = 0;
@@ -409,18 +449,26 @@ void Shell::activate(int id) {
     if (id >= 740 && id <= 742) paint.activate(*this, id);
     return;
   }
-  if (id >= 600 && id <= 612) {
+  if (id >= 600 && id <= 619) {
     if (!dialog) notepad_action(id);
     return;
   }
   if (!notepad_guard(id)) return;
+  if (id >= 1500 && id < 1900) { if (!dialog) sheet_action(id); return; }
+  if ((id >= 1420 && id <= 1424) || (id >= 36 && id <= 38)) {
+    if (!(id == 37 && window == 5) && paint.defer_action(*this,id)) return;
+    if (id == 37) { paint.show(*this); start=context=false; return; }
+    if (id == 36 && document.active) { window=4;start=context=false;begin_text(TextTarget::document);return; }
+    if (id == 38 && sheet.storage.active) { window=6;start=context=false;end_text();return; }
+    new_document(id == 36 ? 1421 : id == 38 ? 1423 : id); return;
+  }
   if (id >= 700 && id <= 749) {
     paint.activate(*this, id);
     return;
   }
   const bool leaving_paint = (id >= 10 && id <= 13) ||
       (id >= 30 && id <= 41) || (id >= 100 && id <= 108) ||
-      (id >= 400 && id <= 409) || (id >= 500 && id < 510) || id == 93;
+      (id >= 400 && id <= 409) || (id >= 500 && id < 580) || id == 93;
   if (leaving_paint && paint.defer_action(*this, id)) return;
   bool text_control = id == 41 || id == 43 || id == 130 ||
                       (id >= 135 && id <= 139) || (id >= 200 && id <= 248) ||
@@ -646,10 +694,10 @@ void Shell::activate(int id) {
     ++web_history_page;
   } else if (id == 858) {
     web_history.save();
-  } else if (id >= 400 && id <= 409) {
+  } else if ((id >= 400 && id <= 409)||(id>=420&&id<=436)) {
     file_location_open(id);
-  } else if (id >= 500 && id < 510) {
-    file_select(file_page * 10 + id - 500);
+  } else if (id >= 500 && id < 580) {
+    file_select(file_hit_index(id));
   } else if (id == 35) {
     games::refresh(game_inventory);
     library_selection = -1;
@@ -659,11 +707,15 @@ void Shell::activate(int id) {
     file_games = true;
     start = calendar = context = false;
   } else if (id == 10 || id == 32) {
-    window = 1;
+    if(id==10||(!file_path[0]&&file_tabs.empty()))file_location_open(420);
+    file_games=false;window = 1;
     start = calendar = context = false;
   } else if (id == 11) {
-    dialog = true;
-    std::snprintf(message, sizeof(message), "Recycle Bin is empty.");
+    char desktop[1024],trash[1100];desktop_folder(desktop,sizeof(desktop));
+    std::snprintf(trash,sizeof(trash),"%s/.winbrew-trash",desktop);
+    fileops::Info info{};
+    if(fileops::inspect(trash,info)<0){dialog=true;std::snprintf(message,sizeof(message),"Desktop Recycle Bin is empty.");return;}
+    window=1;file_games=false;file_open(trash);
   } else if (id == 13 || id == 30) {
     pending = Action::quake;
     start = calendar = context = false;
@@ -906,6 +958,7 @@ void Shell::key(Key k) {
     activate(focus);
     if (context_submenu == 1) focus = 1410;
     else if (context_submenu == 2) focus = 1416;
+    else if (context_submenu == 3) focus = 1422;
     return;
   }
   if (context && context_submenu && (k == Key::left || k == Key::back)) {
@@ -913,6 +966,7 @@ void Shell::key(Key k) {
     context_submenu = 0;
     return;
   }
+  if (sheet_prompt && k == Key::back) { sheet_action(1532); return; }
   if (k == Key::start) {
     activate(40);
     return;
@@ -922,10 +976,12 @@ void Shell::key(Key k) {
     return;
   }
   if (k == Key::back) {
+    if(file_drag_active||file_drag_pending){file_drag_active=file_drag_pending=false;file_drag_items.clear();pad_touch_drag_locked=false;return;}
     if (dialog) {
+      if(recycle_confirmation){recycle_confirmation=false;file_purge.cancel();}
       dialog = false; steam_setup_confirmation_app = 0; steam_manage_confirmation_app = 0;
     }
-    else if (file_transfer.busy()) {
+    else if (files_busy()) {
       file_action(807);
       return;
     }
@@ -938,8 +994,9 @@ void Shell::key(Key k) {
       focus = -1;
       return;
     }
-    else if (notepad_prompt) {
-      notepad_action(612);
+    else if(file_rename_prompt){file_browser_action(2177);return;}
+    else if (notepad_modal()) {
+      notepad_action(notepad_replace?619:notepad_prompt?612:608);
       return;
     }
     else if (paint.modal()) {
@@ -964,7 +1021,7 @@ void Shell::key(Key k) {
       notepad_close();
       return;
     }
-    else if (window == 5) {
+    else if (window == 5 || window == 6) {
       activate(93);
       return;
     }
@@ -978,7 +1035,7 @@ void Shell::key(Key k) {
     return;
   }
   if (k == Key::accept) {
-    if (touch_keyboard && (focus == 130 || focus == 43 || focus == 600 || focus < 0)) {
+    if (touch_keyboard && (focus == 130 || focus == 43 || focus == 600 || focus == 618 || focus < 0)) {
       focus = 200;
       return;
     }
@@ -990,25 +1047,27 @@ void Shell::key(Key k) {
       pointer(mx, my, true, false, true);
     return;
   }
-  int candidates[128], candidate_hits[128], n = 0;
+  int candidates[HitCapacity], candidate_hits[HitCapacity], n = 0;
   int window_start = -1;
   if (window && !start && !calendar && !quick && !tray && !context && !dialog &&
-      !file_context && !file_properties && !notepad_prompt && !paint.modal() && !touch_keyboard) {
+      !file_context && !file_properties && !notepad_modal() && !file_rename_prompt && !paint.modal() && !touch_keyboard) {
     const Rect wr = maximized ? Rect{0, 0, W, H - 54} : Rect{wx, wy, 1200, 780};
     for (int i = 0; i < count; ++i)
       if (hits[i].id == 89 && hits[i].r.x == wr.x && hits[i].r.y == wr.y && hits[i].r.w == wr.w && hits[i].r.h == wr.h) { window_start = i; break; }
   }
   for (int i = 0; i < count; i++) {
     int id = hits[i].id;
-    if (dialog           ? (id != 60 && !((steam_setup_confirmation_app || steam_manage_confirmation_app) && id == 61))
-        : file_transfer.busy() ? id != 807
+    if (dialog           ? (id != 60 && !((steam_setup_confirmation_app || steam_manage_confirmation_app || recycle_confirmation) && id == 61))
+        : files_busy() ? id != 807
+        : file_rename_prompt ? !(id==2176||id==2177||id==2178||(touch_keyboard&&id>=200&&id<=248))
         : file_properties ? id != 806
-        : file_context ? (id < 800 || id > 805)
-        : notepad_prompt ? (id < 610 || id > 612)
+        : file_context ? !((id>=800&&id<=805)||id==808||id==809||id==811||id==812||id==814||id==815||id==816||id==817||id==818||(id>=2100&&id<2180)||((file_new||file_menu_kind==3)&&id>=1420&&id<=1424))
+        : sheet_prompt   ? (id < 1530 || id > 1532)
+        : notepad_modal() ? !notepad_modal_hit(id)
         : paint.modal()  ? (id < 740 || id > 742)
         : touch_keyboard ? (id < 200 || id > 248)
         : start          ? !((id >= 30 && id <= 44) || (id >= 1200 && id < 1328))
-        : context        ? (id < 1400 || id > 1416)
+        : context        ? (id < 1400 || id > 1431)
         : calendar       ? (id < 45 || id > 47)
         : quick          ? (id != 105 && id != 150 && (id < 170 || id > 173))
         : tray           ? (id != 151 && id != 32 && id != 33 && id != 34)
@@ -1198,9 +1257,9 @@ Rect Shell::context_submenu_bounds() const {
   return {x < 0 ? 0 : x, y < 0 ? 0 : y, width, height};
 }
 void Shell::open_context() {
-  if (dialog || file_transfer.busy() || file_properties) return;
+  if (dialog || files_busy() || file_rename_prompt || file_properties) return;
   if (file_context_open()) return;
-  if (notepad_prompt || paint.modal()) return;
+  if (notepad_modal() || paint.modal()) return;
   context_x = mx < 0 ? 0 : mx > W - desktop_context::modern_width ? W - desktop_context::modern_width : mx;
   context_y = my < 0 ? 0 : my > H - 54 - desktop_context::modern_height ? H - 54 - desktop_context::modern_height : my;
   context_classic = false;
@@ -1212,8 +1271,8 @@ void Shell::open_context() {
 }
 void Shell::scroll_steam_library(int rows) {
   if (!steam || window != 1 || !file_games || library_downloads || steam_panel || dialog ||
-      file_context || file_properties || file_transfer.busy() || touch_keyboard || context ||
-      notepad_prompt || paint.modal() || start || calendar || quick || tray) return;
+      file_context || file_properties || files_busy() || touch_keyboard || context ||
+      notepad_modal() || paint.modal() || start || calendar || quick || tray) return;
   const auto count = steam_library_rows.size();
   const auto remaining = count > std::size_t(steam_visible_rows) ? count - steam_visible_rows : 0;
   const int maximum = remaining > INT_MAX ? INT_MAX : int(remaining);
@@ -1222,8 +1281,8 @@ void Shell::scroll_steam_library(int rows) {
 }
 void Shell::scroll_steam_home(int rows) {
   if (!steam || window != 1 || !file_games || library_downloads || steam_panel || dialog ||
-      steam_selection >= 0 || file_context || file_properties || file_transfer.busy() || touch_keyboard || context ||
-      notepad_prompt || paint.modal() || start || calendar || quick || tray) return;
+      steam_selection >= 0 || file_context || file_properties || files_busy() || touch_keyboard || context ||
+      notepad_modal() || paint.modal() || start || calendar || quick || tray) return;
   const int count = int((steam_home_rows.size() + steam_home_columns - 1) / steam_home_columns);
   const int maximum = count > 1 ? count - 1 : 0;
   const long long next = static_cast<long long>(steam_home_row) + rows;
@@ -1231,8 +1290,8 @@ void Shell::scroll_steam_home(int rows) {
 }
 void Shell::scroll_steam_queue(int rows) {
   if (!steam || window != 1 || !file_games || !library_downloads || steam_panel || dialog ||
-      file_context || file_properties || file_transfer.busy() || touch_keyboard || context ||
-      notepad_prompt || paint.modal() || start || calendar || quick || tray) return;
+      file_context || file_properties || files_busy() || touch_keyboard || context ||
+      notepad_modal() || paint.modal() || start || calendar || quick || tray) return;
   const int maximum = steam_queue_count > 5 ? steam_queue_count - 5 : 0;
   const long long next = static_cast<long long>(steam_download_offset) + rows;
   steam_download_offset = next < 0 ? 0 : next > maximum ? maximum : int(next);
@@ -1293,6 +1352,16 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
     if (submenu) context_submenu = submenu;
     else context_submenu = 0;
   }
+  if(file_drag_active){if(held)return;file_drop();return;}
+  if(file_drag_pending){
+    if(held&&(std::abs(mx-file_drag_x)>6||std::abs(my-file_drag_y)>6)){file_drag_begin();if(file_drag_active)return;}
+    if(!held){file_drag_pending=false;if(file_drag_collapse&&file_selected>=0)file_select_row(file_selected);file_drag_collapse=false;}
+  }
+  if(file_scroll_drag||file_nav_drag){if(held&&window==1&&!file_games&&!dialog&&!files_busy()){file_position_scroll(my,file_nav_drag);return;}file_scroll_drag=file_nav_drag=false;}
+  if(down&&window==1&&!file_games&&!dialog&&!file_context&&!file_properties&&!file_rename_prompt&&!files_busy()){
+    if(file_scroll_track.w&&file_scroll_track.has(mx,my)&&file_matches.size()>size_t(std::max(1,file_visible_count))){file_scroll_drag=true;file_position_scroll(my);return;}
+    if(file_nav_track.w&&file_nav_track.has(mx,my)&&file_nav_total>file_nav_bounds.h/30){file_nav_drag=true;file_position_scroll(my,true);return;}
+  }
   if (steam_queue_drag) {
     if (held && window == 1 && file_games && library_downloads && !dialog) {
       position_steam_queue_scroll(my); return;
@@ -1300,7 +1369,7 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
     steam_queue_drag = false;
   }
   if (down && steam && window == 1 && file_games && library_downloads && !dialog &&
-      !file_context && !file_properties && !file_transfer.busy() && steam_queue_track.has(mx, my)) {
+      !file_context && !file_properties && !files_busy() && steam_queue_track.has(mx, my)) {
     steam_queue_drag = true; position_steam_queue_scroll(my); return;
   }
   if (steam_home_drag) {
@@ -1310,7 +1379,7 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
     steam_home_drag = false;
   }
   if (down && steam && window == 1 && file_games && !library_downloads && !steam_panel && steam_selection < 0 && !dialog &&
-      !file_context && !file_properties && !file_transfer.busy() && steam_home_track.has(mx, my)) {
+      !file_context && !file_properties && !files_busy() && steam_home_track.has(mx, my)) {
     steam_home_drag = true; position_steam_home_scroll(my); return;
   }
   if (steam_scroll_drag) {
@@ -1320,7 +1389,7 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
     steam_scroll_drag = false;
   }
   if (down && steam && window == 1 && file_games && !library_downloads && !steam_panel && !dialog &&
-      !file_context && !file_properties && !file_transfer.busy() && steam_scroll_track.has(mx, my)) {
+      !file_context && !file_properties && !files_busy() && steam_scroll_track.has(mx, my)) {
     steam_scroll_drag = true; position_steam_scroll(my); return;
   }
   if (paint.pointer(*this, mx, my, down, held)) return;
@@ -1341,7 +1410,7 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
     drag = false;
   if (!down)
     return;
-  if (file_context && !file_context_bounds.has(mx, my)) {
+  if (file_context && !file_context_bounds.has(mx, my) && !(file_new&&file_new_bounds.has(mx,my))) {
     file_context = false;
     return;
   }
@@ -1373,13 +1442,15 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
     if (hits[i].r.has(mx, my)) {
       int id = hits[i].id;
       if (context && id == 89) return;
-      if (context && id != 89 && (id < 1400 || id > 1416)) return;
-      if (dialog && id != 60 && !((steam_setup_confirmation_app || steam_manage_confirmation_app) && id == 61))
+      if (context && id != 89 && (id < 1400 || id > 1431)) return;
+      if (dialog && id != 60 && !((steam_setup_confirmation_app || steam_manage_confirmation_app || recycle_confirmation) && id == 61))
         return;
-      if (!dialog && file_transfer.busy() && id != 807) return;
+      if (!dialog && files_busy() && id != 807) return;
+      if (!dialog && file_rename_prompt && !(id==2176||id==2177||id==2178||(touch_keyboard&&id>=200&&id<=248)))return;
       if (!dialog && file_properties && id != 806) return;
-      if (!dialog && file_context && (id < 800 || id > 819)) return;
-      if (notepad_prompt && !dialog && (id < 610 || id > 612))
+      if (!dialog && file_context && !((id>=2100&&id<2180)||(id>=800&&id<=819)||((file_new||file_menu_kind==3)&&id>=1420&&id<=1424))) return;
+      if (sheet_prompt && (id < 1530 || id > 1532)) return;
+      if (notepad_modal() && !dialog && !notepad_modal_hit(id))
         return;
       if (paint.modal() && (id < 740 || id > 742)) return;
       if (id == 90 && !maximized) {
@@ -1389,13 +1460,17 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
         dragy = my - wy;
         return;
       }
-      if (id >= 500 && id < 510 && !doubleclick) {
+      if (id >= 500 && id < 580 && (!doubleclick||file_select_mode||(file_modifiers&0x11))) {
         focus = id;
-        file_selected = file_page * 10 + id - 500;
+        int index=file_hit_index(id);
+        if((file_modifiers&0x22)&&file_selection_anchor>=0&&index>=0){if(!(file_modifiers&0x11))file_selection.clear();for(int candidate:file_matches)if(candidate>=std::min(file_selection_anchor,index)&&candidate<=std::max(file_selection_anchor,index)&&std::find(file_selection.begin(),file_selection.end(),files[candidate].name)==file_selection.end())file_selection.push_back(files[candidate].name);file_selected=index;}
+        else if(index>=0&&file_selection.size()>1&&!(file_modifiers&0x11)&&!file_select_mode&&std::find(file_selection.begin(),file_selection.end(),files[index].name)!=file_selection.end()){file_selected=index;file_drag_collapse=true;}
+        else file_select_row(index,file_select_mode||(file_modifiers&0x11));
+        file_drag_pending=index>=0&&!file_selection.empty();file_drag_x=mx;file_drag_y=my;
         return;
       }
       if (((id >= 10 && id <= 13) || (id >= 1200 && id < 1328 && hits[i].r.x < 130 && hits[i].r.y < H - 54) ||
-           ((id == 34 || id == 35) && hits[i].r.x < 130)) &&
+           ((id == 34 || id == 35 || (id >= 36 && id <= 38)) && hits[i].r.x < 130) || (id>=2000&&id<2064)) &&
           !doubleclick) {
         focus = id;
         return;

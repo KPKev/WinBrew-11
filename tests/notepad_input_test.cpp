@@ -44,7 +44,9 @@ int main() {
   s.physical_key(0x2b); // Tab inserts text.
   s.physical_key(6);    // c
   assert(std::string(s.document.text) == "a\nb\tc" && s.document.dirty());
-  s.physical_key(0x16, 1); // Ctrl+S
+  s.physical_key(0x16, 1); // Ctrl+S opens the editable save-name dialog.
+  assert(s.notepad_save_dialog);
+  s.notepad_action(607);
   assert(!s.document.dirty() && get(path) == "a\nb\tc");
   s.physical_key(4, 1); // Ctrl+A
   s.physical_key(7);    // d replaces the selected document.

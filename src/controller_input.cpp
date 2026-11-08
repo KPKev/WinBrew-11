@@ -31,8 +31,8 @@ void Shell::controller_input(bool connected, uint32_t buttons, int lx, int ly,
     return;
   }
   const bool vapor_open = window == 1 && file_games;
-  const bool modal_open = dialog || notepad_prompt || paint.modal() || touch_keyboard || context ||
-      file_context || file_properties || file_transfer.busy();
+  const bool modal_open = dialog || notepad_modal() || paint.modal() || touch_keyboard || context ||
+      file_context || file_rename_prompt || file_properties || files_busy();
   // Physical Circle and Square are Vapor navigation shortcuts, independent of
   // the desktop's optional confirm-button swap. Resolve an open modal first.
   if (vapor_open && (edge & 0x2000u)) {
@@ -61,7 +61,9 @@ void Shell::controller_input(bool connected, uint32_t buttons, int lx, int ly,
   const bool steam_list = steam && window == 1 && file_games && !steam_panel &&
       ((library_downloads && steam_queue_bounds.w > 0) || (!library_downloads && steam_list_bounds.w > 0)) &&
       !modal_open && !start && !calendar && !quick && !tray;
-  if (steam_list) {
+  const bool explorer_list=window==1&&!file_games&&!dialog&&!notepad_modal()&&!file_context&&!file_rename_prompt&&!file_properties&&!files_busy()&&!touch_keyboard&&!start&&!calendar&&!quick&&!tray;
+  if(explorer_list){move_stick(lx,ly,seconds);const int amount=ry-128,magnitude=amount<0?-amount:amount;if(magnitude>pad_deadzone){float dt=seconds<0?0:seconds>.05f?.05f:seconds;steam_scroll_fraction+=(amount<0?-1.f:1.f)*float(magnitude-pad_deadzone)/float(128-pad_deadzone)*16.f*dt;int rows=int(steam_scroll_fraction);if(rows){if(file_nav_bounds.has(mx,my))file_nav_scroll_by(rows);else file_scroll_by(rows);steam_scroll_fraction-=rows;}}else steam_scroll_fraction=0;
+  }else if (steam_list) {
     // Reserve the right stick for the game list in the library; the left
     // stick continues to move the pointer while this view is open.
     move_stick(lx, ly, seconds);
@@ -86,8 +88,8 @@ void Shell::controller_input(bool connected, uint32_t buttons, int lx, int ly,
   uint32_t confirm = pad_swap_confirm ? 0x2000u : 0x4000u;
   uint32_t secondary = pad_swap_confirm ? 0x4000u : 0x2000u;
   if (edge & secondary) {
-    if (dialog || notepad_prompt || paint.modal() || touch_keyboard || context ||
-        file_context || file_properties || file_transfer.busy())
+    if (dialog || notepad_modal() || paint.modal() || touch_keyboard || context ||
+        file_context || file_rename_prompt || file_properties || files_busy())
       key(Key::back);
     else
       open_context();

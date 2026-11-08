@@ -2,6 +2,18 @@
 #include <cassert>
 #include <cstring>
 int main() {
+  for (auto activity : {ww::SteamGameActivity::preparing, ww::SteamGameActivity::starting}) {
+    const auto low = ww::vapor_play_feedback(activity, 0);
+    const auto high = ww::vapor_play_feedback(activity, 900);
+    const auto repeat = ww::vapor_play_feedback(activity, 1800);
+    assert(low.busy && high.busy && low.fill != high.fill && low.halo != high.halo);
+    assert(low.fill == repeat.fill && low.rim == repeat.rim);
+  }
+  for (auto activity : {ww::SteamGameActivity::idle, ww::SteamGameActivity::playing,
+                        ww::SteamGameActivity::registration_required}) {
+    const auto a = ww::vapor_play_feedback(activity, 0), b = ww::vapor_play_feedback(activity, 900);
+    assert(!a.busy && !b.busy && a.fill == b.fill && !a.halo && !a.rim);
+  }
   ww::SteamGame game;
   auto facts = ww::vapor_game_facts(game);
   assert(!facts.playtime_available && !facts.install_size_available && !facts.download_size_available);

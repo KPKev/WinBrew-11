@@ -2,8 +2,14 @@
 #include "shell.hpp"
 #include <cstdio>
 #include <cstring>
+#include <algorithm>
 namespace ww {
 static char *buffer(Shell &s) {
+  if (s.text_target == TextTarget::file_address) return s.file_address;
+  if (s.text_target == TextTarget::file_search) return s.file_query;
+  if (s.text_target == TextTarget::file_rename) return s.file_rename_name;
+  if (s.text_target == TextTarget::filename) return s.notepad_filename;
+  if (s.text_target == TextTarget::sheet) return s.sheet.edit;
   if (s.text_target == TextTarget::document)
     return s.document.text;
   if (s.text_target == TextTarget::vapor_search)
@@ -11,6 +17,11 @@ static char *buffer(Shell &s) {
   return s.text_target == TextTarget::address ? s.address : s.search;
 }
 static size_t capacity(const Shell &s) {
+  if (s.text_target == TextTarget::file_address) return sizeof(s.file_address);
+  if (s.text_target == TextTarget::file_search) return sizeof(s.file_query);
+  if (s.text_target == TextTarget::file_rename) return sizeof(s.file_rename_name);
+  if (s.text_target == TextTarget::filename) return sizeof(s.notepad_filename);
+  if (s.text_target == TextTarget::sheet) return sizeof(s.sheet.edit);
   if (s.text_target == TextTarget::document)
     return TextDocument::Capacity + 1;
   if (s.text_target == TextTarget::vapor_search)
@@ -46,6 +57,7 @@ void Shell::clear_text() {
     buffer(*this)[0] = 0;
   text_caret = 0;
   text_selection = false;
+  if(text_target==TextTarget::file_search){file_scroll=file_page=file_compat_page=0;file_selected=-1;file_selection.clear();file_update_matches();}
   if (text_target == TextTarget::vapor_search) { steam_scroll = 0; steam_home_row = 0; steam_recent_offset = 0; }
 }
 void Shell::insert_text(const char *value) {
@@ -93,11 +105,19 @@ void Shell::erase_text(bool forward) {
     std::memmove(text + text_caret - 1, text + text_caret, n - text_caret + 1);
     --text_caret;
   }
+  if(text_target==TextTarget::file_search){file_scroll=file_page=file_compat_page=0;file_selected=-1;file_selection.clear();file_update_matches();}
   if (text_target == TextTarget::vapor_search) { steam_scroll = 0; steam_home_row = 0; steam_recent_offset = 0; }
 }
 void Shell::character(char c) {
+  if(sheet_prompt)return;
+  if(window==6&&!start&&!dialog&&text_target!=TextTarget::sheet) {
+    if(!sheet.editable()){std::snprintf(sheet.status,sizeof(sheet.status),"This cell cannot be edited here.");return;}
+    if(!sheet.editing)sheet.edit[0]=0;sheet.editing=true;begin_text(TextTarget::sheet);
+  }
   if (window == 5 || paint.modal()) return;
-  if (dialog || notepad_prompt)
+  if (dialog || files_busy() ||
+      (file_rename_prompt&&text_target!=TextTarget::file_rename) ||
+      (notepad_modal() && (text_target!=TextTarget::filename || notepad_replace)))
     return;
   if (text_target == TextTarget::document ||
       (window == 4 && document.active && text_target == TextTarget::none)) {
@@ -134,11 +154,17 @@ void Shell::character(char c) {
   std::memmove(text + text_caret + 1, text + text_caret, n - text_caret + 1);
   text[text_caret++] = c;
   focus = -1;
+  if(text_target==TextTarget::file_search){file_scroll=file_page=file_compat_page=0;file_selected=-1;file_selection.clear();file_update_matches();}
   if (text_target == TextTarget::vapor_search) { steam_scroll = 0; steam_home_row = 0; steam_recent_offset = 0; }
   if (text_target == TextTarget::search)
     start = all = true;
 }
 void Shell::commit_text() {
+  if(text_target==TextTarget::file_address){file_address_submit();return;}
+  if(text_target==TextTarget::file_search){end_text();return;}
+  if(text_target==TextTarget::file_rename){file_rename_submit();return;}
+  if(text_target==TextTarget::filename){notepad_save_submit();return;}
+  if(text_target==TextTarget::sheet){sheet_action(1503);return;}
   if (text_target == TextTarget::vapor_search) { end_text(); return; }
   if (text_target == TextTarget::document) {
     character('\n');
@@ -206,8 +232,13 @@ static char printable(uint16_t key, bool shift, bool caps) {
   }
 }
 void Shell::physical_key(uint16_t usage, uint8_t modifiers, uint32_t locks) {
-  input_device = InputDevice::keyboard;
+  input_device = InputDevice::keyboard;file_modifiers=modifiers;
+  if(files_busy()){if(usage==0x29)key(Key::back);return;}
+  if(text_target==TextTarget::filename&&!dialog&&(usage==0x28||usage==0x58)){commit_text();return;}
+  if(!dialog&&(text_target==TextTarget::file_address||text_target==TextTarget::file_search||text_target==TextTarget::file_rename)&&(usage==0x28||usage==0x58)){commit_text();return;}
+  if(file_browser_key(usage,modifiers))return;
   bool shift = (modifiers & 0x22) != 0, control = (modifiers & 0x11) != 0;
+  if(notepad_modal() && control && !((usage==4||usage==6||usage==0x1b||usage==0x19) && text_target==TextTarget::filename))return;
   if (!window && !dialog && !file_context && !file_properties &&
       !file_transfer.busy() && !start && !calendar && !quick && !tray &&
       text_target == TextTarget::none && control && shift &&
@@ -217,21 +248,37 @@ void Shell::physical_key(uint16_t usage, uint8_t modifiers, uint32_t locks) {
     save_preferences();
     return;
   }
+  if(window==6&&!start&&!dialog&&!sheet_prompt) {
+    if(control&&usage==0x16){sheet_action(1501);return;}
+    if(control&&usage==0x11){activate(1423);return;}
+    if(usage==0x29 && sheet.editing){sheet_action(1504);return;}
+    if(usage==0x28||usage==0x58||usage==0x2b||usage==0x52||usage==0x51 ||
+       ((usage==0x50||usage==0x4f)&&!sheet.editing)) {
+      if(!sheet_commit())return;
+      if(usage==0x2b)sheet.column=std::max(0,std::min(25,sheet.column+(shift?-1:1)));
+      else if(usage==0x50||usage==0x4f)sheet.column=std::max(0,std::min(25,sheet.column+(usage==0x50?-1:1)));
+      else sheet.row=std::max(0,std::min(99,sheet.row+(usage==0x52||shift?-1:1)));
+      if(sheet.row<sheet.first_row||sheet.row>=sheet.first_row+12)sheet.first_row=std::min(88,sheet.row);
+      if(sheet.column<sheet.first_column||sheet.column>=sheet.first_column+10)sheet.first_column=std::min(16,sheet.column);
+      return;
+    }
+    if(usage==0x4c&&!sheet.editing){sheet.set(sheet.row,sheet.column,"");return;}
+  }
   if (window == 5 && control && !dialog && !paint.modal()) {
     if (usage == 0x16) { paint.activate(*this, 702); return; }
     if (usage == 0x1d) { if (shift) paint.redo(); else paint.undo(); return; }
     if (usage == 0x1c) { paint.redo(); return; }
   }
-  if (control && usage == 0x16 && document.active && !dialog &&
-      !notepad_prompt) {
-    notepad_action(601); // Ctrl+S
+  if (control && usage == 0x16 && window == 4 && document.active && !dialog &&
+      !notepad_modal()) {
+    notepad_action(shift?606:601); // Ctrl+S / Ctrl+Shift+S
     return;
   }
-  if (control && usage == 0x1a && window == 4 && !dialog && !notepad_prompt) {
+  if (control && usage == 0x1a && window == 4 && !dialog && !notepad_modal()) {
     notepad_close(); // Ctrl+W
     return;
   }
-  if (text_target == TextTarget::document && !dialog && !notepad_prompt) {
+  if (text_target == TextTarget::document && !dialog && !notepad_modal()) {
     if (usage == 0x4a || usage == 0x4d) {
       if (usage == 0x4a)
         document.home(control);
@@ -261,7 +308,12 @@ void Shell::physical_key(uint16_t usage, uint8_t modifiers, uint32_t locks) {
       return;
     }
   }
-  if (control && usage == 0x0f && !dialog) {
+  if(control&&!dialog&&text_target!=TextTarget::none&&(usage==6||usage==0x1b||usage==0x19)){
+    if(usage==0x19){if(!clipboard_text.empty())insert_text(clipboard_text.c_str());}
+    else if(text_selection){clipboard_text=buffer(*this);if(usage==0x1b)clear_text();}
+    return;
+  }
+  if (control && usage == 0x0f && !dialog && !file_rename_prompt) {
     activate(34);
     begin_text(TextTarget::address);
     text_selection = true;
@@ -348,7 +400,7 @@ void Shell::physical_key(uint16_t usage, uint8_t modifiers, uint32_t locks) {
 }
 void Shell::draw_text_field(int x, int y, int available, TextTarget target,
                             const char *placeholder) {
-  const char *value = target == TextTarget::address ? address : search;
+  const char *value = target == TextTarget::sheet ? sheet.edit : target == TextTarget::address ? address : search;
   bool active = text_target == target;
   if (!value[0]) {
     text(x, y, placeholder, 0, muted());

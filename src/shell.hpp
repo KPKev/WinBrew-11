@@ -12,10 +12,11 @@
 #include <cstdint>
 namespace ww {
 constexpr int W = 1920, H = 1080;
+constexpr int HitCapacity = 512;
 constexpr size_t AtlasBytes = icons::Bytes;
 enum class Action { none, quake, playden, browser };
 enum class InputDevice { controller, mouse, keyboard };
-enum class TextTarget { none, search, address, document, vapor_search };
+enum class TextTarget { none, search, address, document, filename, file_address, file_search, file_rename, sheet, vapor_search };
 enum class Key {
   start,
   back,
@@ -37,7 +38,8 @@ struct Rect {
 };
 struct FileEntry {
   char name[256]{};
-  bool directory = false;
+  bool directory = false, metadata = false;
+  fileops::Info info;
 };
 struct Hit {
   Rect r;
@@ -94,22 +96,114 @@ struct Shell {
   int desktop_position_count = 0;
   std::uint64_t pad_touch_icon_key = 0;
   int pad_touch_icon_dx = 0, pad_touch_icon_dy = 0;
-  FileEntry files[128]{};
+  std::vector<FileEntry> files;
+  static constexpr int MaximumFiles=8192;
+  struct FilePlace { std::string path; int location=420; };
+  struct FileTab { std::vector<FilePlace> history; int position=-1, scroll=0, view=0; std::string query; };
+  struct FileDrive { std::string label,path,letter; int location=0,kind=1; bool capacity=false; uint64_t total=0,free=0; };
+  struct FileNav { std::string label,path; int location=0,depth=0,kind=5; bool group=false,expandable=false,expanded=false; };
+  struct FileBranch { std::string path; std::vector<std::string> children; };
+  std::vector<FileTab> file_tabs;
+  std::vector<FileDrive> file_drives;
+  std::vector<FileNav> file_nav;
+  std::vector<FileBranch> file_branches;
+  std::vector<std::string> file_expanded, file_selection, file_crumbs;
+  std::vector<int> file_matches;
+  std::vector<fileops::Clipboard> file_batch_clipboard,file_batch_queue,file_recycle_queue;
+  std::string file_batch_destination, clipboard_text;
+  size_t file_batch_index=0,file_recycle_index=0;
+  bool file_batch_active=false,file_recycle_active=false,file_transfer_from_clipboard=true;
+  bool file_drag_pending=false,file_drag_active=false,file_drag_collapse=false;
+  int file_drag_x=0,file_drag_y=0;
+  std::vector<fileops::Clipboard> file_drag_items;
+  void file_drag_begin();
+  void file_drop();
+  int file_tab=0,file_scroll=0,file_view=0,file_sort=0,file_visible_count=0,file_nav_scroll=0,file_nav_total=0,file_columns=1,file_compat_page=0;
+  int file_visible[80]{};
+  bool file_known_folders_ready=false,file_preview_pane=false;
+  std::string file_preview_for;
+  int file_context_nav_location=0,file_selection_anchor=-1;
+  uint8_t file_modifiers=0;
+  bool file_sort_descending=false,file_sort_dirty=false,file_show_hidden=false,file_select_mode=false,file_history_replay=false,file_pc_expanded=true,file_network_expanded=true;
+  bool file_scroll_drag=false,file_nav_drag=false,file_rename_prompt=false,file_properties_multiple=false;
+  int file_menu_kind=0;
+  Rect file_scroll_track{},file_nav_bounds{},file_nav_track{},file_address_bounds{},file_search_bounds{};
+  std::uint64_t file_drive_next_scan=0;
+  char file_address[1024]{},file_query[256]{},file_rename_name[256]{},file_rename_path[1024]{};
+  fileops::Info file_rename_expected;
+  bool files_busy() const { return file_transfer.busy() || file_purge.busy() || file_batch_active || file_recycle_active; }
+  void file_browser_ui(Rect);
+  void file_sort_list();
+  void file_update_matches();
+  void file_browser_action(int);
+  bool file_browser_key(uint16_t,uint8_t);
+  void file_scroll_by(int);
+  void file_nav_scroll_by(int);
+  void file_position_scroll(int,bool=false);
+  int file_hit_index(int) const;
+  void file_select_row(int,bool=false);
+  void file_context_selected();
+  void file_address_submit();
+  void file_history_record();
+  void file_history_move(int);
+  void file_tab_switch(int);
+  void file_tab_new(const char * = nullptr);
+  void file_tab_close(int);
+  void file_copy_selection(bool);
+  void file_recycle_selection();
+  void file_begin_rename();
+  void file_rename_submit();
+  void file_drive_refresh();
+  char console_storage_root[1024]{},user_files_root[1024]{};
+  std::string file_c_root() const;
+  bool configure_console_storage(const char *,const char *);
+  std::string file_user_root() const;
+  std::string file_friendly_path(const char *) const;
+  std::string file_current_label() const;
+  void file_popup(int,Rect);
+
   int file_count = 0, file_page = 0, file_error = 0, file_location = 400;
   bool file_truncated = false, file_games = false, file_preview_open = false;
   char file_path[1024] = "", file_root[1024] = "", file_preview[1024] = "";
   char file_error_stage[16] = "";
   fileops::Clipboard file_clipboard;
-  fileops::Transfer file_transfer;
-  fileops::Info file_properties_info;
+  fileops::TreeTransfer file_transfer;
+  fileops::Purge file_purge;
+  bool recycle_confirmation = false;
+  void empty_recycle_request(const char *);
+  fileops::Info file_properties_info, file_context_info;
   fileops::State file_transfer_seen = fileops::State::idle;
+  bool file_new = false, file_context_desktop = false;
+  Rect file_new_bounds{};
   bool file_context = false, file_properties = false, file_context_item = false;
   int file_selected = -1;
+  int shortcut_context_id = 0;
+  std::uint32_t shortcut_context_app = 0;
+  bool shortcut_context_taskbar = false;
+  std::uint64_t taskbar_hidden = (1ULL<<36)|(1ULL<<37)|(1ULL<<38), desktop_hidden = 0;
   Rect file_context_bounds{}, file_content_bounds{}, file_window_bounds{};
   char file_context_path[1024] = "", file_context_folder[1024] = "",
        file_properties_path[1024] = "";
   TextDocument document;
   Paint paint;
+  FileEntry desktop_files[64]{};
+  char desktop_folder_path[1024]{},desktop_rendered_paths[64][1024]{};
+  int desktop_file_count=0;
+  std::uint64_t desktop_files_next_scan=0;
+  void desktop_folder(char *,size_t) const;
+  void desktop_files_refresh();
+  SheetDocument sheet;
+  bool notepad_save_dialog = false, notepad_replace = false, notepad_save_as_mode = false;
+  char notepad_filename[256]{},notepad_save_path[1024]{};
+  std::unique_ptr<TextDocument> notepad_save_target;
+  void notepad_name_init();
+  void notepad_save_submit();
+  void notepad_save_finished();
+  bool notepad_modal() const { return notepad_prompt || notepad_save_dialog || notepad_replace; }
+  bool notepad_modal_hit(int) const;
+  bool sheet_prompt = false;
+  int sheet_pending = -1;
+  int notepad_menu = 0;
   games::Inventory game_inventory;
   int library_selection = -1, library_page = 0;
   bool library_downloads = false, steam_panel = false;
@@ -194,7 +288,7 @@ struct Shell {
   char save_stage[32] = "", network_name[40] = "Network", network_ip[32] = "";
   char active_title[20] = "";
   int settings_page = 0, icon_size = 0, accent = 0, background = 0;
-  Hit hits[128]{};
+  Hit hits[HitCapacity]{};
   int count = 0;
   Action pending = Action::none;
   bool owner_check_requested = false;
@@ -238,6 +332,9 @@ struct Shell {
   bool vapor_game_portrait(std::uint32_t, Rect);
   void update_steam_art(std::uint32_t);
   void text(int, int, const char *, int = 0, uint32_t = 0xff202020);
+  void small_text(int,int,const char*,uint32_t,int=7);
+  int small_width(const char*,int=7) const;
+  void small_fit(int,int,int,const char*,uint32_t,int=7);
   int width(const char *, int = 0);
   void text_fit(int, int, int, const char *, int, uint32_t);
   void icon(int, int, int, int);
@@ -284,6 +381,12 @@ struct Shell {
   void notepad_action(int);
   void notepad_close();
   void notepad_ui(Rect);
+  void sheet_ui(Rect);
+  void sheet_action(int);
+  bool sheet_commit();
+  bool sheet_open(const char *);
+  bool sheet_guard(int);
+  void new_document(int);
   void notepad_prompt_ui();
   void notepad_error();
   void brand_icon(int, int, int, bool = false);

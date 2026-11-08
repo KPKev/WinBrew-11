@@ -87,7 +87,7 @@ int main() {
     auto disabled = shell.context_submenu_bounds();
     assert(disabled.w == 296 && disabled.h == 304);
     shell.draw();
-    shell.pointer(disabled.x + 80, disabled.y + 20, true);
+    shell.pointer(disabled.x + 80, disabled.y + 50, true);
     assert(shell.context && shell.context_submenu == 3 && !shell.dialog);
     shell.key(ww::Key::back);
     shell.key(ww::Key::back);

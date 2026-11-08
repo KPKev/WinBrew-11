@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build
+python3 tests/test_vapor_native_module_modes.py
 python3 tests/test_prepare_steam_registration_reconcile.py
 python3 tests/test_prepare_vapor_title_remover.py
 python3 tests/test_prepare_vapor_file_shims.py
@@ -219,8 +220,10 @@ g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/
 for state in desktop start library calendar settings personalization browser keyboard dark about mouse quick tray input search-keyboard keyboard-dark ps5-controller controller-test; do ./build/preview "$state" "build/$state.ppm"; done
 
 bash tools/test-game-inventory.sh
-g++ -std=c++20 -O2 src/notepad_document.cpp src/privilege.cpp tests/notepad_document_test.cpp -o build/notepad-document-test
+g++ -std=c++20 -O2 src/notepad_document.cpp src/image_codec.cpp src/privilege.cpp tests/notepad_document_test.cpp -o build/notepad-document-test
 ./build/notepad-document-test
+g++ -std=c++20 -O2 src/notepad_document.cpp src/image_codec.cpp src/privilege.cpp tests/notepad_saveas_test.cpp -o build/notepad-saveas-test
+./build/notepad-saveas-test
 g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp tests/notepad_input_test.cpp -o build/notepad-input-test
 ./build/notepad-input-test
 
@@ -235,6 +238,10 @@ g++ -std=c++20 -O2 src/image_codec.cpp src/privilege.cpp tests/paint_save_failur
 
 g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/explorer_fileops_test.cpp -o build/explorer-fileops-test
 ./build/explorer-fileops-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/explorer_treeops_test.cpp -o build/explorer-treeops-test
+./build/explorer-treeops-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/explorer_purge_test.cpp -o build/explorer-purge-test
+./build/explorer-purge-test
 g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp tests/explorer_context_test.cpp -o build/explorer-context-test
 ./build/explorer-context-test
 
@@ -259,3 +266,31 @@ g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/
 g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp tests/owner_check_ui_test.cpp -o build/owner-check-ui-test
 ./build/owner-check-ui-test
 bash tools/test-owner-admission.sh
+
+g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp tests/office_apps_test.cpp -o build/office-apps-test
+./build/office-apps-test
+
+g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp tests/office_xlsx_test.cpp -o build/office-xlsx-test
+./build/office-xlsx-test
+
+# Actual Save As / close-name / recycle confirmation UI fixture.
+g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp tests/saveas_recycle_ui_test.cpp -o build/saveas-recycle-ui-test
+./build/saveas-recycle-ui-test
+
+# Actual Windows-style Explorer navigation and operation fixture.
+sources='src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp'
+g++ -std=c++20 -O1 $sources tests/explorer_browser_test.cpp -o build/explorer-browser-test
+./build/explorer-browser-test
+
+# Actual console C/user profile migration and failure-retention checks.
+sources='src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp'
+g++ -std=c++20 -O1 $sources tests/console_profile_test.cpp -o build/console-profile-test
+./build/console-profile-test
+
+# Standalone recovery-tree, confirmed purge and Save As model checks.
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/explorer_treeops_test.cpp -o build/explorer-treeops-test
+./build/explorer-treeops-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/explorer_purge_test.cpp -o build/explorer-purge-test
+./build/explorer-purge-test
+g++ -std=c++20 -O2 src/notepad_document.cpp src/image_codec.cpp src/privilege.cpp tests/notepad_saveas_test.cpp -o build/notepad-saveas-test
+./build/notepad-saveas-test
