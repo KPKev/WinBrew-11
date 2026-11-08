@@ -48,6 +48,13 @@ Do not edit `app.db`, rename title IDs, or install the old PPSA77381 package to 
 
 Directories normally use `0755`; files use the individual `0644` or `0755` settings recorded for the release. Use the helper instead of setting everything to `0777`. It checks manifest identities, path types, and modes; it does not hash every uploaded payload file. If corruption is suspected, verify the original download and compare/retransfer affected files while the app is closed.
 
+Native libraries in `sce_module/*.prx`, including `libc.prx`, require `0755`.
+Setting `sce_module/libc.prx` to `0644` causes the PS5 loader's
+`mount flag / attribute error` before the desktop starts, even when its file
+hash is correct. The permission helper and app ZIP packager preserve that
+executable permission. A launch API success or a live process alone does not
+establish that the desktop has loaded; check the loader log and visible UI.
+
 ## The tile appears, but WinBrew closes or shows a black screen
 
 1. Record the exact error and when it happens. Check that the jailbreak and your loader's required payloads are running for this session.
@@ -105,3 +112,19 @@ Open [WinBrew-11 Issues](https://github.com/KPKev/WinBrew-11/issues) and include
 The combined release supplies the pinned Blender launcher and runtime during normal installation/reinstallation. It includes Vulkan defaults, independent cursor updates, wheel forwarding and relaunch-folder discovery. Confirmed scope is interactive workspace/pointer/menus/zoom, not large-scene or render/export stability. The owner confirms the earlier unexpected exit was resolved by the cursor repair. See [Blender runtime details](blender-runtime.md).
 
 Counter-Strike's working result is offline play. Splitgate currently stops at server authentication; Kane's Wrath reaches only its first splash screen. Official online work is outside the scope, and co-op testing is deferred.
+
+## A previously compatible game stopped working
+
+This is an active development build. Skyrim Special Edition is currently owner-reported not working after recent changes; the cause is not confirmed. Another affected title has not yet been identified. Earlier successful results remain historical reports, not guarantees for every release. Check [compatibility](compatibility.md) and newer releases often. Report the exact game, last working release and current failure; keep bottles, settings and saves intact.
+
+Enshrouded's `owned validated template`, changing-settings and frozen-operation messages required investigation of an installed preparation transaction. The owner eventually confirmed the game running after scoped recovery. This is not permission to delete arbitrary journals, force a game Ready, or erase a Wine environment; report the state instead of guessing a repair.
+
+## Explorer crashes or shows phantom 2 MB drives
+
+Use the current development package and its matching helper. Earlier local candidates used an unsupported managed-title storage query; this release uses the checked libkernel query and preserves native PRX executable modes. Empty `/mnt/usbN` folders belong to a containing filesystem and are not real connected drives. Current detection requires the actual mount identity; USB devices should appear/disappear within about two seconds while Explorer is open.
+
+## Where did D: and my old small C: go?
+
+C: now represents `/data`, the same large console storage previously shown as D:. No partition was resized. Personal folders use `/data/WinBrew/Users/Default`, and Console Root provides broader accessible paths. The original small private area still holds internal settings/account state and retained original personal files; hiding its old drive card does not free that filesystem allocation.
+
+If personal storage setup fails, WinBrew reports the error and leaves the original files available. Do not delete an unknown existing profile or a `.migrating-v1` stage to force progress. Back up both locations and report the error. See [migration details](explorer-storage.md).

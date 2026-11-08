@@ -2,26 +2,24 @@
 
 A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created by **KPKev** with AI development assistance. Supported Windows games use Playden's Wine-based PS5 runtime. WinBrew 11 is an independent homebrew application; it does not install Microsoft Windows.
 
-**Updated November 7, 2026:** the [combined Blender release](https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1) supplies the complete **PPSA77382** application with the existing CS2 repair and new automatic Blender compatibility bundle. The 3,674-file package passed build, installer and archive verification. Owner acceptance applies to the repaired Blender installation; this combined package has not been console-tested.
+> [!WARNING]
+> **Active development: game compatibility can change between builds.** Some previously working games may temporarily fail to launch or behave unexpectedly after code changes. **Skyrim Special Edition is currently reported not working.** Earlier compatibility reports are historical results, not guarantees for this build. Please check back often for updates and fixes.
 
-## Working games
+**November 7, 2026 development update:** the [Explorer, Office and console-storage release](https://github.com/KPKev/WinBrew-11/releases/tag/desktop-storage-dev-v1) includes the owner-tested Windows-style File Explorer, larger console-backed C:, personal-folder migration, removable-drive detection, Notepad Save As, Paint, spreadsheet improvements, and clearer Vapor preparation feedback. It preserves the existing CS2 and Blender runtime bundles. See the [development report](docs/reports/development-20261107.md) and [current verification](docs/current-status.md).
 
-| Game | Confirmed result | Multiplayer scope |
-| --- | --- | --- |
-| **Schedule I** | Working, owner-reported. | Multiplayer/co-op has not been established by this report. |
-| **Counter-Strike 2 (Steam app 730, called “CSGO” in owner reports)** | Offline gameplay with bots works. The complete fixed runtime is selected automatically during normal CS2 installation/reinstallation. | LAN/local multiplayer **may work but is untested**. Internet tunneling is also untested. In-game Steam authentication and official online matchmaking remain unsupported. |
-| **The Elder Scrolls V: Skyrim Special Edition** | Working, owner-reported. | Offline report; co-op untested. |
-| **Blackjack 21: The Blackjackiest** | Working, owner-reported. | Offline report; co-op untested. |
-| **Golf With Your Friends** | Working, owner-reported. | Offline report; co-op untested. |
-| **Quake II RTX** | Working, owner-reported. | Offline report; co-op untested. |
+## Game status and earlier reports
 
-The tested Counter-Strike installation is CS2/app 730, not a separately tested legacy CS:GO executable. See the [compatibility matrix](docs/compatibility.md).
+| Game/application | Status and confirmed scope |
+| --- | --- |
+| **Skyrim Special Edition** | **Current regression: owner reports it is not working.** It worked in an earlier build; a fix is pending and the cause has not been established. |
+| **Enshrouded** | Owner confirmed the game starts and runs after scoped preparation-state recovery. Long-session, save/load and multiplayer coverage remain unverified. |
+| **Counter-Strike 2 / Steam app 730** | Earlier owner-confirmed offline gameplay with bots; the fixed runtime is preserved. Official in-game Steam authentication/matchmaking remain unsupported. |
+| **Schedule I; Blackjack 21; Golf With Your Friends; Quake II RTX** | Earlier owner-reported working results. They have not all been re-tested against this desktop/storage build. |
+| **Blender** | Earlier repaired workspace, pointer/menus and wheel zoom confirmed. Full render/export and long-session coverage remain unverified. |
+| **Kane's Wrath** | First splash only; no confirmed menu/gameplay. A path-handling experiment remains unqualified and is not a promised fix in this release. |
+| **Splitgate** | Reaches login but is blocked by server authentication; no playable result confirmed. Community offline/LAN ideas remain untested here. |
 
-## Combined Blender release
-
-The Blender compatibility changes are integrated into normal installation/reinstallation. The owner confirmed workspace visibility, smooth pointer/menus and responsive wheel zoom; the owner confirms the earlier unexpected exit was resolved by the cursor repair. Kane's Wrath currently reaches only its first splash screen. Splitgate reaches login and is blocked by server authentication. See [compatibility](docs/compatibility.md), [Blender runtime details](docs/blender-runtime.md), and the [release notes](docs/release-notes-next.md).
-
-Counter-Strike's confirmed result is offline play. Online play does not work for the listed games and official online support is not being pursued. Co-op may be investigated later using other GitHub projects, but it remains unimplemented and untested. That work is deferred; the current priority is making the games function locally. The complete combined download is linked below.
+The owner also reports another affected game whose title has not yet been identified. See the [compatibility matrix](docs/compatibility.md) for current regressions, historical results and multiplayer limits. The tested “CSGO” report refers to CS2/app 730, not a separately tested legacy CS:GO executable.
 
 ## Get the latest runnable version
 
@@ -40,33 +38,35 @@ Vapor uses Playden's underlying runtime, so the console still needs its supporti
 
 ### Download and install
 
-1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1). Under **Assets**, download **Vapor-Combined-Blender-019.1.zip**, **Vapor-base-kit-0.13.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. The base kit is needed for a first installation.
+1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/desktop-storage-dev-v1). Under **Assets**, download **WinBrew-11-Desktop-Storage-Dev-v1.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. For a first installation, also download the unchanged [Vapor-base-kit-0.13.zip](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip).
 2. Extract the ZIPs on your computer. Copy the complete **PPSA77382** folder to **`/data/homebrew/PPSA77382`** on the PS5. Copy **playden-kit** to **`/data/wine11/kits/playden-kit`**. Keep every file and subfolder; copying only `eboot.bin` is incomplete.
 3. Check the copied files' permissions using the supplied helper, let your homebrew loader scan the app folder, then launch **WinBrew 11** from Home. Open **Vapor** inside it and sign into your own Steam account.
 
 **Follow the [step-by-step installation guide](docs/getting-started.md) for the full walkthrough**, including download checks, exact folder layouts, permission commands, and first-launch checks. Already installed? Use its [update steps](docs/getting-started.md#updating-an-existing-installation). Stuck? See [troubleshooting](docs/troubleshooting.md).
 
-The downloads above are for the documented `combined-blender-v1` release. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
+The app download above is the `desktop-storage-dev-v1` development release. The base kit and runtime corresponding-source downloads remain unchanged from `combined-blender-v1`. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
 
 Clone or pull **main** for current code and documentation. SDKs, downloaded runtimes, and generated outputs are separate from Git. The [source-build guide](docs/source-build.md) explains the prerequisites and full target, `tools/build-vapor-cs2.sh`. The historical desktop-only `build-ps5.sh` is not the complete current Steam/Vapor application.
 
-## Included in the combined update
+## Included in this development update
 
-The v1.1 hotfix sends an existing Ready CS2 installation through preparation when its selected runtime is not current, instead of skipping directly to a refused launch. All 11 installed titles passed the runtime inventory/folder-ownership audit. See the [hotfix verification report](docs/reports/cs2-handoff-20261107.md) for scope and the legacy manual-install ownership correction.
+- **Windows-style File Explorer:** tabs, back/forward/up navigation, breadcrumbs, address entry, current-folder search, a left-aligned navigation tree, real drive capacity bars, Details/List/Tiles views, sorting, text preview, multiple selection and drag/drop.
+- **File operations:** verified copy/cut/paste, no-overwrite rename, recoverable delete, confirmed Empty Recycle Bin with progress/cancel, compact centered right-click menus, and desktop/taskbar shortcut removal or unpinning.
+- **Large C: and personal folders:** C: represents `/data`, the large console storage previously displayed as D:. Personal folders live in `C:\WinBrew\Users\Default`. The first successful startup copies and verifies the six known personal folders, including recovery stores, before switching; originals remain available. Internal account/settings state stays in its existing private location. No partition resizing is performed.
+- **Console Root:** browse other accessible console paths. These are real files; edits affect the console. Use Vapor or the console's uninstall flow for registered games rather than deleting their folders manually.
+- **Removable storage:** actual mounted USB/extended storage appears with its real size and disappears on unplug, normally within about two seconds. Empty connection folders no longer appear as 2 MB drives.
+- **Notepad:** editable Save/Save As and close-prompt names, `.txt` completion, replacement confirmation and preservation of unsaved edits on failure.
+- **Paint and Spreadsheet:** drawing/image tools plus CSV and bounded `.xlsx` open/edit/save, worksheet switching and workbook-part preservation. These are built-in WinBrew applications, not Microsoft Office or feature-complete replicas. See [Office capabilities and limits](docs/office-apps.md).
+- **Vapor feedback:** gold status messages and a smoothly pulsing Play button while Preparing/Starting, shared by game pages. An animation indicates activity, not guaranteed successful preparation.
+- Existing library discovery, Steam sign-in/downloads, cached artwork/news, per-game controls and pinned CS2/Blender runtime bundles are retained.
 
-- Steam sign-in, automatic game discovery, downloads, and per-game preparation through the existing Playden services.
-- Persistent per-game hero images, logos, icons, covers, portraits, store descriptions/genres, and news snapshots. Successfully cached content is reused after restart rather than silently replaced when Steam changes it.
-- A **Refresh game cache** button on each game's detail page to clear that game's saved presentation data and request the latest content. Ownership, installation, download, and launch decisions remain live service data.
-- Mouse, USB keyboard, and controller input; desktop/Start/taskbar shortcuts; favorites and library search; download controls and per-game controller settings; Paint, Notepad, and a system-browser launcher.
-- The window-shadow fix that the owner confirmed made Vapor smooth: hidden window pixels are no longer blended 18 times per frame. Further improvements cache glyph coverage, Recent Games ordering, shortcut labels, and download-view updates.
-- Automatic complete **cs2-019.1** runtime selection for Steam app 730, including the tested derived `ntdll.prx`. Other games retain their configured/base runtime.
-- Unlocked default profiles for Skyrim Special Edition, Terraria, Brotato, Counter-Strike: Source, and Blender. Profiles do not establish gameplay compatibility, and saved player settings retain precedence.
+See [Explorer and storage](docs/explorer-storage.md), [file actions](docs/file-context-actions.md), [Notepad Save As](docs/notepad-save-as.md), and the [changelog](CHANGELOG.md).
 
 ## Verification
 
-The previous installed CS2 package had **1,856 files**; the new downloadable combined package has **3,674 files**. The new archive's application/runtime contents, Unix file modes, CRCs and final manifest were verified against pinned hashes. Console startup acceptance belongs to the earlier installed package and repaired Blender copy. Tests cover cache persistence/reset, pixel-identical text/shadows, library discovery, input, downloads, save-preserving migration, and complete CS2 runtime first-install/reinstall paths.
+The exact application executable was installed and readback-verified on the owner's console. All **3,675 packaged files, including the manifest**, passed content and mode checks. The owner confirmed the Explorer layout, drive insertion/removal, large C: replacing D:, Desktop files and Console Root. Personal-folder copies were independently compared byte-for-byte against the retained originals.
 
-Owner gameplay reports are separate from host tests and startup checks. Local rendering benchmarks are **not PS5 FPS measurements**. A fixture reinstall is not a claim that the owner's entire CS2 download was repeated. See [current verification](docs/current-status.md) and the [changelog](CHANGELOG.md).
+Automated checks cover file/profile migration, failure/conflict retention, input, file menus, Office/CSV/XLSX and native module permissions. Spreadsheet interoperability checks preserve supported edits and unedited workbook parts; that does not establish Excel feature parity. Not every application action or game has been physically re-tested in the final build. Historical game reports, current regressions, host tests and console startup checks are recorded separately in [current verification](docs/current-status.md).
 
 ## Screenshots
 

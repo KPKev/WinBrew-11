@@ -1,6 +1,6 @@
 # Current source and build entry points
 
-The default **main** branch is the current source tree. The `combined-blender-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
+The default **main** branch is the current source tree. The `desktop-storage-dev-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
 
 **Only want to install it on your jailbroken PS5? Follow [the installation walkthrough](getting-started.md).** You do not need this page, Git, a compiler, or a PS5 SDK to use the ready-made release. This page is for developers rebuilding the app.
 
@@ -71,3 +71,13 @@ Use a new build name/output ZIP. These scripts verify runtime pins and package t
 ## Git and Releases
 
 Git contains application source, runtime source patches, tested selection logic, manifests, tools, regression tests, docs, and licenses. Generated outputs, dependency checkouts, runtime caches, console state, accounts, and game content are excluded. Releases supply complete app/base-kit archives, runtime payloads, corresponding source, and checksums. The [runtime guide](cs2-runtime.md) explains each asset.
+
+## Current Explorer/Office/storage validation
+
+The development update changes `Shell` and file-transfer state layouts. Build the fresh native UI and every bridge object together; do not reuse older UI objects against the new headers. The normal prepared-machine target already runs the fresh snapshot steps. Compiled-source receipts are separate from owner-specific console logs.
+
+Focused regression files include `tests/console_profile_test.cpp`, `explorer_browser_test.cpp`, `explorer_treeops_test.cpp`, `explorer_purge_test.cpp`, `saveas_recycle_ui_test.cpp`, `office_apps_test.cpp` and `office_xlsx_test.cpp`; the host UI cases are registered in `tools/test.sh`. `python3 tests/test_vapor_native_module_modes.py` checks PRX packaging/repair modes.
+
+Native storage queries must use the checked managed-title libkernel `_fstatfs` resolution. Ordinary `statvfs`/`statfs` imports can resolve differently in an unmanaged payload and a managed app; a passing payload-only test does not qualify the managed UI. External drives require the returned mount name to match the requested root. The profile copy keeps the app's qualified per-operation root gate and creator ownership; PS5 UID 0 does not automatically bypass UID 1-only permissions.
+
+The profile initializer copies only six known personal folders, including their recovery stores, into a fresh staging tree; unsupported links, unknown destinations, stale stages and changed sources are refused. It publishes the verified profile marker only after copy verification. Existing verified profiles remain authoritative across launches, so later edits are not overwritten by stale original files.

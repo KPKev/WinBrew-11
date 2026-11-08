@@ -1,26 +1,41 @@
 {
-  "updated": "2026-11-07",
+  "schema": "winbrew-public-verification/1",
+  "updated_local_date": "2026-11-07",
+  "timezone": "America/Chicago",
+  "release_tag": "desktop-storage-dev-v1",
   "application": {
     "title_id": "PPSA77382",
     "version": "01.016.000",
-    "verified_package_files": 1856,
-    "executable_sha256": "2d322963599fc2d159a7458254a5a674f791cdbd1813e196c0bcc8c851b2736c",
-    "manifest_sha256": "933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be",
+    "package_files_including_manifest": 3675,
+    "executable_sha256": "58ef324568b3235500d9baaa14bb7e78baefa30624427810a0feafd5e1ca673e",
+    "manifest_sha256": "8f83086ba79a152c6926140828c45e361c8cc57e2894dac5a19c9e3c03d2b4a8",
     "installed_readback_verified": true,
-    "startup_and_input_initialization_verified": true,
-    "further_combined_update_owner_testing": "pending"
+    "startup_verified": true,
+    "owner_confirmed": [
+      "Explorer opening/layout",
+      "USB hotplug/real capacity",
+      "large C replaces D",
+      "Desktop files present",
+      "Console Root visible"
+    ],
+    "personal_migration_byte_verified": true,
+    "original_personal_files_retained": true
+  },
+  "game_regressions": {
+    "skyrim_special_edition": "owner reports currently not working; earlier success historical; cause unconfirmed",
+    "additional_affected_title": "not identified"
   },
   "games": {
-    "schedule_i": {"status": "owner-reported working", "multiplayer": "not established"},
-    "cs2_app_730": {
-      "status": "owner-confirmed offline gameplay with bots",
-      "lan_local_play": "untested",
-      "internet_tunneling": "untested",
-      "in_game_steam_authentication_and_official_matchmaking": "unsupported",
-      "legacy_csgo_separately_tested": false
-    }
+    "enshrouded": "starts/runs owner-confirmed after scoped recovery; long-session/save/network unverified",
+    "cs2_app_730": "earlier offline bots confirmed; matched runtime preserved; official matchmaking unsupported",
+    "blender": "earlier interactive repair confirmed; render/export unverified",
+    "kanes_wrath": "first splash only",
+    "splitgate": "authentication blocked; no qualified LAN workaround"
   },
-  "owner_shadow_fix_feedback": "Smooth now",
-  "hardware_fps_measured": false,
-  "owner_game_reinstalled_for_combined_app_update": false
+  "limits": [
+    "Not every game re-tested on final build",
+    "Advanced XLSX physical testing incomplete",
+    "Host render timings are not PS5 FPS"
+  ],
+  "private_diagnostics_published": false
 }

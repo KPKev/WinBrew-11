@@ -32,11 +32,11 @@ Web File Manager starts looking for a free port at **8888** and can choose **888
 
 ## 1. Download the right files
 
-On your computer, open the [combined-blender-v1 release](https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1). Expand **Assets** and save these four files into one new folder:
+On your computer, open the [desktop-storage-dev-v1 development release](https://github.com/KPKev/WinBrew-11/releases/tag/desktop-storage-dev-v1). Save the new app, checksum list and matching permission helper from **Assets**. For a first installation, also download the unchanged [base kit](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip). Keep these four files together:
 
 | File | What it is for |
 | --- | --- |
-| `Vapor-Combined-Blender-019.1.zip` | The complete app, including the fixed CS2 and Blender runtimes. |
+| `WinBrew-11-Desktop-Storage-Dev-v1.zip` | The complete app, including the fixed CS2 and Blender runtimes. |
 | `Vapor-base-kit-0.13.zip` | The shared game runtime needed for a first installation. |
 | `SHA256SUMS.txt` | Expected download fingerprints, used to check the files. |
 | `fix-vapor-install-modes.py` | Checks/restores file permissions after copying. |
@@ -50,7 +50,7 @@ A SHA-256 checksum is a file's fingerprint. Checking it catches incomplete or ch
 On Windows, open the download folder, right-click empty space, and choose **Open in Terminal**. In PowerShell run:
 
 ```powershell
-Get-FileHash .\Vapor-Combined-Blender-019.1.zip -Algorithm SHA256
+Get-FileHash .\WinBrew-11-Desktop-Storage-Dev-v1.zip -Algorithm SHA256
 Get-FileHash .\Vapor-base-kit-0.13.zip -Algorithm SHA256
 Get-FileHash .\fix-vapor-install-modes.py -Algorithm SHA256
 ```
@@ -61,7 +61,7 @@ On Linux, use `sha256sum FILENAME`; on macOS, use `shasum -a 256 FILENAME`. Repl
 
 ## 2. Extract both ZIPs on your computer
 
-1. Right-click `Vapor-Combined-Blender-019.1.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
+1. Right-click `WinBrew-11-Desktop-Storage-Dev-v1.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
 2. Extract `Vapor-base-kit-0.13.zip` separately. Find the **playden-kit** folder.
 3. Check that `PPSA77382` contains `eboot.bin`, `manifest.json`, `sce_sys`, and `runtime`. Check that `playden-kit` contains `manifest.json` and its runtime files.
 
@@ -168,14 +168,23 @@ Vapor's Steam sign-in is for library/download services. It does not provide an a
 5. Repeat the permission check/repair. Omit `--base-kit` if the existing kit is already correctly configured.
 6. Repeat the desktop, input, Vapor sign-in/library, and game-launch checks. An app update does not require redownloading every game.
 
+This release also copies/verifies your six known personal folders into `/data/WinBrew/Users/Default` on first successful startup. Originals are retained, and internal account/settings data is not relocated. Back up this new personal-files folder separately; restoring an older app may show its older private Desktop instead. New-profile edits are not automatically copied back. See [storage and migration](explorer-storage.md).
+
 To roll back, close WinBrew and restore the backed-up app folder and its recorded permissions, preserving game/account/save data. Permission helpers are release-specific: use the matching helper/instructions for the version being restored.
+
+## Desktop storage and file tools
+
+Open **This PC** for the large console-backed C:. The separate D: card is hidden. Desktop/Documents/Downloads/Pictures/Music/Videos use `C:\WinBrew\Users\Default`; **Console Root** browses other accessible paths. USB entries appear only for actual mounted devices, with real capacities, and disappear after unplugging. This is a real-filesystem desktop environment, not Microsoft Windows or a repartitioning utility. See [Explorer/storage](explorer-storage.md) and [Office capabilities](office-apps.md).
+
+> [!WARNING]
+> **Active development: game compatibility can change between builds.** Some previously working games may temporarily fail to launch or behave unexpectedly after code changes. **Skyrim Special Edition is currently reported not working.** Earlier compatibility reports are historical results, not guarantees for this build. Please check back often for updates and fixes.
 
 ## What to expect
 
 - New games are detected by the live library service. Downloaded artwork/details are saved per game and reused.
 - Use **Refresh game cache** on a game's detail page to request updated artwork, descriptions, and news. This is a presentation refresh, not a game reinstall.
 - Steam app 730 automatically receives the complete bundled fixed runtime through normal preparation, including first installation/reinstallation. Blender (Steam app 365670) also receives its pinned runtime and launcher through normal preparation. Other games retain their runtime selection and saved player settings.
-- The owner reports Schedule I, CS2 offline bots, Skyrim Special Edition, Blackjack 21: The Blackjackiest, Golf With Your Friends and Quake II RTX working. Online play is unavailable for the listed games; official online support is not pursued and co-op is deferred. See [compatibility](compatibility.md).
+- Earlier owner reports include Schedule I, CS2 offline bots, Blackjack 21, Golf With Your Friends and Quake II RTX. **Skyrim Special Edition is now reported not working**, despite its earlier successful result. Other regressions may affect previously compatible games. Online play is unavailable for the listed games; official online support is not pursued and co-op is deferred. See [compatibility](compatibility.md).
 
 ## Source updates
 

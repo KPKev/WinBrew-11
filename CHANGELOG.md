@@ -1,5 +1,20 @@
 # Changelog
 
+## November 7, 2026 — desktop-storage-dev-v1 development update
+
+- Windows-style Explorer tabs, breadcrumb/address/search bars, left-aligned tree and details, drive cards, scrolling, sorting, multiple selection, views, preview, rename and drag/drop.
+- Verified copy/cut/paste, recoverable deletion, confirmed Empty Recycle Bin, compact centered context menus and taskbar unpinning.
+- Notepad Save As, editable save/close names, replacement confirmation and growing/wrapped dialogs. Paint and bounded CSV/XLSX workbook editing/preservation from the Office workstream.
+- C: now maps the large console `/data` storage; duplicate D: hidden. Verified personal-folder/recovery migration to `/data/WinBrew/Users/Default` retains originals and keeps private account/settings state in place. Console Root exposes other accessible locations.
+- Real mounted-device detection rejects empty 2 MB connection folders; USB insertion/removal and capacity refresh are owner-confirmed.
+- Gold Vapor status text and pulsing Preparing/Starting Play feedback. Owner-confirmed Enshrouded startup after scoped preparation-state recovery; not a universal journal-reset feature.
+- Corrected native PRX executable modes and replaced an unsupported managed-title storage import with the checked libkernel query. Owner-confirmed recovery from the Explorer crash.
+- Installed/readback-verified final executable; owner confirmed large C:, Desktop files, Console Root and prior USB hotplug behavior. Host/native file, profile, editor and workbook checks pass.
+- **Known regression:** owner now reports Skyrim Special Edition not working; another affected title remains unidentified. Historical compatibility is not a current-build guarantee.
+
+See [the detailed multi-workstream report](docs/reports/development-20261107.md).
+
+
 ## November 7, 2026 — combined-blender-v1 release
 
 - Blender: pinned installer/reinstall bundle, Vulkan defaults, independent cursor updates, mouse-wheel forwarding, loading-indicator fix and numbered sandbox discovery.
