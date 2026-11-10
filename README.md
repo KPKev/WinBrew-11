@@ -5,7 +5,7 @@ A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created b
 > [!WARNING]
 > **Active development: game compatibility can change between builds.** Some previously working games may temporarily fail to launch or behave unexpectedly after code changes. **Skyrim Special Edition is currently reported not working.** Earlier compatibility reports are historical results, not guarantees for this build. Please check back often for updates and fixes.
 
-**November 7, 2026 development update:** the [Explorer, Office and console-storage release](https://github.com/KPKev/WinBrew-11/releases/tag/desktop-storage-dev-v1) includes the owner-tested Windows-style File Explorer, larger console-backed C:, personal-folder migration, removable-drive detection, Notepad Save As, Paint, spreadsheet improvements, and clearer Vapor preparation feedback. It preserves the existing CS2 and Blender runtime bundles. See the [development report](docs/reports/development-20261107.md) and [current verification](docs/current-status.md).
+**November 10, 2026 development update:** the [Notepad, Start and Recycle Bin release](https://github.com/KPKev/WinBrew-11/releases/tag/notepad-start-recycle-dev-v1) adds tabbed Notepad with find and replace, improved mouse/controller context menus, Start pinning, a customizable display name and Recycle Bin recovery and emptying. The existing Vapor, CS2 and Blender runtimes remain included. See the [release notes](docs/release-notes-next.md) and [current verification](docs/current-status.md).
 
 ## Game status and earlier reports
 
@@ -14,7 +14,7 @@ A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created b
 | **Skyrim Special Edition** | **Current regression: owner reports it is not working.** It worked in an earlier build; a fix is pending and the cause has not been established. |
 | **Enshrouded** | Owner confirmed the game starts and runs after scoped preparation-state recovery. Long-session, save/load and multiplayer coverage remain unverified. |
 | **Counter-Strike 2 / Steam app 730** | Earlier owner-confirmed offline gameplay with bots; the fixed runtime is preserved. Official in-game Steam authentication/matchmaking remain unsupported. |
-| **Schedule I; Blackjack 21; Golf With Your Friends; Quake II RTX** | Earlier owner-reported working results. They have not all been re-tested against this desktop/storage build. |
+| **Schedule I; Blackjack 21; Golf With Your Friends** | Earlier owner-reported working results. They have not all been re-tested against this desktop/storage build. |
 | **Blender** | Earlier repaired workspace, pointer/menus and wheel zoom confirmed. Full render/export and long-session coverage remain unverified. |
 | **Kane's Wrath** | First splash only; no confirmed menu/gameplay. A path-handling experiment remains unqualified and is not a promised fix in this release. |
 | **Splitgate** | Reaches login but is blocked by server authentication; no playable result confirmed. Community offline/LAN ideas remain untested here. |
@@ -38,24 +38,25 @@ Vapor uses Playden's underlying runtime, so the console still needs its supporti
 
 ### Download and install
 
-1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/desktop-storage-dev-v1). Under **Assets**, download **WinBrew-11-Desktop-Storage-Dev-v1.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. For a first installation, also download the unchanged [Vapor-base-kit-0.13.zip](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip).
+1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/notepad-start-recycle-dev-v1). Under **Assets**, download **WinBrew-11-Notepad-Start-Recycle-Dev-v1.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. For a first installation, also download the unchanged [Vapor-base-kit-0.13.zip](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip).
 2. Extract the ZIPs on your computer. Copy the complete **PPSA77382** folder to **`/data/homebrew/PPSA77382`** on the PS5. Copy **playden-kit** to **`/data/wine11/kits/playden-kit`**. Keep every file and subfolder; copying only `eboot.bin` is incomplete.
 3. Check the copied files' permissions using the supplied helper, let your homebrew loader scan the app folder, then launch **WinBrew 11** from Home. Open **Vapor** inside it and sign into your own Steam account.
 
 **Follow the [step-by-step installation guide](docs/getting-started.md) for the full walkthrough**, including download checks, exact folder layouts, permission commands, and first-launch checks. Already installed? Use its [update steps](docs/getting-started.md#updating-an-existing-installation). Stuck? See [troubleshooting](docs/troubleshooting.md).
 
-The app download above is the `desktop-storage-dev-v1` development release. The base kit and runtime corresponding-source downloads remain unchanged from `combined-blender-v1`. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
+The app download above is the `notepad-start-recycle-dev-v1` development release. The base kit and runtime corresponding-source downloads remain unchanged from `combined-blender-v1`. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
 
 Clone or pull **main** for current code and documentation. SDKs, downloaded runtimes, and generated outputs are separate from Git. The [source-build guide](docs/source-build.md) explains the prerequisites and full target, `tools/build-vapor-cs2.sh`. The historical desktop-only `build-ps5.sh` is not the complete current Steam/Vapor application.
 
 ## Included in this development update
 
 - **Windows-style File Explorer:** tabs, back/forward/up navigation, breadcrumbs, address entry, current-folder search, a left-aligned navigation tree, real drive capacity bars, Details/List/Tiles views, sorting, text preview, multiple selection and drag/drop.
-- **File operations:** verified copy/cut/paste, no-overwrite rename, recoverable delete, confirmed Empty Recycle Bin with progress/cancel, compact centered right-click menus, and desktop/taskbar shortcut removal or unpinning.
+- **File operations:** recoverable delete, Recycle Bin item visibility and individual deletion, confirmation and cancellation before emptying, and collection of older recovery stores. Cross-drive recycling verifies copies before removing originals. Mouse and controller context menus expose file actions.
+- **Start and personalization:** pin or unpin built-in apps to the desktop, Start and taskbar; context menus keep the chosen Start or All Apps item visible. Change the display name in Personalization (default **WinBrew**); the existing folder path stays stable.
 - **Large C: and personal folders:** C: represents `/data`, the large console storage previously displayed as D:. Personal folders live in `C:\WinBrew\Users\Default`. The first successful startup copies and verifies the six known personal folders, including recovery stores, before switching; originals remain available. Internal account/settings state stays in its existing private location. No partition resizing is performed.
 - **Console Root:** browse other accessible console paths. These are real files; edits affect the console. Use Vapor or the console's uninstall flow for registered games rather than deleting their folders manually.
 - **Removable storage:** actual mounted USB/extended storage appears with its real size and disappears on unplug, normally within about two seconds. Empty connection folders no longer appear as 2 MB drives.
-- **Notepad:** editable Save/Save As and close-prompt names, `.txt` completion, replacement confirmation and preservation of unsaved edits on failure.
+- **Notepad:** redesigned Windows 11-inspired interface, tabs, find and replace, undo/redo, editable Save/Save As and close-prompt names, replacement confirmation and preservation of unsaved edits on failure. The owner confirmed physical-keyboard typing on PS5.
 - **Paint and Spreadsheet:** drawing/image tools plus CSV and bounded `.xlsx` open/edit/save, worksheet switching and workbook-part preservation. These are built-in WinBrew applications, not Microsoft Office or feature-complete replicas. See [Office capabilities and limits](docs/office-apps.md).
 - **Vapor feedback:** gold status messages and a smoothly pulsing Play button while Preparing/Starting, shared by game pages. An animation indicates activity, not guaranteed successful preparation.
 - Existing library discovery, Steam sign-in/downloads, cached artwork/news, per-game controls and pinned CS2/Blender runtime bundles are retained.
@@ -64,9 +65,7 @@ See [Explorer and storage](docs/explorer-storage.md), [file actions](docs/file-c
 
 ## Verification
 
-The exact application executable was installed and readback-verified on the owner's console. All **3,675 packaged files, including the manifest**, passed content and mode checks. The owner confirmed the Explorer layout, drive insertion/removal, large C: replacing D:, Desktop files and Console Root. Personal-folder copies were independently compared byte-for-byte against the retained originals.
-
-Automated checks cover file/profile migration, failure/conflict retention, input, file menus, Office/CSV/XLSX and native module permissions. Spreadsheet interoperability checks preserve supported edits and unedited workbook parts; that does not establish Excel feature parity. Not every application action or game has been physically re-tested in the final build. Historical game reports, current regressions, host tests and console startup checks are recorded separately in [current verification](docs/current-status.md).
+The preceding app update was installed and readback-verified on the owner’s PS5. The owner confirmed physical-keyboard typing. Local fixtures cover Notepad, Start/context menus, Recycle Bin cancellation and deletion, older recovery stores, and large/cross-volume cases. An isolated PS5-native file-operation fixture passed; the final release executable and its visible interface have not been tested on the console. Game reports remain historical or scoped as described above.
 
 ## Screenshots
 

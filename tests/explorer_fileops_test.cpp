@@ -274,6 +274,11 @@ int main() {
     Transfer job;
     assert(!job.begin(large, (root / "destination").string().c_str(), &io));
     assert(job.error == EFBIG && !job.destination_created);
+    // Recycling across drives supports larger files without allocating them
+    // in memory; cancel before reading the artificial large fixture.
+    assert(job.begin_recovery(large, (root / "destination").string().c_str(), &io));
+    assert(job.total == fake_size && job.destination_created);
+    const fs::path partial=job.destination;job.cancel();assert(fs::remove(partial));
     fake_size = 0; // A virtual/pseudo-file may report zero but still yield data.
     assert(large.copy(source.string().c_str(), &io));
     assert(job.begin(large, (root / "destination").string().c_str(), &io));

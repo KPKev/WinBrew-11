@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <array>
+#include <vector>
 #include "xlsx_codec.hpp"
 namespace ww {
 enum class DocumentResult {
@@ -50,6 +51,11 @@ struct TextDocument {
   enum class Newline { lf, crlf, cr } newline = Newline::lf;
   DocumentResult result = DocumentResult::ok;
   int error = 0;
+  struct EditState { std::string text; size_t caret; };
+  std::vector<EditState> undo_history, redo_history;
+  void checkpoint();
+  bool undo();
+  bool redo();
   bool dirty() const;
   bool load(const char *, bool discard = false);
   bool save(const DocumentIo *io = nullptr);

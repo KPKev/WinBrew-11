@@ -1,6 +1,8 @@
-# Current verification — November 7, 2026
+# Current verification
 
-The **desktop-storage-dev-v1** development release contains the final owner-installed **PPSA77382** app (system version `01.016.000`). All **3,675 packaged files including the manifest** passed content/mode checks. The release tag distinguishes this update; the system version alone does not.
+**November 10 update:** Notepad, Start/context menus and Recycle Bin changes are included in the new development release. The owner confirmed keyboard typing on the preceding PS5 build; isolated PS5-native Recycle Bin operations and local UI fixtures passed. The final release executable has not been launched or visually tested on the PS5. The earlier observations below retain their original scope.
+
+The earlier **desktop-storage-dev-v1** development release contained an owner-installed **PPSA77382** app (system version `01.016.000`); its 3,675 packaged files, including the manifest, passed content/mode checks. The release tag distinguishes updates; the system version alone does not.
 
 > [!WARNING]
 > Previously working games can regress. **Skyrim Special Edition is currently owner-reported not working**, and another affected title remains unidentified. Earlier reports are not current-build guarantees. Check back often for fixes and review [compatibility](compatibility.md).
@@ -15,7 +17,7 @@ The **desktop-storage-dev-v1** development release contains the final owner-inst
 
 ## Game reports and limits
 
-Enshrouded starts/runs after scoped recovery, owner-confirmed. CS2 offline bots, Schedule I, Blackjack 21, Golf With Your Friends and Quake II RTX have earlier working reports; this final build has not been re-tested against every game. Skyrim's earlier success is superseded by the current failure report. Blender's repaired workspace/input was previously confirmed. Kane's Wrath remains splash-only and Splitgate authentication-blocked. No new online/co-op compatibility is claimed.
+Enshrouded starts/runs after scoped recovery, owner-confirmed. CS2 offline bots, Schedule I, Blackjack 21 and Golf With Your Friends have earlier working reports; this final build has not been re-tested against every game. Skyrim's earlier success is superseded by the current failure report. Blender's repaired workspace/input was previously confirmed. Kane's Wrath remains splash-only and Splitgate authentication-blocked. No new online/co-op compatibility is claimed.
 
 ## Automated/native verification
 

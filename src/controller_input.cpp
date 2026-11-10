@@ -17,7 +17,7 @@ void Shell::controller_input(bool connected, uint32_t buttons, int lx, int ly,
   pad_ly = ly;
   pad_rx = rx;
   pad_ry = ry;
-  if (window == 2 && settings_page == 8) {
+  if (!start && window == 2 && settings_page == 8) {
     if (edge & 8) {
       settings_page = 7;
       focus = 107;
@@ -30,7 +30,7 @@ void Shell::controller_input(bool connected, uint32_t buttons, int lx, int ly,
     finish_touchpad_drag();
     return;
   }
-  const bool vapor_open = window == 1 && file_games;
+  const bool vapor_open = !start && window == 1 && file_games;
   const bool modal_open = dialog || notepad_modal() || paint.modal() || touch_keyboard || context ||
       file_context || file_rename_prompt || file_properties || files_busy();
   // Physical Circle and Square are Vapor navigation shortcuts, independent of

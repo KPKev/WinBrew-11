@@ -5,11 +5,13 @@
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 #include <fcntl.h>
 #include <chrono>
 #include <algorithm>
 #include <sys/stat.h>
 #include <limits>
+#include <string_view>
 #ifdef __PROSPERO__
 #include <sys/mount.h>
 #elif !defined(_WIN32)
@@ -311,6 +313,14 @@ bool Transfer::fail(const char *where, int code) {
 }
 bool Transfer::begin(const Clipboard &clipboard, const char *folder,
                      const Io *provided) {
+  return begin_transfer(clipboard,folder,provided,false);
+}
+bool Transfer::begin_recovery(const Clipboard &clipboard, const char *folder,
+                              const Io *provided) {
+  return begin_transfer(clipboard,folder,provided,true);
+}
+bool Transfer::begin_transfer(const Clipboard &clipboard, const char *folder,
+                              const Io *provided, bool recovery) {
   if (busy())
     return false;
   close_handles();
@@ -336,7 +346,9 @@ bool Transfer::begin(const Clipboard &clipboard, const char *folder,
     return fail("Regular files only", code < 0 ? code : ENOTSUP);
   if (!unchanged(initial, clipboard.info))
     return fail("Source changed", ChangedPath);
-  if (initial.size > MaximumBytes)
+  if (initial.size > uint64_t(std::numeric_limits<int64_t>::max()))
+    return fail("File size limit", EFBIG);
+  if (!recovery && initial.size > MaximumBytes)
     return fail("8 GB copy limit", EFBIG);
   total = initial.size;
   for (int number = 0; number < 100; ++number) {
@@ -486,10 +498,14 @@ int make_directory(const char *path) {
   return result<0 ? -directory::error_or_io(errno) : 0;
 #endif
 }
-bool children(const char *path, std::vector<std::string> &names) {
-  auto add = [&](const char *name) {
+bool children(const char *path, std::vector<std::string> &names, size_t limit=4096, bool directories_only=false, size_t skip=0, bool *more=nullptr) {
+  size_t seen=0;bool stopped=false;if(more)*more=false;
+  auto add = [&](const char *name,bool possibly_directory) {
     if (!std::strcmp(name,".") || !std::strcmp(name,"..")) return true;
-    if (names.size() >= 4096 || std::strchr(name,'/') || std::strchr(name,'\\')) return false;
+    if(directories_only && !possibly_directory && std::strcmp(name,".winbrew-trash"))return true;
+    if (std::strchr(name,'/') || std::strchr(name,'\\')) return false;
+    if(seen++<skip)return true;
+    if(names.size() >= limit){if(more){*more=true;stopped=true;}return false;}
     names.emplace_back(name); return true;
   };
 #ifdef _WIN32
@@ -497,9 +513,9 @@ bool children(const char *path, std::vector<std::string> &names) {
   WIN32_FIND_DATAA data{}; HANDLE h = FindFirstFileA(pattern.c_str(), &data);
   if (h == INVALID_HANDLE_VALUE) return GetLastError() == ERROR_FILE_NOT_FOUND;
   bool ok = true;
-  do { if (!add(data.cFileName)) {ok=false;break;} } while (FindNextFileA(h,&data));
+  do { if (!add(data.cFileName,(data.dwFileAttributes&(FILE_ATTRIBUTE_DIRECTORY|FILE_ATTRIBUTE_REPARSE_POINT))!=0)) {ok=false;break;} } while (FindNextFileA(h,&data));
   if (ok && GetLastError()!=ERROR_NO_MORE_FILES) ok=false;
-  FindClose(h); return ok;
+  FindClose(h); return ok || stopped;
 #elif defined(__PROSPERO__)
   const int fd = error_code(ww::privilege::run([&] {
     return sceKernelOpen(path,O_RDONLY|O_DIRECTORY|O_NOFOLLOW,0);
@@ -517,61 +533,141 @@ bool children(const char *path, std::vector<std::string> &names) {
       auto r=directory::next(buffer.data(),size_t(n),at,item);
       if(r==directory::Read::end)break;
       if(r==directory::Read::invalid){ok=false;break;}
-      if(item.inode && !add(item.name)){ok=false;break;}
+      if(item.inode && !add(item.name,item.type==DT_DIR || item.type==DT_UNKNOWN || item.type==DT_LNK)){ok=false;break;}
     }
   }
-  if(close_file(nullptr,fd)<0)ok=false;
-  return ok;
+  if(close_file(nullptr,fd)<0)return false;
+  return ok || stopped;
 #else
   DIR *d=opendir(path); if(!d)return false; bool ok=true;
-  while(true){errno=0;auto *entry=readdir(d);if(!entry){if(errno)ok=false;break;}if(!add(entry->d_name)){ok=false;break;}}
-  if(closedir(d)!=0)ok=false;
-  return ok;
+  while(true){errno=0;auto *entry=readdir(d);if(!entry){if(errno)ok=false;break;}if(!add(entry->d_name,entry->d_type==DT_DIR || entry->d_type==DT_UNKNOWN || entry->d_type==DT_LNK)){ok=false;break;}}
+  if(closedir(d)!=0)return false;
+  return ok || stopped;
 #endif
 }
+bool tree_append(std::vector<TreeTransfer::Entry> &entries,const std::string &path,const Info &info){entries.push_back({path,info});return true;}
+bool tree_append(CheckedTransferEntries &entries,const std::string &path,const Info &info){return entries.append(path.c_str(),info);}
+template<class List>
 bool scan_tree(const std::string &root, const std::string &relative,
-               std::vector<TreeTransfer::Entry> &entries, unsigned depth=0,
+               List &entries, unsigned depth=0,
                bool recovery=false) {
-  if(depth>(recovery?64u:32u) || entries.size()>=(recovery?65536u:4096u))return false;
+  constexpr bool checked=std::is_same_v<List,CheckedTransferEntries>;
+  if(depth>(recovery?64u:32u) || ((!recovery || !checked) && entries.size()>=(recovery?65536u:4096u)))return false;
   std::string path=root;
   if(!relative.empty() && !join_path(path,root,relative))return false;
   Info info{}; if(inspect(path.c_str(),info)<0 || (!info.regular&&!info.directory))return false;
-  entries.push_back({relative,info});
+  if(!tree_append(entries,relative,info))return false;
   if(info.directory){
-    std::vector<std::string> names;if(!children(path.c_str(),names))return false;
-    std::sort(names.begin(),names.end());
-    for(const auto &name:names){
-      // Recovery stores are never recursively copied into new documents.
-      if(!recovery && name==".winbrew-trash")continue;
-      std::string next=relative.empty()?name:relative+"/"+name;
-      if(!scan_tree(root,next,entries,depth+1,recovery))return false;
-    }
+    size_t offset=0;bool more=false;
+    do {
+      std::vector<std::string> names;
+      if(recovery && checked){if(!children(path.c_str(),names,512,false,offset,&more))return false;offset+=names.size();}
+      else if(!children(path.c_str(),names,recovery?65536:4096))return false;
+      std::sort(names.begin(),names.end());
+      for(const auto &name:names){
+        // Recovery stores are never recursively copied into new documents.
+        if(!recovery && name==".winbrew-trash")continue;
+        std::string next=relative.empty()?name:relative+"/"+name;
+        if(!scan_tree(root,next,entries,depth+1,recovery))return false;
+      }
+      Info page_after{};if(inspect(path.c_str(),page_after)<0 || !unchanged(info,page_after))return false;
+    }while(more);
   }
   Info after{};return inspect(path.c_str(),after)>=0 && unchanged(info,after);
 }
-bool same_tree(const std::vector<TreeTransfer::Entry>&a,const std::vector<TreeTransfer::Entry>&b){
+template<class A,class B>
+bool same_tree(const A &a,const B &b){
   if(a.size()!=b.size())return false;
-  for(size_t i=0;i<a.size();++i)if(a[i].relative!=b[i].relative || !unchanged(a[i].info,b[i].info))return false;
+  for(size_t i=0;i<a.size();++i)if(std::string_view(a[i].relative)!=std::string_view(b[i].relative) || !unchanged(a[i].info,b[i].info))return false;
   return true;
 }
 }
-bool trash(const char *path, const Info &expected, char *recovery, size_t capacity) {
+bool RecoveryWalker::begin(const std::vector<std::string> &roots,const char *exclude) {
+  pending.clear();stores.clear();names.clear();current.clear();excluded=exclude?exclude:"";
+  current_device=0;name_index=name_offset=directories=0;names_more=false;active=complete=failed=false;
+  std::vector<Pending> checked;
+  for(auto path:roots){
+    while(path.size()>1 && path.back()=='/')path.pop_back();
+    Info info{};if(path.empty() || path.size()>=1024 || inspect(path.c_str(),info)<0 || !info.directory){failed=true;return false;}
+    checked.push_back({std::move(path),info.device,info.inode});
+  }
+  std::sort(checked.begin(),checked.end(),[](const Pending &a,const Pending &b){return a.path.size()==b.path.size()?a.path<b.path:a.path.size()<b.path.size();});
+  for(auto &candidate:checked){
+    bool covered=false;
+    for(const auto &existing:pending)if(existing.device==candidate.device &&
+       (candidate.path==existing.path || (existing.path=="/"?candidate.path.front()=='/':candidate.path.compare(0,existing.path.size()+1,existing.path+"/")==0))){covered=true;break;}
+    if(!covered)pending.push_back(std::move(candidate));
+  }
+  if(pending.empty()){complete=true;return true;}
+  active=true;return true;
+}
+void RecoveryWalker::cancel(){active=false;complete=false;pending.clear();names.clear();current.clear();stores.clear();}
+void RecoveryWalker::step(size_t budget) {
+  if(!active || !budget)return;
+  auto failure=[&]{active=false;failed=true;complete=false;pending.clear();names.clear();current.clear();stores.clear();};
+  while(active && budget){
+    if(current.empty()){
+      if(pending.empty()){std::sort(stores.begin(),stores.end());stores.erase(std::unique(stores.begin(),stores.end()),stores.end());active=false;complete=true;return;}
+      auto next=std::move(pending.back());pending.pop_back();current=std::move(next.path);current_device=next.device;
+      if(inspect(current.c_str(),current_info)<0 || !current_info.directory || current_info.device!=current_device || current_info.inode!=next.inode){failure();return;}
+      names.clear();name_index=name_offset=0;names_more=false;
+      if(!children(current.c_str(),names,1024,true,0,&names_more)){failure();return;}
+      ++directories;--budget;
+    }
+    while(budget && name_index<names.size()){
+      const auto name=names[name_index++];--budget;std::string path;
+      if(!join_path(path,current,name) || path.size()>=1024){failure();return;}
+#ifndef _WIN32
+      // Only directories can contain an old store. Inspect the directory
+      // entry without opening regular, private or special files.
+      struct stat entry{};
+      if(ww::privilege::run([&]{return ::lstat(path.c_str(),&entry);})!=0){failure();return;}
+      if(!S_ISDIR(entry.st_mode)){if(name==".winbrew-trash"){failure();return;}continue;}
+#endif
+      Info info{};const int code=inspect(path.c_str(),info);
+      if(code<0){if(code==-ELOOP && name!=".winbrew-trash")continue;failure();return;}
+      if(!info.directory){if(name==".winbrew-trash"){failure();return;}continue;}
+      if(info.device!=current_device)continue;
+      if(name==".winbrew-trash"){if(path!=excluded)stores.push_back(std::move(path));}
+      else pending.push_back({std::move(path),current_device,info.inode});
+    }
+    if(name_index==names.size()){
+      Info after{};if(inspect(current.c_str(),after)<0 || !unchanged(current_info,after)){failure();return;}
+      if(names_more){
+        name_offset+=names.size();names.clear();name_index=0;
+        if(!children(current.c_str(),names,1024,true,name_offset,&names_more)){failure();return;}
+        continue;
+      }
+      current.clear();names.clear();name_index=0;
+    }
+  }
+}
+bool trash(const char *path, const Info &expected, char *recovery, size_t capacity, const char *store_path) {
   if(!path || !*path)return false;
   std::string source=path; while(source.size()>1 && source.back()=='/')source.pop_back();
   auto slash=source.find_last_of("/\\");
   if(slash==std::string::npos || source.substr(slash+1).empty() || source.substr(slash+1)==".winbrew-trash" || source.substr(slash+1)==".." || source.substr(slash+1)==".")return false;
   Info actual{};if(inspect(source.c_str(),actual)<0 || !unchanged(expected,actual))return false;
-  std::string base=source.substr(0,slash)+"/.winbrew-trash";
+  std::string base=store_path && *store_path ? store_path : source.substr(0,slash)+"/.winbrew-trash";
+  if(base.size()<15 || base.compare(base.size()-15,15,"/.winbrew-trash")!=0)return false;
   int code=make_directory(base.c_str()); if(code<0 && code!=-EEXIST)return false;
   Info store{}; if(inspect(base.c_str(),store)<0 || !store.directory || store.device!=actual.device)return false;
   const auto stamp=std::chrono::steady_clock::now().time_since_epoch().count();
   for(unsigned i=0;i<100;++i){
-    std::string box=base+"/"+std::to_string(stamp)+"-"+std::to_string(i);
-    code=make_directory(box.c_str());if(code==-EEXIST)continue;if(code<0)return false;
+    const std::string label=store_path && *store_path ? source.substr(slash+1,170)+" - " : "";
+    std::string box=base+"/"+label+std::to_string(stamp)+"-"+std::to_string(i);
     std::string target=box+"/"+source.substr(slash+1);
     if(target.size()>=capacity)return false;
-    if(inspect(source.c_str(),actual)<0 || !unchanged(expected,actual))return false;
-    if(ww::privilege::run([&]{return std::rename(source.c_str(),target.c_str());})!=0)return false;
+    code=make_directory(box.c_str());if(code==-EEXIST)continue;if(code<0)return false;
+    auto remove_empty=[&]{
+#ifdef _WIN32
+      RemoveDirectoryA(box.c_str());
+#else
+      ww::privilege::run([&]{return ::rmdir(box.c_str());});
+#endif
+    };
+    if(inspect(source.c_str(),actual)<0 || !unchanged(expected,actual)){remove_empty();return false;}
+    if(ww::privilege::run([&]{return std::rename(source.c_str(),target.c_str());})!=0){remove_empty();return false;}
     Info moved{};if(inspect(target.c_str(),moved)<0 || !identity(expected,moved))return false;
     std::snprintf(recovery,capacity,"%s",target.c_str());return true;
   }
@@ -581,12 +677,14 @@ bool TreeTransfer::fail(const char *where,int code){
   if(child && child->busy())child->cancel();
   state=State::failed;error=code<0?-code:code;std::snprintf(stage,sizeof(stage),"%s",where);return false;
 }
-bool TreeTransfer::begin(const Clipboard &clip,const char *folder,bool recovery){
+bool TreeTransfer::begin(const Clipboard &clip,const char *folder,bool recovery,const char *store){
   include_recovery=recovery;
   if(busy())return false;
   child.reset();entries.clear();outputs.clear();index=0;copied=verified=total=0;error=0;destination_created=false;moving=clip.move;
   state=State::idle;destination[0]=0;
   if(!clip.ready || !folder || std::strlen(folder)>=1024)return fail("Clipboard",EINVAL);
+  if(store && std::strlen(store)>=sizeof(recovery_store))return fail("Recycle Bin path",ENAMETOOLONG);
+  std::snprintf(recovery_store,sizeof(recovery_store),"%s",store?store:"");
   std::snprintf(source,sizeof(source),"%s",clip.path);std::snprintf(directory,sizeof(directory),"%s",folder);
   Info now{},parent{};
   if(inspect(source,now)<0 || !unchanged(now,clip.info))return fail("Source changed",EAGAIN);
@@ -598,8 +696,8 @@ bool TreeTransfer::begin(const Clipboard &clip,const char *folder,bool recovery)
     if(identity(p,now))return fail("Folder inside itself",EINVAL);
     auto at=ancestor.find_last_of("/\\");if(at==std::string::npos || !at)break;ancestor.resize(at);
   }
-  if(!scan_tree(source,"",entries,0,include_recovery))return fail("Scan (4096 items)",ENOTSUP);
-  for(const auto &e:entries)if(e.info.regular){if(e.info.size>Transfer::MaximumBytes)return fail("8 GB file limit",EFBIG);total+=e.info.size;}
+  if(!scan_tree(source,"",entries,0,include_recovery))return fail("Scan source",ENOTSUP);
+  for(const auto &e:entries)if(e.info.regular){if(e.info.size>uint64_t(std::numeric_limits<int64_t>::max()) || (!include_recovery&&e.info.size>Transfer::MaximumBytes) || e.info.size>std::numeric_limits<uint64_t>::max()-total)return fail("File size limit",EFBIG);total+=e.info.size;}
   if(now.directory){
     int code=-EEXIST;
     for(int n=0;n<100 && code==-EEXIST;++n){
@@ -608,7 +706,7 @@ bool TreeTransfer::begin(const Clipboard &clip,const char *folder,bool recovery)
     }
     if(code<0)return fail("Create folder",code);
     Info created{};if(inspect(destination,created)<0 || !created.directory)return fail("Created folder",EIO);
-    outputs.push_back({destination,created});
+    if(!outputs.append(destination,created))return fail("Snapshot memory",ENOMEM);
     destination_created=true;index=1;
   }
   state=State::copying;std::snprintf(stage,sizeof(stage),"Preparing copy");return true;
@@ -624,26 +722,27 @@ void TreeTransfer::step(){
     if(child->state!=State::complete)return;
     if(entries.size()==1 && entries[0].info.regular)std::snprintf(destination,sizeof(destination),"%s",child->destination);
     Info written{};if(inspect(child->destination,written)<0 || !identity(child->created,written) || written.size!=child->total){fail("Destination changed",EAGAIN);return;}
-    outputs.push_back({child->destination,written});
+    if(!outputs.append(child->destination,written)){fail("Snapshot memory",ENOMEM);return;}
     child.reset();++index;return;
   }
   if(index<entries.size()){
     const auto &e=entries[index];std::string src=source,dest=destination;
-    if(!e.relative.empty() && (!join_path(src,source,e.relative)||!join_path(dest,destination,e.relative))){fail("Path too long",ENAMETOOLONG);return;}
-    if(e.info.directory){int code=make_directory(dest.c_str());if(code<0){fail("Create subfolder",code);return;}Info created{};if(inspect(dest.c_str(),created)<0 || !created.directory){fail("Created subfolder",EIO);return;}outputs.push_back({dest,created});++index;return;}
+    if(*e.relative && (!join_path(src,source,e.relative)||!join_path(dest,destination,e.relative))){fail("Path too long",ENAMETOOLONG);return;}
+    if(e.info.directory){int code=make_directory(dest.c_str());if(code<0){fail("Create subfolder",code);return;}Info created{};if(inspect(dest.c_str(),created)<0 || !created.directory){fail("Created subfolder",EIO);return;}if(!outputs.append(dest.c_str(),created)){fail("Snapshot memory",ENOMEM);return;}++index;return;}
     Clipboard clip;clip.ready=true;clip.info=e.info;std::snprintf(clip.path,sizeof(clip.path),"%s",src.c_str());
     std::string parent=index==0?directory:dest.substr(0,dest.find_last_of('/'));
     child=std::make_unique<Transfer>();
-    if(!child->begin(clip,parent.c_str())){fail(child->stage,child->error);return;}
+    const bool opened=include_recovery?child->begin_recovery(clip,parent.c_str()):child->begin(clip,parent.c_str());
+    if(!opened){fail(child->stage,child->error);return;}
     if(index!=0 && dest!=child->destination){fail("Destination collision",EEXIST);return;}
     destination_created=true;
     if(index==0 && entries[0].info.regular)std::snprintf(destination,sizeof(destination),"%s",child->destination);
     return;
   }
-  for(const auto &entry:outputs){Info actual{};if(inspect(entry.relative.c_str(),actual)<0 || !(entry.info.directory?identity(entry.info,actual):unchanged(entry.info,actual))){fail("Destination changed",EAGAIN);return;}}
-  std::vector<Entry> current;
+  for(const auto &entry:outputs){Info actual{};if(inspect(entry.relative,actual)<0 || !(entry.info.directory?identity(entry.info,actual):unchanged(entry.info,actual))){fail("Destination changed",EAGAIN);return;}}
+  CheckedTransferEntries current;
   if(!scan_tree(source,"",current,0,include_recovery)||!same_tree(entries,current)){fail("Source changed",EAGAIN);return;}
-  if(moving){char recovery[1024];if(!trash(source,entries[0].info,recovery,sizeof(recovery))){fail("Move source retained",EACCES);return;}}
+  if(moving){char recovery[1024];if(!trash(source,entries[0].info,recovery,sizeof(recovery),recovery_store[0]?recovery_store:nullptr)){fail("Move source retained",EACCES);return;}}
   state=State::complete;
 }
 
@@ -662,40 +761,345 @@ bool recovery_location(const char *folder, char *out, size_t capacity) {
   if(path.size()>=capacity)return false;
   std::snprintf(out,capacity,"%s",path.c_str());return true;
 }
+bool legacy_recovery_name(const char *path, std::string &name) {
+  if(!path || !*path)return false;
+  const std::string value(path);const auto slash=value.find_last_of('/');
+  if(slash==std::string::npos)return false;
+  const auto leaf=value.substr(slash+1);const auto dash=leaf.find('-');
+  if(dash==std::string::npos || dash==0 || dash+1==leaf.size())return false;
+  for(size_t i=0;i<leaf.size();++i)if(i!=dash && (leaf[i]<'0'||leaf[i]>'9'))return false;
+  Info info{};if(inspect(path,info)<0 || !info.directory)return false;
+  std::vector<std::string> names;if(!children(path,names) || names.size()!=1)return false;
+  name=names.front();return true;
+}
+bool discover_recovery_stores(const char *root_path, std::vector<std::string> &output) {
+  if(!root_path || !*root_path || std::strlen(root_path)>=1024)return false;
+  Info root{};if(inspect(root_path,root)<0 || !root.directory)return false;
+  struct Pending { std::string path; unsigned depth; };
+  std::vector<Pending> pending{{root_path,0}};std::vector<std::string> result;size_t visited=0;
+  while(!pending.empty()) {
+    auto item=std::move(pending.back());pending.pop_back();
+    if(++visited>4096 || item.depth>32)return false;
+    Info before{};if(inspect(item.path.c_str(),before)<0 || !before.directory || before.device!=root.device)return false;
+    std::vector<std::string> names;if(!children(item.path.c_str(),names))return false;
+    for(const auto &name:names) {
+      std::string path;if(!join_path(path,item.path,name) || path.size()>=1024)return false;
+      Info info{};const int rc=inspect(path.c_str(),info);
+      if(rc<0){if(rc==-ELOOP && name!=".winbrew-trash")continue;return false;}
+      if(!info.directory){if(name==".winbrew-trash")return false;continue;}
+      if(info.device!=root.device)return false;
+      if(name==".winbrew-trash") {if(result.size()>=512)return false;result.push_back(std::move(path));}
+      else pending.push_back({std::move(path),item.depth+1});
+    }
+    Info after{};if(inspect(item.path.c_str(),after)<0 || !unchanged(before,after))return false;
+  }
+  std::sort(result.begin(),result.end());output=std::move(result);return true;
+}
+bool collect_recovery_batch(const std::vector<std::string> &stores,const char *destination,std::vector<Clipboard> &output,bool &more) {
+  constexpr size_t batch=256, page=512;
+  if(!destination)return false;
+  const std::string dest(destination);
+  if(dest.size()<15 || dest.compare(dest.size()-15,15,"/.winbrew-trash")!=0)return false;
+  std::vector<Clipboard> result;bool full=false;
+  for(const auto &store:stores){
+    if(store==dest)continue;
+    Info store_before{};if(inspect(store.c_str(),store_before)<0 || !store_before.directory)return false;
+    size_t offset=0;bool next=false;
+    do {
+      std::vector<std::string> names;if(!children(store.c_str(),names,page,false,offset,&next))return false;
+      offset+=names.size();
+      for(const auto &name:names){
+        std::string container;if(!join_path(container,store,name))return false;
+        Info before{};if(inspect(container.c_str(),before)<0 || (!before.directory&&!before.regular))return false;
+        if(before.directory){
+          size_t inner_offset=0;bool inner_next=false;
+          do {
+            std::vector<std::string> items;if(!children(container.c_str(),items,page,false,inner_offset,&inner_next))return false;
+            inner_offset+=items.size();
+            for(const auto &item:items){
+              std::string path;Clipboard clip;if(!join_path(path,container,item) || !clip.copy(path.c_str()))return false;
+              result.push_back(clip);if(result.size()==batch){full=true;break;}
+            }
+            Info after{};if(inspect(container.c_str(),after)<0 || !unchanged(before,after))return false;
+          }while(inner_next&&!full);
+        }else{
+          Clipboard clip;if(!clip.copy(container.c_str()))return false;
+          result.push_back(clip);if(result.size()==batch)full=true;
+        }
+        if(full)break;
+      }
+      Info after{};if(inspect(store.c_str(),after)<0 || !unchanged(store_before,after))return false;
+    }while(next&&!full);
+    if(full)break;
+  }
+  output=std::move(result);more=full;return true;
+}
+bool collect_recovery_stores(const std::vector<std::string> &stores,const char *destination,std::vector<Clipboard> &output) {
+  if(!destination)return false;
+  const std::string dest(destination);
+  if(dest.size()<15 || dest.compare(dest.size()-15,15,"/.winbrew-trash")!=0)return false;
+  std::vector<Clipboard> result;
+  for(const auto &store:stores){
+    if(store==dest)continue;
+    std::vector<std::string> names;if(!children(store.c_str(),names,65536))return false;
+    std::sort(names.begin(),names.end());
+    for(const auto &name:names){
+      std::string container;if(!join_path(container,store,name))return false;
+      Info info{};if(inspect(container.c_str(),info)<0 || (!info.directory&&!info.regular))return false;
+      if(info.directory){
+        std::vector<std::string> items;if(!children(container.c_str(),items,65536))return false;
+        std::sort(items.begin(),items.end());
+        for(const auto &item:items){std::string path;Clipboard clip;if(!join_path(path,container,item) || !clip.copy(path.c_str()))return false;result.push_back(clip);}
+      } else {Clipboard clip;if(!clip.copy(container.c_str()))return false;result.push_back(clip);}
+      if(result.size()>65536)return false;
+    }
+  }
+  output=std::move(result);return true;
+}
+bool collect_recovery_items(const char *root,const char *destination,std::vector<Clipboard> &output) {
+  if(!root)return false;std::vector<std::string> stores;
+  return discover_recovery_stores(root,stores) && collect_recovery_stores(stores,destination,output);
+}
+bool consolidate_recovery_stores(const char *profile,const char *destination,size_t &moved) {
+  moved=0;if(!profile||!destination)return false;
+  std::vector<std::string> stores;if(!discover_recovery_stores(profile,stores))return false;
+  const std::string dest(destination);
+  if(dest.size()<15 || dest.compare(dest.size()-15,15,"/.winbrew-trash")!=0)return false;
+  for(const auto &store:stores) {
+    if(store==dest)continue;
+    std::vector<std::string> names;if(!children(store.c_str(),names))return false;
+    std::sort(names.begin(),names.end());
+    for(const auto &name:names) {
+      std::string source;if(!join_path(source,store,name) || source.size()>=1024)return false;
+      Info info{};char result[1024];
+      if(inspect(source.c_str(),info)<0 || (!info.regular&&!info.directory))return false;
+      // Older stores wrap each deleted item in a generated directory. Move its
+      // contents, so the central bin shows the original names, not wrapper IDs.
+      if(info.directory) {
+        std::vector<std::string> items;if(!children(source.c_str(),items))return false;
+        std::sort(items.begin(),items.end());
+        for(const auto &item:items) {
+          std::string original;if(!join_path(original,source,item) || original.size()>=1024)return false;
+          Info entry{};if(inspect(original.c_str(),entry)<0 || (!entry.regular&&!entry.directory) || !trash(original.c_str(),entry,result,sizeof(result),dest.c_str()))return false;
+          ++moved;
+        }
+      } else {
+        if(!trash(source.c_str(),info,result,sizeof(result),dest.c_str()))return false;
+        ++moved;
+      }
+    }
+  }
+  return true;
+}
 namespace {
 #ifndef _WIN32
-int anchored_directory(const std::string &path, int anchor=-1) {
-  if(path.empty())return -EINVAL;
+int anchored_directory(const char *path, int anchor=-1) {
+  if(!path || !*path)return -EINVAL;
   int fd=ww::privilege::run([&] {
-    return anchor<0 ? ::open(path.front()=='/'?"/":".",O_RDONLY|O_DIRECTORY|O_NOFOLLOW)
+    return anchor<0 ? ::open(*path=='/'?"/":".",O_RDONLY|O_DIRECTORY|O_NOFOLLOW)
                     : ::openat(anchor,".",O_RDONLY|O_DIRECTORY|O_NOFOLLOW);
   });
   if(fd<0)return -directory::error_or_io(errno);
-  size_t at=path.front()=='/'?1:0;
-  while(at<path.size()) {
-    auto end=path.find('/',at);if(end==std::string::npos)end=path.size();
-    auto part=path.substr(at,end-at);at=end+1;
-    if(part.empty())continue;
-    if(part==".." || part=="."){close_file(nullptr,fd);return -EINVAL;}
-    int next=ww::privilege::run([&]{return ::openat(fd,part.c_str(),O_RDONLY|O_DIRECTORY|O_NOFOLLOW);});
+  const char *at=path+(*path=='/'?1:0);
+  while(*at) {
+    const char *end=std::strchr(at,'/');if(!end)end=at+std::strlen(at);
+    const size_t length=size_t(end-at);if(!length){at=end+1;continue;}
+    if(length>=1024 || (length==1 && at[0]=='.') || (length==2 && at[0]=='.' && at[1]=='.')){close_file(nullptr,fd);return -EINVAL;}
+    char part[1024];std::memcpy(part,at,length);part[length]=0;at=*end?end+1:end;
+    int next=ww::privilege::run([&]{return ::openat(fd,part,O_RDONLY|O_DIRECTORY|O_NOFOLLOW);});
     int error=errno;close_file(nullptr,fd);
     if(next<0)return -directory::error_or_io(error);
     fd=next;
   }
   return fd;
 }
+int anchored_directory(const std::string &path,int anchor=-1){return anchored_directory(path.c_str(),anchor);}
 #endif
+}
+void CrossVolumeRecycle::close() {
+  if(parent_fd>=0)close_file(nullptr,parent_fd);
+  if(store_fd>=0)close_file(nullptr,store_fd);
+  parent_fd=store_fd=-1;
+}
+bool CrossVolumeRecycle::fail(int code) {
+  error=code<0?-code:code;state=State::failed;close();return false;
+}
+bool CrossVolumeRecycle::begin(const Clipboard &clip,const char *store) {
+  if(busy())return false;
+  close();state=State::idle;removing=false;remaining=removed=0;error=0;parent.clear();leaf.clear();store_path.clear();
+  if(!clip.ready || !store || !*store)return fail(EINVAL);
+  const std::string bin(store),source(clip.path);
+  if(bin.size()<15 || bin.compare(bin.size()-15,15,"/.winbrew-trash")!=0 ||
+     source.compare(0,bin.size()+1,bin+"/")==0)return fail(EINVAL);
+  const auto slash=source.find_last_of('/');
+  if(slash==std::string::npos || slash+1==source.size())return fail(EINVAL);
+  parent=slash==0?"/":source.substr(0,slash);leaf=source.substr(slash+1);
+  if(leaf=="." || leaf==".." || leaf.find('\\')!=std::string::npos)return fail(EINVAL);
+  Info current{};
+  if(inspect(source.c_str(),current)<0 || !unchanged(current,clip.info) ||
+     inspect(bin.c_str(),store_info)<0 || !store_info.directory)return fail(EAGAIN);
+  store_path=bin;
+#ifdef _WIN32
+  for(size_t i=0;i<=bin.size();++i)if(i==bin.size() || (i>2 && bin[i]=='/')){Info ancestor{};if(inspect(bin.substr(0,i).c_str(),ancestor)<0 || !ancestor.directory)return fail(EACCES);}
+  store_fd=open_file(nullptr,bin.c_str(),false);
+#else
+  store_fd=anchored_directory(bin);
+#endif
+  Info held_store{};
+  if(store_fd<0 || metadata(nullptr,store_fd,held_store)<0 || !identity(store_info,held_store))return fail(EACCES);
+  Clipboard copy=clip;copy.move=false;
+  if(!transfer.begin(copy,store,true))return fail(transfer.error?transfer.error:EIO);
+  state=State::copying;return true;
+}
+void CrossVolumeRecycle::cancel() {
+  if(transfer.busy())transfer.cancel();state=State::cancelled;close();
+}
+void CrossVolumeRecycle::step() {
+  if(!busy())return;
+  Info named_store{},held_store{};
+  if(inspect(store_path.c_str(),named_store)<0 || metadata(nullptr,store_fd,held_store)<0 ||
+     !identity(store_info,named_store) || !identity(store_info,held_store)){
+    if(transfer.busy())transfer.cancel();fail(EAGAIN);return;
+  }
+  if(!removing) {
+    if(transfer.busy())transfer.step();
+    if(transfer.busy()){state=transfer.state;return;}
+    if(transfer.state!=State::complete){fail(transfer.error?transfer.error:EIO);return;}
+    CheckedTransferEntries current;
+    if(transfer.entries.empty() || transfer.entries.size()!=transfer.outputs.size() ||
+       !scan_tree(transfer.source,"",current,0,true) || !same_tree(transfer.entries,current)) {fail(EAGAIN);return;}
+    for(const auto &out:transfer.outputs){Info item{};if(inspect(out.relative,item)<0 || !(out.info.directory?identity(out.info,item):unchanged(out.info,item))){fail(EAGAIN);return;}}
+#ifndef _WIN32
+    // The copied file contents are already flushed by Transfer. Flush the
+    // destination directory entries too, before removing any source data.
+    for(auto it=transfer.outputs.rbegin();it!=transfer.outputs.rend();++it)if(it->info.directory){
+      int fd=anchored_directory(it->relative);if(fd<0){fail(EACCES);return;}
+      const int result=ww::privilege::run([&]{return ::fsync(fd);});close_file(nullptr,fd);
+      if(result!=0){fail(EIO);return;}
+    }
+    if(ww::privilege::run([&]{return ::fsync(store_fd);})!=0){fail(EIO);return;}
+    // If the bin itself was just created, persist its entry in the parent too.
+    std::string bin_parent=store_path.substr(0,store_path.size()-15);
+    if(bin_parent.empty())bin_parent="/";
+    int bin_parent_fd=anchored_directory(bin_parent);if(bin_parent_fd<0){fail(EACCES);return;}
+    const int synced=ww::privilege::run([&]{return ::fsync(bin_parent_fd);});close_file(nullptr,bin_parent_fd);
+    if(synced!=0){fail(EIO);return;}
+#endif
+#ifdef _WIN32
+    Info named{};if(inspect(parent.c_str(),named)<0 || !named.directory){fail(EACCES);return;}
+    parent_fd=open_file(nullptr,parent.c_str(),false);
+#else
+    parent_fd=anchored_directory(parent);
+#endif
+    if(parent_fd<0){parent_fd=-1;fail(EACCES);return;}
+    if(metadata(nullptr,parent_fd,parent_info)<0 || !parent_info.directory){fail(EACCES);return;}
+    remaining=transfer.entries.size();removing=true;state=State::copying;return;
+  }
+  if(!remaining){state=State::complete;close();return;}
+  Info named_parent{},held{};
+  if(inspect(parent.c_str(),named_parent)<0 || metadata(nullptr,parent_fd,held)<0 ||
+     !identity(parent_info,named_parent) || !identity(parent_info,held)){fail(EAGAIN);return;}
+  const size_t index=remaining-1;const auto &entry=transfer.entries[index];const auto &out=transfer.outputs[index];
+  Info copied{};if(inspect(out.relative,copied)<0 || !(out.info.directory?identity(out.info,copied):unchanged(out.info,copied))){fail(EAGAIN);return;}
+  const std::string relative=!*entry.relative?leaf:leaf+"/"+entry.relative;
+#ifdef _WIN32
+  const std::string path=parent+"/"+relative;
+  HANDLE handle=CreateFileA(path.c_str(),DELETE|FILE_READ_ATTRIBUTES,FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_BACKUP_SEMANTICS,nullptr);
+  if(handle==INVALID_HANDLE_VALUE){fail(EACCES);return;}
+  int fd=_open_osfhandle(reinterpret_cast<intptr_t>(handle),_O_BINARY|_O_RDONLY);
+  if(fd<0){CloseHandle(handle);fail(EACCES);return;}
+  Info actual{};const bool matches=metadata(nullptr,fd,actual)>=0 && (entry.info.directory?identity(entry.info,actual):unchanged(entry.info,actual));
+  FILE_DISPOSITION_INFO disposition{};disposition.DeleteFile=TRUE;
+  const bool erased=matches && SetFileInformationByHandle(handle,FileDispositionInfo,&disposition,sizeof(disposition));
+  close_file(nullptr,fd);if(!erased){fail(matches?EACCES:EAGAIN);return;}
+#else
+  const auto slash=relative.find_last_of('/');const auto name=slash==std::string::npos?relative:relative.substr(slash+1);
+  const auto directory=slash==std::string::npos?std::string():relative.substr(0,slash);
+  int dir=directory.empty()?ww::privilege::run([&]{return ::openat(parent_fd,".",O_RDONLY|O_DIRECTORY|O_NOFOLLOW);}):anchored_directory(directory,parent_fd);
+  if(dir<0){fail(EACCES);return;}
+  int target=ww::privilege::run([&]{return ::openat(dir,name.c_str(),O_RDONLY|O_NOFOLLOW|O_NONBLOCK|(entry.info.directory?O_DIRECTORY:0));});
+  Info actual{};const bool matches=target>=0 && metadata(nullptr,target,actual)>=0 && (entry.info.directory?identity(entry.info,actual):unchanged(entry.info,actual));
+  bool erased=false;if(matches)erased=ww::privilege::run([&]{return ::unlinkat(dir,name.c_str(),entry.info.directory?AT_REMOVEDIR:0);})==0;
+  if(target>=0)close_file(nullptr,target);if(erased)ww::privilege::run([&]{return ::fsync(dir);});close_file(nullptr,dir);
+  if(!erased){fail(matches?EACCES:EAGAIN);return;}
+#endif
+  --remaining;++removed;if(!remaining){state=State::complete;close();}
 }
 void Purge::close() {
   if(root_fd>=0)close_file(nullptr,root_fd);
   root_fd=-1;
 }
 bool Purge::fail(int code) {
-  error=code<0?-code:code;ready=false;state=State::failed;close();return false;
+  error=code<0?-code:code;ready=false;state=State::failed;close();entries.clear();return false;
+}
+namespace {
+bool recovery_ancestors(const std::string &root,const char *relative) {
+  if(!relative)return false;
+  for(const char *slash=std::strchr(relative,'/');slash;slash=std::strchr(slash+1,'/')){
+    const size_t part=size_t(slash-relative);char path[1024];
+    if(root.size()+1+part>=sizeof(path))return false;
+    std::memcpy(path,root.data(),root.size());path[root.size()]='/';
+    std::memcpy(path+root.size()+1,relative,part);path[root.size()+1+part]=0;Info info{};
+    if(inspect(path,info)<0 || !info.directory)return false;
+  }
+  return true;
+}
+// Stream directory entries into a checked in-memory snapshot. Unlike a vector
+// of every name in a directory, this has no fixed item-count limit and can
+// report allocation failure before permanently deleting anything.
+bool recovery_snapshot_tree(char *path,size_t root_length,RecoverySnapshot<Info> &entries,uint64_t &bytes,bool root) {
+  const size_t length=std::strlen(path);Info before{};
+  if(length>=1024 || inspect(path,before)<0 || (!before.regular&&!before.directory))return false;
+  if(!root){
+    if(length<=root_length || path[root_length]!='/')return false;
+    if(!entries.append(path+root_length+1,before))return false;
+    if(before.regular){if(before.size>std::numeric_limits<uint64_t>::max()-bytes)return false;bytes+=before.size;}
+  }
+  if(before.directory){
+    auto child=[&](const char *name){
+      if(!std::strcmp(name,".")||!std::strcmp(name,".."))return true;
+      const size_t count=std::strlen(name);if(!count || std::strchr(name,'/') || std::strchr(name,'\\'))return false;
+      const bool slash=length && path[length-1]!='/';
+      if(length+size_t(slash)+count>=1024)return false;
+      if(slash)path[length]='/';std::memcpy(path+length+size_t(slash),name,count+1);
+      const bool ok=recovery_snapshot_tree(path,root_length,entries,bytes,false);path[length]=0;return ok;
+    };
+    bool ok=true;
+#ifdef _WIN32
+    char pattern[1028];const int n=std::snprintf(pattern,sizeof(pattern),"%s/*",path);
+    if(n<0 || size_t(n)>=sizeof(pattern))return false;
+    WIN32_FIND_DATAA data{};HANDLE handle=FindFirstFileA(pattern,&data);
+    if(handle==INVALID_HANDLE_VALUE){if(GetLastError()!=ERROR_FILE_NOT_FOUND)return false;}
+    else {do{if(!child(data.cFileName)){ok=false;break;}}while(FindNextFileA(handle,&data));if(ok && GetLastError()!=ERROR_NO_MORE_FILES)ok=false;FindClose(handle);}
+#elif defined(__PROSPERO__)
+    const int fd=error_code(ww::privilege::run([&]{return sceKernelOpen(path,O_RDONLY|O_DIRECTORY|O_NOFOLLOW,0);}));
+    if(fd<0)return false;
+    auto *buffer=static_cast<unsigned char *>(std::malloc(64*1024));
+    if(!buffer){close_file(nullptr,fd);return false;}
+    while(ok){
+      const int n=sceKernelGetdents(fd,reinterpret_cast<char *>(buffer),64*1024);
+      if(n<0 || n>64*1024){ok=false;break;}if(!n)break;
+      size_t at=0;directory::Record item{};
+      while(true){const auto state=directory::next(buffer,size_t(n),at,item);if(state==directory::Read::end)break;if(state==directory::Read::invalid){ok=false;break;}if(item.inode && !child(item.name)){ok=false;break;}}
+    }
+    std::free(buffer);if(close_file(nullptr,fd)<0)ok=false;
+#else
+    DIR *directory=nullptr;ww::privilege::run([&]{directory=opendir(path);return directory?0:-1;});
+    if(!directory)return false;
+    while(true){errno=0;auto *item=readdir(directory);if(!item){if(errno)ok=false;break;}if(!child(item->d_name)){ok=false;break;}}
+    if(closedir(directory)!=0)ok=false;
+#endif
+    if(!ok)return false;
+  }
+  Info after{};return inspect(path,after)>=0 && unchanged(before,after);
+}
 }
 bool Purge::prepare(const char *path) {
+  return prepare_target(path,nullptr);
+}
+bool Purge::prepare_target(const char *path,const char *relative) {
   if(busy())return false;
-  close();entries.clear();remaining=removed=0;bytes=0;error=0;ready=false;state=State::idle;
+  close();entries.clear();selected.clear();remaining=removed=0;bytes=0;error=0;ready=false;state=State::idle;
   if(!path || std::strlen(path)>=1024)return fail(EINVAL);
   root=path;while(root.size()>1 && root.back()=='/')root.pop_back();
   const auto slash=root.find_last_of('/');
@@ -713,33 +1117,53 @@ bool Purge::prepare(const char *path) {
 #endif
   if(root_fd<0){const int code=root_fd;root_fd=-1;if(code==-ENOENT){state=State::complete;return true;}return fail(code);}
   if(metadata(nullptr,root_fd,root_info)<0 || !root_info.directory)return fail(EACCES);
-  if(!scan_tree(root,"",entries,0,true))return fail(ENOTSUP);
   Info named{};
   if(inspect(root.c_str(),named)<0 || !identity(root_info,named))return fail(EAGAIN);
-  remaining=entries.size()-1;
-  for(const auto &entry:entries)if(entry.info.regular)bytes+=entry.info.size;
+  if(!unchanged(root_info,named))return fail(EAGAIN);
+  char path_buffer[1024];
+  if(relative){selected=relative;if(!recovery_ancestors(root,selected.c_str()))return fail(ENOTSUP);}
+  const int length=std::snprintf(path_buffer,sizeof(path_buffer),relative?"%s/%s":"%s",root.c_str(),relative?relative:"");
+  if(length<0 || size_t(length)>=sizeof(path_buffer) || !recovery_snapshot_tree(path_buffer,root.size(),entries,bytes,!relative))return fail(ENOTSUP);
+  Info after{};if(inspect(root.c_str(),after)<0 || !unchanged(named,after))return fail(EAGAIN);
+  remaining=entries.size();
   ready=remaining>0;
   if(!ready){state=State::complete;close();}
   return true;
 }
+bool Purge::prepare_item(const char *store,const char *item) {
+  if(!store||!item)return false;
+  const std::string root_path(store),item_path(item),prefix=root_path+"/";
+  if(item_path.compare(0,prefix.size(),prefix)!=0)return false;
+  const std::string relative=item_path.substr(prefix.size());
+  if(relative.empty() || relative.find('\\')!=std::string::npos)return false;
+  for(size_t at=0;at<relative.size();) {auto end=relative.find('/',at);if(end==std::string::npos)end=relative.size();const auto part=relative.substr(at,end-at);if(part.empty()||part=="."||part=="..")return false;at=end+1;if(end+1==relative.size())return false;}
+  return prepare_target(store,relative.c_str()) && ready;
+}
 bool Purge::begin() {
   if(!ready || busy())return false;
-  std::vector<TreeTransfer::Entry> current;
-  if(!scan_tree(root,"",current,0,true) || !same_tree(entries,current))return fail(EAGAIN);
-  Info held{};
-  if(metadata(nullptr,root_fd,held)<0 || !identity(root_info,held))return fail(EAGAIN);
+  Info held{},named{};
+  if(metadata(nullptr,root_fd,held)<0 || inspect(root.c_str(),named)<0 ||
+     !unchanged(root_info,held) || !unchanged(root_info,named))return fail(EAGAIN);
+  for(auto *entry=entries.last();entry;entry=entry->previous){
+    char path[1024];const int n=std::snprintf(path,sizeof(path),"%s/%s",root.c_str(),entry->path);
+    Info current{};if(n<0 || size_t(n)>=sizeof(path) || !recovery_ancestors(root,entry->path) ||
+       inspect(path,current)<0 || !unchanged(entry->info,current))return fail(EAGAIN);
+  }
+  if(metadata(nullptr,root_fd,held)<0 || !unchanged(root_info,held))return fail(EAGAIN);
   ready=false;state=State::copying;return true;
 }
-void Purge::cancel(){ready=false;state=State::cancelled;close();}
+void Purge::cancel(){ready=false;state=State::cancelled;close();entries.clear();}
 void Purge::step() {
   if(!busy())return;
   if(!remaining){state=State::complete;close();return;}
   Info named_root{};
   if(inspect(root.c_str(),named_root)<0 || !identity(root_info,named_root)){fail(EAGAIN);return;}
-  const auto &entry=entries[remaining];
+  const auto *entry=entries.last();if(!entry){fail(EIO);return;}
 #ifdef _WIN32
-  const std::string path=root+"/"+entry.relative;
-  HANDLE handle=CreateFileA(path.c_str(),DELETE|FILE_READ_ATTRIBUTES,
+  char path[1024];const int path_length=std::snprintf(path,sizeof(path),"%s/%s",root.c_str(),entry->path);
+  if(path_length<0 || size_t(path_length)>=sizeof(path)){fail(ENAMETOOLONG);return;}
+  if(!recovery_ancestors(root,entry->path)){fail(EAGAIN);return;}
+  HANDLE handle=CreateFileA(path,DELETE|FILE_READ_ATTRIBUTES,
       FILE_SHARE_READ|FILE_SHARE_WRITE|FILE_SHARE_DELETE,nullptr,OPEN_EXISTING,
       FILE_FLAG_OPEN_REPARSE_POINT|FILE_FLAG_BACKUP_SEMANTICS,nullptr);
   if(handle==INVALID_HANDLE_VALUE){fail(EACCES);return;}
@@ -747,29 +1171,28 @@ void Purge::step() {
   if(fd<0){CloseHandle(handle);fail(EACCES);return;}
   Info actual{};
   const bool matches=metadata(nullptr,fd,actual)>=0 &&
-      (entry.info.directory?identity(entry.info,actual):unchanged(entry.info,actual));
+      (entry->info.directory?identity(entry->info,actual):unchanged(entry->info,actual));
   FILE_DISPOSITION_INFO disposition{};disposition.DeleteFile=TRUE;
   const bool erased=matches && SetFileInformationByHandle(handle,FileDispositionInfo,&disposition,sizeof(disposition));
   close_file(nullptr,fd);
   if(!erased){fail(EACCES);return;}
 #else
-  const auto slash=entry.relative.find_last_of('/');
-  const std::string name=slash==std::string::npos?entry.relative:entry.relative.substr(slash+1);
-  const std::string parent=slash==std::string::npos?"":entry.relative.substr(0,slash);
-  int directory_fd=parent.empty() ? ww::privilege::run([&]{return ::openat(root_fd,".",O_RDONLY|O_DIRECTORY|O_NOFOLLOW);}) : anchored_directory(parent,root_fd);
+  const char *slash=std::strrchr(entry->path,'/');const char *name=slash?slash+1:entry->path;
+  char parent[1024]{};if(slash){const size_t n=size_t(slash-entry->path);if(n>=sizeof(parent)){fail(ENAMETOOLONG);return;}std::memcpy(parent,entry->path,n);parent[n]=0;}
+  int directory_fd=!slash ? ww::privilege::run([&]{return ::openat(root_fd,".",O_RDONLY|O_DIRECTORY|O_NOFOLLOW);}) : anchored_directory(parent,root_fd);
   if(directory_fd<0){fail(EACCES);return;}
-  int target=ww::privilege::run([&]{return ::openat(directory_fd,name.c_str(),O_RDONLY|O_NOFOLLOW|O_NONBLOCK|(entry.info.directory?O_DIRECTORY:0));});
+  int target=ww::privilege::run([&]{return ::openat(directory_fd,name,O_RDONLY|O_NOFOLLOW|O_NONBLOCK|(entry->info.directory?O_DIRECTORY:0));});
   Info actual{};
   const bool matches=target>=0 && metadata(nullptr,target,actual)>=0 &&
-      (entry.info.directory?identity(entry.info,actual):unchanged(entry.info,actual));
+      (entry->info.directory?identity(entry->info,actual):unchanged(entry->info,actual));
   bool erased=false;
-  if(matches)erased=ww::privilege::run([&]{return ::unlinkat(directory_fd,name.c_str(),entry.info.directory?AT_REMOVEDIR:0);})==0;
+  if(matches)erased=ww::privilege::run([&]{return ::unlinkat(directory_fd,name,entry->info.directory?AT_REMOVEDIR:0);})==0;
   if(target>=0)close_file(nullptr,target);
   if(erased)ww::privilege::run([&]{return ::fsync(directory_fd);});
   close_file(nullptr,directory_fd);
   if(!erased){fail(matches?EACCES:EAGAIN);return;}
 #endif
-  --remaining;++removed;
+  entries.pop_back();--remaining;++removed;
   if(!remaining){state=State::complete;close();}
 }
 

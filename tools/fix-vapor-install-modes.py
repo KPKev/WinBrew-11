@@ -10,7 +10,8 @@ from pathlib import PurePosixPath
 
 APP = '/data/homebrew/PPSA77382'
 KIT = '/data/wine11/kits/playden-kit'
-APP_PIN = ('933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be',
+APP_PIN = ('9ee6608da3b66738f65cfdcc60c27744a0c537fa7773b83a0aee7101a3bda8d4',
+           '933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be',
            'a712a3d69ad0eae2829415486053790ce38361156f4bab6442d2838e4a9b4c4c',
            'e245bfab1cc296be9e586bac86bd61160073b6ba99c22faf84da71c2ea203f12',
            '462020117c5fba9ce83b1a48b187183c5409b1a7c9ef56aaf4c3de49d3d2f5d2',

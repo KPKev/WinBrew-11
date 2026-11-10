@@ -88,12 +88,12 @@ int main() {
       assert(s.pending == ww::Action::browser);
     }
   }
+  s.pending = ww::Action::none;
   s.activate(32);
   s.activate(401);
   s.draw();
-  auto game = hit(s, 30);
-  s.pointer(game.x + 3, game.y + 3, true);
-  assert(s.pending == ww::Action::quake);
+  for (int i=0;i<s.count;++i) assert(s.hits[i].id!=30);
+  assert(s.pending == ww::Action::none);
   s.pending = ww::Action::none;
   s.activate(100);
   s.draw();

@@ -16,7 +16,7 @@ constexpr int HitCapacity = 512;
 constexpr size_t AtlasBytes = icons::Bytes;
 enum class Action { none, quake, playden, browser };
 enum class InputDevice { controller, mouse, keyboard };
-enum class TextTarget { none, search, address, document, filename, file_address, file_search, file_rename, sheet, vapor_search };
+enum class TextTarget { none, search, address, document, filename, file_address, file_search, file_rename, sheet, vapor_search, notepad_find, notepad_replace_text, username };
 enum class Key {
   start,
   back,
@@ -38,6 +38,7 @@ struct Rect {
 };
 struct FileEntry {
   char name[256]{};
+  std::string display_name;
   bool directory = false, metadata = false;
   fileops::Info info;
 };
@@ -168,9 +169,16 @@ struct Shell {
   char file_error_stage[16] = "";
   fileops::Clipboard file_clipboard;
   fileops::TreeTransfer file_transfer;
+  fileops::CrossVolumeRecycle file_cross_recycle;
+  bool file_cross_in_progress = false;
+  int file_recycle_resume = 0;
   fileops::Purge file_purge;
   bool recycle_confirmation = false;
+  bool recycle_single = false;
   void empty_recycle_request(const char *);
+  std::string recycle_store() const;
+  bool prepare_recycle_bin();
+  bool begin_recycle_collection(int resume_action);
   fileops::Info file_properties_info, file_context_info;
   fileops::State file_transfer_seen = fileops::State::idle;
   bool file_new = false, file_context_desktop = false;
@@ -180,11 +188,18 @@ struct Shell {
   int shortcut_context_id = 0;
   std::uint32_t shortcut_context_app = 0;
   bool shortcut_context_taskbar = false;
+  bool desktop_context_target = false;
   std::uint64_t taskbar_hidden = (1ULL<<36)|(1ULL<<37)|(1ULL<<38), desktop_hidden = 0;
   Rect file_context_bounds{}, file_content_bounds{}, file_window_bounds{};
   char file_context_path[1024] = "", file_context_folder[1024] = "",
        file_properties_path[1024] = "";
   TextDocument document;
+  std::vector<std::unique_ptr<TextDocument>> notepad_tabs;
+  int notepad_tab = 0;
+  void notepad_tab_init();
+  void notepad_tab_switch(int);
+  void notepad_tab_new();
+  void notepad_tab_remove();
   Paint paint;
   FileEntry desktop_files[64]{};
   char desktop_folder_path[1024]{},desktop_rendered_paths[64][1024]{};
@@ -204,6 +219,9 @@ struct Shell {
   bool sheet_prompt = false;
   int sheet_pending = -1;
   int notepad_menu = 0;
+  bool notepad_search_open = false;
+  char notepad_query[256]{}, notepad_replacement[256]{}, notepad_search_message[80]{};
+  size_t notepad_match = size_t(-1);
   games::Inventory game_inventory;
   int library_selection = -1, library_page = 0;
   bool library_downloads = false, steam_panel = false;
@@ -273,6 +291,9 @@ struct Shell {
   char message[256] = "";
   char address[256] = "https://www.google.com", url[768] = "";
   char preferences[1024] = "";
+  char username[64] = "WinBrew";
+  void load_username();
+  bool save_username();
   bool address_edit = false, show_icons = true, left_taskbar = false,
        clock24 = false, large_pointer = false;
   bool quick = false, tray = false, ui_muted = false, audio_available = false,
@@ -396,5 +417,12 @@ struct Shell {
   uint32_t muted() const;
   uint32_t accent_color() const;
   void center(int, int, int, const char *, int = 0, uint32_t = 0xff202020);
+  // Appended to preserve offsets of existing Shell members during updates.
+  std::unique_ptr<fileops::RecoveryWalker> file_recovery_walker;
+  bool file_recovery_scan_ready = false;
+  std::vector<fileops::RecoveryWalker::Pending> file_recovery_scanned_roots, file_recovery_pending_roots;
+  size_t file_recycle_batch_offset = 0, file_recycle_batch_seen = 0;
+  std::vector<std::string> file_recovery_stores;
+  bool file_recovery_more = false;
 };
 } // namespace ww

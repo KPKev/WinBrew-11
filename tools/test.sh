@@ -224,6 +224,8 @@ g++ -std=c++20 -O2 src/notepad_document.cpp src/image_codec.cpp src/privilege.cp
 ./build/notepad-document-test
 g++ -std=c++20 -O2 src/notepad_document.cpp src/image_codec.cpp src/privilege.cpp tests/notepad_saveas_test.cpp -o build/notepad-saveas-test
 ./build/notepad-saveas-test
+g++ -std=c++20 -O2 tests/notepad_search_test.cpp -o build/notepad-search-test
+./build/notepad-search-test
 g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp tests/notepad_input_test.cpp -o build/notepad-input-test
 ./build/notepad-input-test
 
@@ -242,6 +244,18 @@ g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/explorer_tre
 ./build/explorer-treeops-test
 g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/explorer_purge_test.cpp -o build/explorer-purge-test
 ./build/explorer-purge-test
+g++ -std=c++20 -O2 tests/recovery_snapshot_test.cpp -o build/recovery-snapshot-test
+./build/recovery-snapshot-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/recovery_huge_purge_test.cpp -Wl,--wrap=fsync -o build/recovery-huge-purge-test
+./build/recovery-huge-purge-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/cross_volume_recycle_test.cpp -o build/cross-volume-recycle-test
+./build/cross-volume-recycle-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/recovery_walk_test.cpp -o build/recovery-walk-test
+./build/recovery-walk-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/recovery_batches_test.cpp -o build/recovery-batches-test
+./build/recovery-batches-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/cross_volume_huge_test.cpp -Wl,--wrap=fsync -Wl,--wrap=realloc -o build/cross-volume-huge-test
+./build/cross-volume-huge-test
 g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp tests/explorer_context_test.cpp -o build/explorer-context-test
 ./build/explorer-context-test
 
@@ -281,6 +295,12 @@ g++ -std=c++20 -O2 src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/
 sources='src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp'
 g++ -std=c++20 -O1 $sources tests/explorer_browser_test.cpp -o build/explorer-browser-test
 ./build/explorer-browser-test
+g++ -std=c++20 -O1 $sources tests/cross_volume_recycle_ui_test.cpp -o build/cross-volume-recycle-ui-test
+./build/cross-volume-recycle-ui-test
+g++ -std=c++20 -O1 $sources tests/recovery_scan_ui_test.cpp -o build/recovery-scan-ui-test
+./build/recovery-scan-ui-test
+g++ -std=c++20 -O1 $sources tests/recycle_large_ui_test.cpp -o build/recycle-large-ui-test
+./build/recycle-large-ui-test
 
 # Actual console C/user profile migration and failure-retention checks.
 sources='src/shell.cpp src/vapor_shortcuts.cpp src/desktop_ui.cpp src/preferences.cpp src/pointer.cpp src/controller_input.cpp src/explorer.cpp src/privilege.cpp src/explorer_fileops.cpp src/explorer_context.cpp src/notepad_document.cpp src/notepad_ui.cpp src/paint.cpp src/image_codec.cpp src/game_inventory.cpp src/web_history.cpp src/tray_ui.cpp src/icons.cpp src/text_input.cpp src/keyboard_ui.cpp src/hid_input.cpp'

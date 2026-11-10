@@ -38,19 +38,42 @@ int main() {
   s.input_device = ww::InputDevice::keyboard;
   assert(s.notepad_open(path));
   assert(s.window == 4 && s.document.active && !s.touch_keyboard);
+  s.insert_text("red blue red");
+  s.physical_key(0x09, 1); // Ctrl+F
+  assert(s.notepad_search_open && s.text_target == ww::TextTarget::notepad_find);
+  s.insert_text("red");
+  s.notepad_action(623);
+  assert(s.notepad_match == 0);
+  s.notepad_action(623);
+  assert(s.notepad_match == 9);
+  s.notepad_action(622);
+  s.insert_text("green");
+  s.notepad_action(626);
+  assert(std::string(s.document.text) == "red blue green");
+  s.notepad_action(624);
+  assert(std::string(s.document.text) == "green blue green");
+  s.physical_key(0x1d,1); // Ctrl+Z reverses Replace All.
+  assert(std::string(s.document.text) == "red blue green");
+  s.physical_key(0x1d,1);
+  assert(std::string(s.document.text) == "red blue red");
+  s.physical_key(0x1c,1); s.physical_key(0x1c,1); // Ctrl+Y
+  assert(std::string(s.document.text) == "green blue green");
+  s.notepad_action(625);
+  s.document.clear();
   s.physical_key(4);    // a
   s.physical_key(0x28); // Enter creates a new line, without leaving the editor.
   s.physical_key(5);    // b
   s.physical_key(0x2b); // Tab inserts text.
   s.physical_key(6);    // c
   assert(std::string(s.document.text) == "a\nb\tc" && s.document.dirty());
-  s.physical_key(0x16, 1); // Ctrl+S opens the editable save-name dialog.
-  assert(s.notepad_save_dialog);
-  s.notepad_action(607);
+  s.physical_key(0x16, 1); // Ctrl+S saves the existing document directly.
+  assert(!s.notepad_save_dialog);
   assert(!s.document.dirty() && get(path) == "a\nb\tc");
   s.physical_key(4, 1); // Ctrl+A
   s.physical_key(7);    // d replaces the selected document.
   assert(std::string(s.document.text) == "d" && s.document.dirty());
+  s.physical_key(0x1d,1);assert(std::string(s.document.text)=="a\nb\tc");
+  s.physical_key(0x1c,1);assert(std::string(s.document.text)=="d");
   s.activate(32);
   assert(s.notepad_prompt && s.window == 4 && s.notepad_pending_action == 32);
   // Underlying apps and right-click cannot replace the unsaved modal.
@@ -100,23 +123,53 @@ int main() {
   assert(s.notepad_prompt && s.window == 4);
   s.notepad_action(611); // Explicit discard.
   assert(!s.document.active && s.window == 1 && get(path) == "d");
-  // Choosing a different file while dirty also offers Save / Don't save /
-  // Cancel.
+  // Opening another file keeps the first tab's unsaved edits.
   assert(s.notepad_open(path));
   s.character('x');
   put("build/notepad-input/other.txt", "Another document");
-  assert(!s.notepad_open("build/notepad-input/other.txt") && s.notepad_prompt);
-  s.notepad_action(610);
+  assert(s.notepad_open("build/notepad-input/other.txt") && !s.notepad_prompt);
   assert(s.window == 4 && std::string(s.document.text) == "Another document");
+  assert(get(path) == "d");
+  s.notepad_tab_switch(0);
+  assert(std::string(s.document.text) == "xd" && s.document.dirty());
+  s.notepad_action(601);
   assert(get(path) == "xd");
+  s.notepad_tab_switch(1);
   s.character('!');
-  s.activate(30); // Game launches wait for unsaved edits.
+  s.activate(12); // Launches wait for unsaved edits.
   assert(s.notepad_prompt && s.pending == ww::Action::none);
   s.notepad_action(612);
   assert(s.pending == ww::Action::none && s.document.dirty());
-  s.activate(30);
+  s.activate(12);
   s.notepad_action(611);
-  assert(s.pending == ww::Action::quake && !s.document.active);
+  assert(s.pending == ww::Action::playden && !s.document.active);
+  assert(s.notepad_open(path));
+  s.notepad_tab_new();
+  assert(s.document.active && !s.document.path[0]);
+  s.insert_text("new unsaved text");
+  s.notepad_tab_switch(0);
+  assert(std::string(s.document.text) == "xd");
+  s.notepad_tab_switch(1);
+  assert(std::string(s.document.text) == "new unsaved text");
+  s.physical_key(0x1d,1);assert(std::string(s.document.text)=="new unsaved tex");
+  s.physical_key(0x1c,1);assert(std::string(s.document.text)=="new unsaved text");
+  s.notepad_close();
+  assert(s.notepad_prompt);
+  s.notepad_action(612);
+  assert(s.document.dirty() && s.notepad_tabs.size() == 2);
+  s.notepad_close(); s.notepad_action(611);
+  assert(s.notepad_tabs.size() == 1 && std::string(s.document.text) == "xd");
+  s.pending = ww::Action::none;
+  s.insert_text(" first");
+  s.notepad_tab_new(); s.insert_text("second");
+  s.activate(12);
+  assert(s.notepad_prompt && s.pending == ww::Action::none);
+  s.notepad_action(611);
+  assert(s.notepad_prompt && std::string(s.document.text) == " firstxd");
+  s.notepad_action(612);
+  assert(s.document.dirty() && s.pending == ww::Action::none);
+  s.activate(12); s.notepad_action(611);
+  assert(s.pending == ww::Action::playden && !s.document.active);
   std::puts(
       "PASS: Notepad USB/touch/mouse input, multiline editing, Ctrl+S, "
       "modal hit surfaces, save/discard/cancel and launch/navigation guards");

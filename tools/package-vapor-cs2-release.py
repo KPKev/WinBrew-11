@@ -9,7 +9,7 @@ import prepare_blender_runtime as blender
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
 def document(name):
     text = (cs2.ROOT/'docs'/name).read_text(encoding='utf-8')
-    base = 'https://github.com/KPKev/WinBrew-11/blob/desktop-storage-dev-v1/docs/'
+    base = 'https://github.com/KPKev/WinBrew-11/blob/notepad-start-recycle-dev-v1/docs/'
     return re.sub(r'(\]\()([^)]+)(\))',
                   lambda m: m[1] + urljoin(base, m[2]) + m[3], text).encode('utf-8')
 def package(app, output):

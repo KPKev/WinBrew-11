@@ -21,16 +21,16 @@ int main() {
   assert(s.paint.dirty());
   s.activate(33);
   assert(s.window == 5 && s.paint.modal());
-  s.activate(30);
+  s.activate(12);
   assert(s.pending == ww::Action::none);
   s.key(ww::Key::back);
   assert(!s.paint.modal() && s.paint.dirty());
-  s.activate(30);
+  s.activate(12);
   assert(s.paint.modal() && s.pending == ww::Action::none);
   s.activate(740);
   finish_paint_save(s.paint, s);
   assert(!s.paint.modal() && !s.paint.dirty());
-  assert(s.pending == ww::Action::quake);
+  assert(s.pending == ww::Action::playden);
   bool saved_copy = false;
   for (const auto &entry :
        std::filesystem::directory_iterator("build/paint-input-output"))

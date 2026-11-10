@@ -279,31 +279,37 @@ void Shell::settings_ui(Rect wr) {
          muted());
     button({cx, y + 630, 200, 42}, 101, "Personalize desktop");
   } else if (settings_page == 1) {
-    card(142, 110);
-    text(cx + 22, y + 159, "Choose your mode", 1, ink());
-    text(cx + 22, y + 198, "Windows and menus", 0, muted());
-    choice({cx + cw - 260, y + 178, 106, 44}, 110, "Light", !dark);
-    choice({cx + cw - 142, y + 178, 106, 44}, 111, "Dark", dark);
-    card(268, 112);
-    text(cx + 22, y + 286, "Accent color", 1, ink());
+    card(142, 96);
+    text(cx+22,y+156,"Display name",1,ink());
+    text(cx+22,y+192,"Your files stay in the same folder",0,muted());
+    round({cx+350,y+168,245,44},5,dark?color(31,33,38):color(241,244,248));
+    add({cx+350,y+168,245,44},330);draw_text_field(cx+360,y+178,225,TextTarget::username,"WinBrew");
+    button({cx+608,y+168,115,44},331,"Save");
+    card(252, 100);
+    text(cx + 22, y + 269, "Choose your mode", 1, ink());
+    text(cx + 22, y + 308, "Windows and menus", 0, muted());
+    choice({cx + cw - 260, y + 288, 106, 44}, 110, "Light", !dark);
+    choice({cx + cw - 142, y + 288, 106, 44}, 111, "Dark", dark);
+    card(366, 100);
+    text(cx + 22, y + 384, "Accent color", 1, ink());
     const char *names[] = {"Blue", "Violet", "Teal"};
     for (int i = 0; i < 3; ++i) {
-      button({cx + 245 + i * 150, y + 309, 136, 44}, 112 + i, names[i]);
+      button({cx + 245 + i * 150, y + 407, 136, 44}, 112 + i, names[i]);
       if (accent == i)
-        round({cx + 278 + i * 150, y + 354, 70, 3}, 1, accent_color());
+        round({cx + 278 + i * 150, y + 452, 70, 3}, 1, accent_color());
     }
-    card(396, 112);
-    text(cx + 22, y + 414, "Background", 1, ink());
+    card(480, 100);
+    text(cx + 22, y + 498, "Background", 1, ink());
     const char *bg[] = {"Bloom", "Midnight", "Slate"};
     for (int i = 0; i < 3; ++i) {
-      button({cx + 245 + i * 150, y + 437, 136, 44}, 120 + i, bg[i]);
+      button({cx + 245 + i * 150, y + 521, 136, 44}, 120 + i, bg[i]);
       if (background == i)
-        round({cx + 278 + i * 150, y + 482, 70, 3}, 1, accent_color());
+        round({cx + 278 + i * 150, y + 566, 70, 3}, 1, accent_color());
     }
-    card(524, 112);
-    text(cx + 22, y + 542, "Desktop icon size", 1, ink());
-    choice({cx + cw - 290, y + 563, 120, 44}, 116, "Small", icon_size == 0);
-    choice({cx + cw - 155, y + 563, 120, 44}, 117, "Medium", icon_size == 1);
+    card(594, 100);
+    text(cx + 22, y + 612, "Desktop icon size", 1, ink());
+    choice({cx + cw - 290, y + 633, 120, 44}, 116, "Small", icon_size == 0);
+    choice({cx + cw - 155, y + 633, 120, 44}, 117, "Medium", icon_size == 1);
   } else if (settings_page == 2) {
     card(142, 118);
     text(cx + 22, y + 160, "Taskbar alignment", 1, ink());
@@ -365,11 +371,6 @@ void Shell::settings_ui(Rect wr) {
     text(cx + 28, y + 551,
          "Independent software. Microsoft Windows is not installed.", 0,
          muted());
-    card(620, 126);
-    text(cx + 22, y + 638, "Game return", 1, ink());
-    button({cx + cw - 176, y + 635, 154, 38}, 185, "Run check");
-    text(cx + 22, y + 681, owner_check_line(owner_check_status), 0, ink());
-    text(cx + 22, y + 715, "Checks only. Your game files and settings stay unchanged.", 0, muted());
   } else if (settings_page == 8) {
     controller_test_ui(wr);
   } else if (settings_page == 9) {
@@ -728,6 +729,20 @@ static void desktop_context_ui(Shell &shell) {
   const int *separators = classic ? classic_separators : modern_separators;
   for (int index = 0; index < (classic ? 5 : 4); ++index)
     shell.rect({menu.x + 5, menu.y + separators[index], menu.w - 10, 1}, separator);
+  if (shell.desktop_context_target) {
+    const int top = classic ? classic_height : modern_height;
+    shell.rect({menu.x+5,menu.y+top,menu.w-10,1},separator);
+    const bool file = shell.file_context_desktop && shell.file_context_item;
+    if (shell.shortcut_context_id == 11) {
+      row({menu.x+4,menu.y+top+3,menu.w-8,30},815,"Open Recycle Bin",true,classic?32:39,nullptr,false);
+      row({menu.x+4,menu.y+top+35,menu.w-8,30},814,"Empty Recycle Bin",true,classic?32:39,nullptr,false);
+    } else {
+    row({menu.x+4,menu.y+top+3,menu.w-8,30},801,"Copy",file,classic?32:39,nullptr,false);
+    row({menu.x+4,menu.y+top+35,menu.w-8,30},802,"Cut",file,classic?32:39,nullptr,false);
+    const bool shortcut = shell.shortcut_context_id && shell.shortcut_context_id != 11;
+    row({menu.x+4,menu.y+top+67,menu.w-8,30},file?809:812,file?"Delete":"Remove shortcut",file||shortcut,classic?32:39,nullptr,false);
+    }
+  }
   if (!shell.context_submenu) return;
   const Rect sub = shell.context_submenu_bounds();
   panel(sub);
@@ -827,15 +842,15 @@ void Shell::desktop_ui() {
       if (found != wanted.end()) { shortcut_labels[found->second] = game.title; wanted.erase(found); }
     }
   }
-  const char *labels[] = {"This PC", "Recycle Bin", "Vapor",
-                          "Quake II RTX", "Web", "Notepad", "Paint", "Spreadsheet"};
-  int kinds[] = {1, 2, 16, 4, 8, 17, 18, 19}, ids[] = {10, 11, 35, 13, 34, 36, 37, 38};
+  const char *labels[] = {"This PC", "Recycle Bin", "Vapor", "Web", "Notepad", "Paint", "Spreadsheet", "Settings"};
+  int kinds[] = {1, 2, 16, 8, 17, 18, 19, 6}, ids[] = {10, 11, 35, 34, 36, 37, 38, 33};
+  const int positions[] = {0,1,2,4,5,6,7,8};
   if (show_icons)
     for (int i = 0; i < 8; ++i) {
       if(desktop_hidden & (std::uint64_t(1)<<ids[i]))continue;
       int spacing = icon_size == 2 ? 134 : icon_size == 1 ? 112 : 94;
       int s = icon_size == 2 ? 64 : icon_size == 1 ? 46 : 36;
-      Rect r = desktop_icon_position(std::uint64_t(ids[i]), {12, 18 + i * spacing, 108, spacing - 5});
+      Rect r = desktop_icon_position(std::uint64_t(ids[i]), {12, 18 + positions[i] * spacing, 108, spacing - 5});
       add(r, ids[i]);
       if (hover == ids[i] || focus == ids[i])
         round(r, 4, 0x406fabed);
@@ -850,7 +865,7 @@ void Shell::desktop_ui() {
     for (std::size_t i = 0; i < vapor_shortcuts.count(); ++i) {
       if (!(vapor_shortcuts.entries()[i].placements & VaporShortcuts::Desktop)) continue;
       Rect r = desktop_icon_position(0x100000000ULL | vapor_shortcuts.entries()[i].app,
-                                    {12+((8+row)/std::max(1,(H-80)/spacing))*120,18+((8+row++)%std::max(1,(H-80)/spacing))*spacing,108,spacing-5});
+                                    {12+((9+row)/std::max(1,(H-80)/spacing))*120,18+((9+row++)%std::max(1,(H-80)/spacing))*spacing,108,spacing-5});
       add(r, 1200 + int(i));
       if (hover == 1200 + int(i) || focus == 1200 + int(i)) round(r, 4, 0x406fabed);
       vapor_shortcut_icon(vapor_shortcuts.entries()[i].app, r.x + (r.w - size) / 2, r.y + 4, size, shortcut_labels[i].c_str());
@@ -859,7 +874,7 @@ void Shell::desktop_ui() {
   }
   if(show_icons){int spacing=icon_size==2?134:icon_size==1?112:94;int per_column=std::max(1,(H-80)/spacing),size=icon_size==2?64:icon_size==1?46:36,game_count=0;
     for(std::size_t i=0;i<vapor_shortcuts.count();++i)if(vapor_shortcuts.entries()[i].placements&VaporShortcuts::Desktop)++game_count;
-    for(int i=0;i<desktop_file_count;++i){int index=8+game_count+i;Rect r{12+(index/per_column)*120,18+(index%per_column)*spacing,108,spacing-5};if(r.x+r.w>W)break;
+    for(int i=0;i<desktop_file_count;++i){int index=9+game_count+i;Rect r{12+(index/per_column)*120,18+(index%per_column)*spacing,108,spacing-5};if(r.x+r.w>W)break;
       int length=std::snprintf(desktop_rendered_paths[i],sizeof(desktop_rendered_paths[i]),"%s/%s",desktop_folder_path,desktop_files[i].name);if(length<0||length>=int(sizeof(desktop_rendered_paths[i]))){desktop_rendered_paths[i][0]=0;continue;}add(r,2000+i);
       if(hover==2000+i||focus==2000+i)round(r,4,0x406fabed);
       icon(r.x+(r.w-size)/2,r.y+4,size,desktop_files[i].directory?5:SheetDocument::supports(desktop_files[i].name)?19:Paint::supports(desktop_files[i].name)?18:17);
@@ -937,27 +952,28 @@ void Shell::desktop_ui() {
                    : "Pinned",
          1, ink());
     button({1090, 458, 130, 36}, 42, all ? "< Back" : "All apps >");
-    const char *names[] = {"Quake II RTX", "Vapor", "File Explorer",
+    const char *names[] = {"Vapor", "File Explorer",
                            "Settings", "Web", "Notepad", "Paint", "Spreadsheet"};
-    const char *match[] = {"quake ii rtx", "vapor game library games",
-                           "file explorer", "settings",
+    const char *match[] = {"vapor game library games", "file explorer", "settings",
                            "web chrome browser google", "notepad text document", "paint drawing image", "spreadsheet excel worksheet csv"};
-    int k[] = {4, 16, 5, 6, 8, 17, 18, 19}, id[] = {30, 35, 32, 33, 34, 36, 37, 38};
+    int k[] = {16, 5, 6, 8, 17, 18, 19}, id[] = {35, 32, 33, 34, 36, 37, 38};
     int row = 0;
-    for (int i = 0; i < 8; ++i) {
+    for (int i = 0; i < 7; ++i) {
+      if (!all && !search[0] && (taskbar_hidden & (1ULL << (id[i]+20)))) continue;
       if (search[0] && !std::strstr(match[i], search))
         continue;
       if (all || search[0]) {
         Rect b{692, 510 + row++ * 50, 536, 46};
         add(b, id[i]);
-        if (hover == id[i] || focus == id[i])
+        if (hover == id[i] || focus == id[i] || (file_context && file_menu_kind==7 && shortcut_context_id==id[i]))
           round(b, 5, dark ? color(55, 60, 70) : color(223, 233, 246));
         icon(b.x + 18, b.y + 11, 34, k[i]);
         text(b.x + 74, b.y + 12, names[i], 0, ink());
       } else {
-        Rect b{692 + (i % 3) * 178, 514 + (i / 3) * 115, 168, 102};
+        const int pos = row++;
+        Rect b{692 + (pos % 3) * 178, 514 + (pos / 3) * 115, 168, 102};
         add(b, id[i]);
-        if (hover == id[i] || focus == id[i])
+        if (hover == id[i] || focus == id[i] || (file_context && file_menu_kind==6 && shortcut_context_id==id[i]))
           round(b, 5, dark ? color(55, 60, 70) : color(223, 233, 246));
         icon(b.x + 66, b.y + 9, 36, k[i]);
         center(b.x, b.y + 61, b.w, names[i], 0, ink());
@@ -966,11 +982,11 @@ void Shell::desktop_ui() {
     int pinned = 0;
     if (!all && !search[0]) for (std::size_t i = 0; i < vapor_shortcuts.count(); ++i) {
       if (!(vapor_shortcuts.entries()[i].placements & VaporShortcuts::Start)) continue;
-      int pos = 8 + pinned++;
+      int pos = row + pinned++;
       if (pos >= 9) break;
       Rect b{692 + (pos % 3) * 178, 514 + (pos / 3) * 115, 168, 102};
       add(b, 1200 + int(i));
-      if (hover == 1200 + int(i) || focus == 1200 + int(i)) round(b, 5, dark ? color(55, 60, 70) : color(223, 233, 246));
+      if (hover == 1200 + int(i) || focus == 1200 + int(i) || (file_context && file_menu_kind==6 && shortcut_context_id==1200+int(i))) round(b, 5, dark ? color(55, 60, 70) : color(223, 233, 246));
       vapor_shortcut_icon(vapor_shortcuts.entries()[i].app, b.x + 66, b.y + 9, 36, shortcut_labels[i].c_str());
       text_fit(b.x + 5, b.y + 61, b.w - 10, shortcut_labels[i].c_str(), 0, ink());
     }
@@ -978,7 +994,7 @@ void Shell::desktop_ui() {
       text(712, 548, "No apps found", 0, muted());
     rect({661, 935, 598, 1}, dark ? color(65, 69, 79) : color(216, 224, 235));
     brand_icon(705, 957, 30, true);
-    text(751, 963, "KPKev", 0, ink());
+    text_fit(751, 963, 340, username, 0, ink());
     button({1113, 949, 110, 44}, 44, "Close");
   }
   if (context) desktop_context_ui(*this);
@@ -1012,7 +1028,6 @@ void Shell::desktop_ui() {
   task(273, 5, 32, window == 1 && !file_games, "File Explorer");
   task(326, 8, 34, window == 3, "Web");
   task(379, 16, 35, window == 1 && file_games, "Vapor");
-  task(432, 4, 30, false, "Quake II RTX");
   task(485, 6, 33, window == 2, "Settings");
   for(int app=4;app<=6;++app)task(538,app==4?17:app==5?18:19,app+32,window==app,app==4?"Notepad":app==5?"Paint":"Spreadsheet");
   int task_pin = 0;
@@ -1115,7 +1130,7 @@ void Shell::desktop_ui() {
       button({1025, 589, 130, 42}, 60, "Cancel", 0);
       button({1170, 589, 150, 42}, 61, "Continue", 1);
     } else {
-      text(bounds.x + 36, bounds.y + 27, recycle_confirmation ? "Empty Recycle Bin?" : "WinBrew 11", 2, ink());
+      text(bounds.x + 36, bounds.y + 27, recycle_confirmation ? (recycle_single?"Delete permanently?":"Empty Recycle Bin?") : "WinBrew 11", 2, ink());
       int y = bounds.y + 88;
       for (const auto &line : lines) {
         text(bounds.x + 36, y, line.c_str(), 0, ink());
@@ -1123,7 +1138,7 @@ void Shell::desktop_ui() {
       }
       if(recycle_confirmation){
         button({1005,bounds.y+bounds.h-73,130,42},60,"Cancel",0);
-        button({1150,bounds.y+bounds.h-73,170,42},61,"Delete forever",1);
+        button({1150,bounds.y+bounds.h-73,170,42},61,"OK",1);
       }else button({1185, bounds.y + bounds.h - 73, 130, 42}, 60, "OK", 1);
     }
   }

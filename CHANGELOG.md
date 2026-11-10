@@ -1,5 +1,13 @@
 # Changelog
 
+## November 10, 2026 — notepad-start-recycle-dev-v1 development update
+
+- Redesigned Notepad with tabs, find/replace, undo/redo and improved save prompts; owner confirmed physical-keyboard typing on the preceding PS5 build.
+- Unified mouse/controller desktop context actions, kept pinned Start and All Apps visible with context menus, and added pin/unpin controls for built-in app placements. Removed the legacy built-in Quake II shortcut/search launch; Vapor remains.
+- Added a customizable display name, defaulting to WinBrew, while retaining the existing personal-folder path.
+- Reworked Recycle Bin visibility, older-store collection, individual deletion, empty confirmation/cancellation and verified cross-drive recycling. Added bounded browsing and tests for large collections.
+- Local UI and file-operation fixtures passed; isolated PS5-native file-operation checks passed. The final release executable has not been launched or visually checked on the PS5. Existing game compatibility caveats remain.
+
 ## November 7, 2026 — desktop-storage-dev-v1 development update
 
 - Windows-style Explorer tabs, breadcrumb/address/search bars, left-aligned tree and details, drive cards, scrolling, sorting, multiple selection, views, preview, rename and drag/drop.

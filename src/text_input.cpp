@@ -5,6 +5,9 @@
 #include <algorithm>
 namespace ww {
 static char *buffer(Shell &s) {
+  if (s.text_target == TextTarget::username) return s.username;
+  if (s.text_target == TextTarget::notepad_find) return s.notepad_query;
+  if (s.text_target == TextTarget::notepad_replace_text) return s.notepad_replacement;
   if (s.text_target == TextTarget::file_address) return s.file_address;
   if (s.text_target == TextTarget::file_search) return s.file_query;
   if (s.text_target == TextTarget::file_rename) return s.file_rename_name;
@@ -17,6 +20,9 @@ static char *buffer(Shell &s) {
   return s.text_target == TextTarget::address ? s.address : s.search;
 }
 static size_t capacity(const Shell &s) {
+  if (s.text_target == TextTarget::username) return sizeof(s.username);
+  if (s.text_target == TextTarget::notepad_find) return sizeof(s.notepad_query);
+  if (s.text_target == TextTarget::notepad_replace_text) return sizeof(s.notepad_replacement);
   if (s.text_target == TextTarget::file_address) return sizeof(s.file_address);
   if (s.text_target == TextTarget::file_search) return sizeof(s.file_query);
   if (s.text_target == TextTarget::file_rename) return sizeof(s.file_rename_name);
@@ -51,6 +57,7 @@ void Shell::end_text() {
 void Shell::clear_text() {
   if (text_target == TextTarget::none)
     return;
+  if (text_target == TextTarget::document || text_target == TextTarget::notepad_find) notepad_match = size_t(-1);
   if (text_target == TextTarget::document)
     document.clear();
   else
@@ -86,6 +93,7 @@ void Shell::move_caret(int delta) {
 void Shell::erase_text(bool forward) {
   if (text_target == TextTarget::none)
     return;
+  if (text_target == TextTarget::document || text_target == TextTarget::notepad_find) notepad_match = size_t(-1);
   auto *text = buffer(*this);
   size_t n = std::strlen(text);
   if (text_selection) {
@@ -109,6 +117,7 @@ void Shell::erase_text(bool forward) {
   if (text_target == TextTarget::vapor_search) { steam_scroll = 0; steam_home_row = 0; steam_recent_offset = 0; }
 }
 void Shell::character(char c) {
+  if (text_target == TextTarget::document || text_target == TextTarget::notepad_find) notepad_match = size_t(-1);
   if(sheet_prompt)return;
   if(window==6&&!start&&!dialog&&text_target!=TextTarget::sheet) {
     if(!sheet.editable()){std::snprintf(sheet.status,sizeof(sheet.status),"This cell cannot be edited here.");return;}
@@ -127,10 +136,13 @@ void Shell::character(char c) {
       input_device = InputDevice::keyboard;
       begin_text(TextTarget::document);
     }
+    const bool replaced_all = text_selection && document.length != 0;
     if (text_selection)
       clear_text();
     if (!document.insert(c))
       notepad_error();
+    else if (replaced_all && document.undo_history.size() >= 2)
+      document.undo_history.pop_back(); // One undo restores the selected text.
     text_caret = int(document.caret);
     focus = -1;
     return;
@@ -160,6 +172,8 @@ void Shell::character(char c) {
     start = all = true;
 }
 void Shell::commit_text() {
+  if (text_target == TextTarget::username) { if(save_username()) end_text(); return; }
+  if (text_target == TextTarget::notepad_find || text_target == TextTarget::notepad_replace_text) { notepad_action(623); return; }
   if(text_target==TextTarget::file_address){file_address_submit();return;}
   if(text_target==TextTarget::file_search){end_text();return;}
   if(text_target==TextTarget::file_rename){file_rename_submit();return;}
@@ -177,11 +191,14 @@ void Shell::commit_text() {
   touch_keyboard = false;
   if (!search[0])
     return;
-  const char *names[] = {"quake ii rtx", "game library games", "file explorer",
-                         "settings", "web chrome browser google"};
-  for (int i = 0; i < 5; ++i)
-    if (std::strstr(names[i], search)) {
-      activate(i == 1 ? 35 : 30 + i);
+  const struct { const char *terms; int id; } apps[] = {
+      {"vapor game library games", 35}, {"file explorer", 32},
+      {"settings", 33}, {"web chrome browser google", 34},
+      {"notepad text document", 36}, {"paint drawing image", 37},
+      {"spreadsheet excel worksheet csv", 38}};
+  for (const auto &app : apps)
+    if (std::strstr(app.terms, search)) {
+      activate(app.id);
       return;
     }
 }
@@ -235,6 +252,7 @@ void Shell::physical_key(uint16_t usage, uint8_t modifiers, uint32_t locks) {
   input_device = InputDevice::keyboard;file_modifiers=modifiers;
   if(files_busy()){if(usage==0x29)key(Key::back);return;}
   if(text_target==TextTarget::filename&&!dialog&&(usage==0x28||usage==0x58)){commit_text();return;}
+  if(text_target==TextTarget::username&&!dialog&&(usage==0x28||usage==0x58)){commit_text();return;}
   if(!dialog&&(text_target==TextTarget::file_address||text_target==TextTarget::file_search||text_target==TextTarget::file_rename)&&(usage==0x28||usage==0x58)){commit_text();return;}
   if(file_browser_key(usage,modifiers))return;
   bool shift = (modifiers & 0x22) != 0, control = (modifiers & 0x11) != 0;
@@ -274,6 +292,12 @@ void Shell::physical_key(uint16_t usage, uint8_t modifiers, uint32_t locks) {
     notepad_action(shift?606:601); // Ctrl+S / Ctrl+Shift+S
     return;
   }
+  if (control && (usage == 0x09 || usage == 0x0b) && window == 4 && !dialog && !notepad_modal()) {
+    notepad_action(620); return;
+  }
+  if (control && usage == 0x17 && window == 4 && !dialog && !notepad_modal()) { notepad_action(638); return; }
+  if (control && (usage==0x1d || usage==0x1c) && window==4 && document.active && !dialog && !notepad_modal()) { notepad_action(usage==0x1c || shift ? 628 : 627); return; }
+  if (control && usage == 0x2b && window == 4 && !dialog && !notepad_modal() && notepad_tabs.size() > 1) { notepad_tab_switch((notepad_tab + (shift ? int(notepad_tabs.size())-1 : 1)) % int(notepad_tabs.size())); return; }
   if (control && usage == 0x1a && window == 4 && !dialog && !notepad_modal()) {
     notepad_close(); // Ctrl+W
     return;
@@ -400,7 +424,7 @@ void Shell::physical_key(uint16_t usage, uint8_t modifiers, uint32_t locks) {
 }
 void Shell::draw_text_field(int x, int y, int available, TextTarget target,
                             const char *placeholder) {
-  const char *value = target == TextTarget::sheet ? sheet.edit : target == TextTarget::address ? address : search;
+  const char *value = target == TextTarget::username ? username : target == TextTarget::sheet ? sheet.edit : target == TextTarget::address ? address : search;
   bool active = text_target == target;
   if (!value[0]) {
     text(x, y, placeholder, 0, muted());

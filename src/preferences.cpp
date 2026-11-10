@@ -11,6 +11,41 @@
 #include <unistd.h>
 #endif
 namespace ww {
+namespace {
+bool valid_username(const char *name) {
+  const auto n=std::strlen(name);if(!n || n>=64)return false;
+  bool nonspace=false;for(size_t i=0;i<n;++i){const unsigned char c=name[i];if(c<32||c>126)return false;if(c!=' ')nonspace=true;}
+  return nonspace;
+}
+}
+void Shell::load_username() {
+  if (!preferences[0]) return;
+  char path[1100];if(std::snprintf(path,sizeof(path),"%s.username",preferences)>=int(sizeof(path)))return;
+  FILE *f=std::fopen(path,"rb");if(!f)return;
+  char data[65]{};const size_t n=std::fread(data,1,sizeof(data),f);const bool ok=!std::ferror(f)&&std::feof(f);std::fclose(f);
+  if(ok && n<sizeof(username) && std::strlen(data)==n && valid_username(data))std::memcpy(username,data,n+1);
+}
+bool Shell::save_username() {
+  if(!valid_username(username)){dialog=true;focus=60;std::snprintf(message,sizeof(message),"Enter a name using letters, numbers, or spaces.");return false;}
+  if(!preferences[0])return true;
+  char path[1100],temp[1120];
+  if(std::snprintf(path,sizeof(path),"%s.username",preferences)>=int(sizeof(path))||std::snprintf(temp,sizeof(temp),"%s.tmp",path)>=int(sizeof(temp)))return false;
+  FILE *f=std::fopen(temp,"wb");if(!f){dialog=true;focus=60;std::snprintf(message,sizeof(message),"Could not save the display name.");return false;}
+  const size_t n=std::strlen(username);bool ok=std::fwrite(username,1,n,f)==n && std::fflush(f)==0;
+#ifdef _WIN32
+  if(ok)ok=_commit(_fileno(f))==0;
+#else
+  if(ok)ok=::fsync(fileno(f))==0;
+#endif
+  if(std::fclose(f)!=0)ok=false;
+#ifdef _WIN32
+  if(ok)ok=MoveFileExA(temp,path,MOVEFILE_REPLACE_EXISTING|MOVEFILE_WRITE_THROUGH)!=0;
+#else
+  if(ok)ok=std::rename(temp,path)==0;
+#endif
+  if(!ok){dialog=true;focus=60;std::snprintf(message,sizeof(message),"Could not save the display name.");return false;}
+  return true;
+}
 Rect Shell::desktop_icon_position(std::uint64_t key, Rect fallback) const {
   for (int i = 0; i < desktop_position_count; ++i)
     if (desktop_positions[i].key == key) { fallback.x = desktop_positions[i].x; fallback.y = desktop_positions[i].y; break; }
@@ -91,6 +126,7 @@ void Shell::load_preferences() {
         (v == 3 && fields == 15) || (v == 4 && fields == 19) || (v == 5 && fields == 23) || (v == 6 && fields == 25)))
     return;
   taskbar_hidden=hidden;desktop_hidden=desktop;
+  if (!(taskbar_hidden & (1ULL<<63))) taskbar_hidden |= (1ULL<<63)|(1ULL<<50);
   dark = d == 1;
   show_icons = icons != 0;
   left_taskbar = left == 1;

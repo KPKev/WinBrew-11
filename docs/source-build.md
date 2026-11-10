@@ -1,6 +1,6 @@
 # Current source and build entry points
 
-The default **main** branch is the current source tree. The `desktop-storage-dev-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
+The default **main** branch is the current source tree. The `notepad-start-recycle-dev-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
 
 **Only want to install it on your jailbroken PS5? Follow [the installation walkthrough](getting-started.md).** You do not need this page, Git, a compiler, or a PS5 SDK to use the ready-made release. This page is for developers rebuilding the app.
 

@@ -23,7 +23,6 @@ namespace native_input {
 static ww::HidInput input;
 static Log diagnostic = nullptr;
 static int owner = 0;
-static double retry_time = 0;
 struct Device {
   uint16_t module_id;
   const char *name;
@@ -35,6 +34,9 @@ struct Device {
   int (*keyboard_read)(int, void *) = nullptr;
   int (*mouse_read)(int, void *, int) = nullptr;
   bool reported = false, connected = false;
+  double retry_time = 0;
+  unsigned read_errors = 0;
+  bool key_report_seen = false;
 };
 static Device keyboard{0x0106, "keyboard"}, mouse{0x00a9, "mouse"};
 static void log(const char *name, unsigned code) {
@@ -76,9 +78,12 @@ void preload_modules(Log logger) {
         mask);
   }
 }
-static void open_device(Device &d) {
+static void open_device(Device &d, double now = 0) {
   if (d.handle >= 0)
     return;
+  if (now < d.retry_time)
+    return;
+  d.retry_time = now + 3;
   if (!d.loaded)
     return;
   if (d.init && d.open &&
@@ -102,22 +107,44 @@ static void open_device(Device &d) {
   d.reported = true;
 }
 void open(int user, Log logger) {
+  if (owner != user)
+    close();
   owner = user;
   diagnostic = logger;
   open_device(keyboard);
   open_device(mouse);
 }
 void poll(ww::Shell &shell, double now) {
-  if (now >= retry_time) {
-    retry_time = now + 3;
-    open_device(keyboard);
-    open_device(mouse);
-  }
+  open_device(keyboard, now);
+  open_device(mouse, now);
   auto timestamp = uint64_t(now * 1000000);
   if (keyboard.handle >= 0) {
     uint8_t state[96]{};
-    if (keyboard.keyboard_read(keyboard.handle, state) == 0)
+    int status = keyboard.keyboard_read(keyboard.handle, state);
+    bool was_connected = keyboard.connected;
+    if (status == 0) {
+      keyboard.read_errors = 0;
+      auto report = ww::parse_keyboard(state);
+      if (report.count && !keyboard.key_report_seen) {
+        keyboard.key_report_seen = true;
+        // Diagnostic counts only: never record typed characters or usages.
+        log("USB keyboard key report received", unsigned(report.count));
+      }
       input.keyboard(shell, state, timestamp);
+    } else {
+      if (keyboard.read_errors++ == 0)
+        log("USB keyboard read error", unsigned(status));
+      // Never retain Ctrl/Alt, held keys or repeat after a failed read.
+      input.keyboard(shell, nullptr, timestamp);
+    }
+    if (keyboard.read_errors >= 3 ||
+        (status == 0 && was_connected && !shell.keyboard_connected)) {
+      keyboard.close(keyboard.handle);
+      keyboard.handle = -1;
+      keyboard.key_report_seen = false;
+      keyboard.retry_time = now + 3;
+      log("USB keyboard reconnect scheduled", unsigned(status));
+    }
     if (shell.keyboard_connected != keyboard.connected) {
       keyboard.connected = shell.keyboard_connected;
       log("USB keyboard connected", keyboard.connected);
@@ -139,6 +166,10 @@ void close() {
     if (d->handle >= 0 && d->close)
       d->close(d->handle);
     d->handle = -1;
+    d->retry_time = 0;
+    d->read_errors = 0;
+    d->connected = false;
+    d->key_report_seen = false;
   }
   input = ww::HidInput{};
 }

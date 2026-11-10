@@ -15,5 +15,6 @@
 src/owner_admission/** text eol=lf
 
 # Preserve exact upstream notice hashes and patch context.
+runtime-patches/cs2/upstream-notices/** -text
 runtime-patches/blender/upstream-notices/** -text
 runtime-patches/blender/*.patch -text

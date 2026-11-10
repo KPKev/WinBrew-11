@@ -5,12 +5,20 @@
 #include <cstring>
 int main() {
   const char *file = "build/test-desktop-settings.ini";
+  const char *namefile = "build/test-desktop-settings.ini.username";
   std::remove(file);
+  std::remove(namefile);
   {
     ww::Shell s;
     assert(s.init("assets", nullptr, nullptr, nullptr, file));
     s.activate(101);
     assert(s.window == 2 && s.settings_page == 1);
+    assert(!std::strcmp(s.username,"WinBrew"));
+    const auto user_root=s.file_user_root();
+    s.input_device=ww::InputDevice::keyboard;s.activate(330);s.physical_key(4,1);s.insert_text("Alex");s.physical_key(0x28);
+    assert(!std::strcmp(s.username,"Alex") && s.file_user_root()==user_root);
+    s.activate(330);s.physical_key(4,1);s.insert_text("  ");s.physical_key(0x28);assert(s.dialog);
+    s.activate(60);s.activate(330);s.physical_key(4,1);s.insert_text("Alex");s.physical_key(0x28);assert(!s.dialog);
     s.activate(111);
     s.activate(114);
     s.activate(117);
@@ -23,10 +31,16 @@ int main() {
     assert(s.background == 1 && !s.show_icons && s.large_pointer && s.clock24);
     assert(!s.dialog);
     s.draw();
+    if (FILE *image=std::fopen("build/personalization-name.ppm","wb")) {
+      std::fprintf(image,"P6\n%d %d\n255\n",ww::W,ww::H);
+      for(int i=0;i<ww::W*ww::H;++i)std::fwrite(s.pixels+i,1,3,image);
+      std::fclose(image);
+    }
   }
   {
     ww::Shell s;
     assert(s.init("assets", nullptr, nullptr, nullptr, file));
+    assert(!std::strcmp(s.username,"Alex"));
     assert(s.dark && s.accent == 2 && s.icon_size == 1 && s.left_taskbar);
     assert(s.background == 1 && !s.show_icons && s.large_pointer && s.clock24);
     s.activate(34);
@@ -85,6 +99,7 @@ int main() {
     assert(s.window == 3);
   }
   std::remove(file);
+  std::remove(namefile);
   std::puts(
       "PASS: settings survive restart, controller keyboard navigation, URL "
       "normalization/rejection, input bounds, modal focus and show desktop");

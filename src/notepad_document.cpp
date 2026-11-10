@@ -2,6 +2,7 @@
 #include "notepad_document.hpp"
 #include "privilege.hpp"
 #include "explorer_directory.hpp"
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -301,6 +302,7 @@ bool TextDocument::load(const char *name, bool discard) {
   bom = original_bom = has_bom;
   newline = ending;
   active = true;
+  undo_history.clear(); redo_history.clear();
   result = DocumentResult::ok;
   error = 0;
   return true;
@@ -434,7 +436,8 @@ bool TextDocument::save_as(const char *name, const TextDocument *confirmed,
   int checked=0;
   if(!target->dirty() && !matches(target->path,target->original,target->original_length,target->original_bom,checked))return fail(DocumentResult::conflict,checked);
   if(!target->save(provided))return fail(target->result,target->error);
-  *this=*target;return true;
+  auto undo_saved=std::move(undo_history), redo_saved=std::move(redo_history);
+  *this=*target;undo_history=std::move(undo_saved);redo_history=std::move(redo_saved);return true;
 }
 bool TextDocument::close(bool discard) {
   if (dirty() && !discard)
@@ -442,9 +445,30 @@ bool TextDocument::close(bool discard) {
   text[0] = original[0] = path[0] = 0;
   length = original_length = caret = 0;
   active = false;
+  undo_history.clear(); redo_history.clear();
   result = DocumentResult::ok;
   error = 0;
   return true;
+}
+void TextDocument::checkpoint() {
+  if (!active) return;
+  if (undo_history.size() == 32) undo_history.erase(undo_history.begin());
+  undo_history.push_back({std::string(text,length),caret});
+  redo_history.clear();
+}
+bool TextDocument::undo() {
+  if (!active || undo_history.empty()) return false;
+  if (redo_history.size()==32) redo_history.erase(redo_history.begin());
+  redo_history.push_back({std::string(text,length),caret});
+  EditState state=std::move(undo_history.back());undo_history.pop_back();
+  length=state.text.size();std::memcpy(text,state.text.data(),length);text[length]=0;caret=std::min(state.caret,length);return true;
+}
+bool TextDocument::redo() {
+  if (!active || redo_history.empty()) return false;
+  if (undo_history.size()==32) undo_history.erase(undo_history.begin());
+  undo_history.push_back({std::string(text,length),caret});
+  EditState state=std::move(redo_history.back());redo_history.pop_back();
+  length=state.text.size();std::memcpy(text,state.text.data(),length);text[length]=0;caret=std::min(state.caret,length);return true;
 }
 bool TextDocument::insert(char value) {
   if (!active ||
@@ -455,6 +479,7 @@ bool TextDocument::insert(char value) {
   const size_t size = value == '\n' && newline == Newline::crlf ? 2 : 1;
   if (length + size > Capacity)
     return fail(DocumentResult::capacity);
+  checkpoint();
   if (caret > length)
     caret = length;
   std::memmove(text + caret + size, text + caret, length - caret + 1);
@@ -481,6 +506,7 @@ void TextDocument::erase(bool forward) {
   if (at >= length)
     return;
   const size_t count = newline_size(*this, at);
+  checkpoint();
   std::memmove(text + at, text + at + count, length - at - count + 1);
   length -= count;
   caret = at;
@@ -488,6 +514,7 @@ void TextDocument::erase(bool forward) {
 void TextDocument::clear() {
   if (!active)
     return;
+  if (length) checkpoint();
   text[0] = 0;
   length = caret = 0;
 }

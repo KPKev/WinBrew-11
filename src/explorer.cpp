@@ -54,11 +54,15 @@ void file_failure(Shell &shell, int error, const char *stage) {
                 stage);
 }
 bool append_file(Shell &shell, const char *name, bool folder) {
-  if (!std::strcmp(name, ".") || !std::strcmp(name, "..") || (!shell.file_show_hidden && !std::strcmp(name,".winbrew-trash")))
+  if (!std::strcmp(name, ".") || !std::strcmp(name, "..") || (shell.file_location!=436 && !shell.file_show_hidden && !std::strcmp(name,".winbrew-trash")))
     return true;
   if (std::strlen(name) >= sizeof(shell.files[0].name))
     return true;
-  if (shell.file_count == Shell::MaximumFiles) {
+  if (shell.file_location == 436 &&
+      shell.file_recycle_batch_seen++ < shell.file_recycle_batch_offset)
+    return true;
+  const int limit=shell.file_location==436?65535:Shell::MaximumFiles;
+  if (shell.file_count == limit) {
     shell.file_truncated = true;
     return false;
   }
@@ -99,7 +103,7 @@ void Shell::file_location_open(int id) {
   }
   std::string path;
   if(id>=430&&id<=435){static const char*names[]={"Desktop","Downloads","Documents","Pictures","Music","Videos"};path=file_user_root()+"/"+names[id-430];fileops::ensure_folder(path.c_str());}
-  else if(id==436){char desktop[1024];desktop_folder(desktop,sizeof(desktop));fileops::ensure_folder(desktop);path=std::string(desktop)+"/.winbrew-trash";fileops::ensure_folder(path.c_str());}
+  else if(id==436){path=recycle_store();const bool complete=begin_recycle_collection(436);if(file_recycle_active)return;if(path.empty()){file_failure(*this,EACCES,"Recycle Bin");return;}file_open(path.c_str());if(!complete){dialog=true;focus=60;std::snprintf(message,sizeof(message),"Not all Recycle Bin locations could be checked. Existing items were kept; some may be in their original recovery folders.");}return;}
   else if(id==402)path=file_c_root();
   else if(id==424)path="/";
   else if(id==403)path="/mnt/usb0";else if(id==404)path="/app0";else if(id==409)path="/data";
@@ -108,6 +112,7 @@ void Shell::file_location_open(int id) {
 }
 void Shell::file_open(const char *path) {
   if(!path||!*path||std::strlen(path)>=sizeof(file_path)){file_failure(*this,path&&*path?ENAMETOOLONG:ENOENT,"Open folder");return;}
+  file_recycle_batch_offset=0;
   char copy[1024];std::snprintf(copy,sizeof(copy),"%s",path);std::snprintf(file_path,sizeof(file_path),"%s",copy);
   while(std::strlen(file_path)>1 && file_path[std::strlen(file_path)-1]=='/')file_path[std::strlen(file_path)-1]=0;
   file_page=file_compat_page=file_scroll=0;file_games=false;file_preview_open=false;file_preview[0]=file_query[0]=0;file_selection.clear();
@@ -137,6 +142,7 @@ void Shell::file_refresh() {
   file_error = 0;
   file_error_stage[0] = 0;
   file_truncated = false;
+  file_recycle_batch_seen = 0;
   file_preview[0] = 0;
   file_preview_open = false;
   if (!file_path[0])
@@ -249,6 +255,12 @@ void Shell::file_refresh() {
   if (file_error) {
     file_count = 0;
     file_truncated = false;
+  }
+  if(file_location==436 && std::string(file_path)==recycle_store())for(auto &entry:files) {
+    if(!entry.directory)continue;
+    std::string original;
+    const auto path=std::string(file_path)+"/"+entry.name;
+    if(fileops::legacy_recovery_name(path.c_str(),original))entry.display_name=original+" - "+entry.name;
   }
   file_sort_list();
   for(int i=0;i<file_count;++i)if(selected_name==files[i].name)file_selected=i;
@@ -811,9 +823,6 @@ void Shell::explorer_ui(Rect wr) {
             if (!selected_progress.available)
               text_fit(dx + 200, y + 365, dw - 280, paused ? "Download paused" :
                        selected.install == SteamInstallState::queued ? "Download queued" : "Downloading", 0, dim);
-          } else if (selected.app_id == 1089130 && existing) {
-            Rect play{dx + 30, y + 351, 150, 54}; round(play, 4, 0xff2b9c66); add(play, 30);
-            center(play.x, play.y + 15, play.w, "PLAY", 1, white);
           } else if (existing) {
             text_fit(dx + 32, y + 365, selected_progress.available ? 150 : dw - 110, "Existing game record - launch not connected yet", 0, dim);
           } else if (state.downloads_available && selected.install == SteamInstallState::not_installed && state.account == SteamAccount::online) {
@@ -1084,10 +1093,6 @@ void Shell::explorer_ui(Rect wr) {
     rect(list, 0xff392d20);
     text(list.x + 20, list.y + 22, "GAMES", 1, white);
     text(list.x + 20, list.y + 62, "Installed on this PS5", 0, dim);
-    Rect quake{list.x + 8, list.y + 99, list.w - 16, 46};
-    if (library_selection < 0 || focus == 964 || hover == 964) rect(quake, 0xff64523c);
-    add(quake, 964);
-    text(quake.x + 12, quake.y + 11, "Quake II RTX", 0, white);
     for (int row = 0; row < 8; ++row) {
       int i = library_page * 8 + row;
       if (i >= game_inventory.count) break;
@@ -1097,7 +1102,7 @@ void Shell::explorer_ui(Rect wr) {
       if (game.steam_app == 431240) std::snprintf(label, sizeof(label), "Golf With Your Friends");
       else if (game.steam_app) std::snprintf(label, sizeof(label), "Steam game %u", game.steam_app);
       else std::snprintf(label, sizeof(label), "Local installation");
-      Rect item{list.x + 8, list.y + 151 + row * 47, list.w - 16, 44};
+      Rect item{list.x + 8, list.y + 99 + row * 47, list.w - 16, 44};
       if (library_selection == i || focus == 900 + i || hover == 900 + i) rect(item, 0xff64523c);
       add(item, 900 + i);
       text_fit(item.x + 12, item.y + 9, item.w - 24, label, 0, white);
@@ -1113,14 +1118,9 @@ void Shell::explorer_ui(Rect wr) {
     int dx = x + 293, dw = wr.w - 294;
     rect({dx, y + 106, dw, 230}, 0xff604c34);
     if (library_selection < 0 || library_selection >= game_inventory.count) {
-      icon(dx + 32, y + 153, 90, 4);
-      text(dx + 150, y + 172, "Quake II RTX", 2, white);
+      text(dx + 32, y + 172, "Select a game", 2, white);
       rect({dx, y + 336, dw, 84}, 0xff4b3b26);
-      Rect play{dx + 30, y + 351, 150, 54};
-      round(play, 4, (hover == 30 || focus == 30) ? 0xff38be84 : 0xff2b9c66);
-      add(play, 30);
-      center(play.x, play.y + 15, play.w, "PLAY", 1, white);
-      text(dx + 205, y + 366, "Installed", 0, dim);
+      text(dx + 32, y + 365, "Choose a game from the list.", 0, dim);
     } else {
       const auto &game = game_inventory.entries[library_selection];
       char title[80];
@@ -1204,7 +1204,7 @@ std::string Shell::file_current_label() const {
  if(!file_path[0])return file_location==400?"Home":file_location==421?"Network":"This PC";
  if(explorer_leaf(file_path)==".winbrew-trash")return "Recycle Bin";
  if(std::string(file_path)==file_c_root())return console_storage_root[0]?"Console storage (C:)":"WinBrew (C:)";
- if(user_files_root[0]&&std::string(file_path)==file_user_root())return "WinBrew user";
+ if(user_files_root[0]&&std::string(file_path)==file_user_root())return username;
  if(!std::strcmp(file_path,"/"))return "Console Root";
  for(const auto&drive:file_drives)if(drive.path==file_path)return drive.label;
  return explorer_leaf(file_path);
@@ -1243,7 +1243,7 @@ void Shell::file_drive_refresh(){
 void Shell::file_update_matches(){
  file_matches.clear();if(!file_path[0])return;std::string query=file_query;
  std::transform(query.begin(),query.end(),query.begin(),[](unsigned char c){return std::tolower(c);});
- for(int i=0;i<file_count;++i){std::string name=files[i].name;if(!file_show_hidden&&!name.empty()&&name.front()=='.')continue;std::transform(name.begin(),name.end(),name.begin(),[](unsigned char c){return std::tolower(c);});if(query.empty()||name.find(query)!=std::string::npos)file_matches.push_back(i);}
+ for(int i=0;i<file_count;++i){std::string name=files[i].display_name.empty()?files[i].name:files[i].display_name;if(file_location!=436&&!file_show_hidden&&!name.empty()&&name.front()=='.')continue;std::transform(name.begin(),name.end(),name.begin(),[](unsigned char c){return std::tolower(c);});if(query.empty()||name.find(query)!=std::string::npos)file_matches.push_back(i);}
 }
 void Shell::file_sort_list(){
  if(file_sort==1||file_sort==3)for(auto&e:files)explorer_metadata(*this,e);
@@ -1329,6 +1329,12 @@ void Shell::file_copy_selection(bool moving){
 void Shell::file_recycle_selection(){
  std::vector<fileops::Clipboard> next;
  if(file_selection.empty()&&file_selected>=0)file_selection.push_back(files[file_selected].name);
+ if(file_location==436){
+  if(file_selection.size()>1){explorer_report(*this,"Select one Recycle Bin item at a time to delete it permanently.");return;}
+  if(file_selection.empty())return;
+  file_selected=-1;for(int i=0;i<file_count;++i)if(file_selection.front()==files[i].name){file_selected=i;break;}
+  if(file_selected>=0){file_context_selected();file_action(809);}return;
+ }
  for(const auto&name:file_selection){fileops::Clipboard item;std::string path=std::string(file_path)+"/"+name;if(!item.copy(path.c_str())){explorer_report(*this,"One of the selected items changed or cannot be recycled. Refresh and try again.");return;}next.push_back(item);}
  if(next.empty())return;file_recycle_queue=std::move(next);file_recycle_index=0;file_recycle_active=true;file_context=false;focus=807;
 }
@@ -1355,7 +1361,7 @@ void Shell::file_drop(){
  for(const auto&item:file_drag_items){std::string path=item.path;auto slash=path.find_last_of('/');if((item.info.directory&&explorer_prefix(destination,path)) || (!copying&&slash!=std::string::npos&&path.substr(0,slash)==destination)){file_drag_items.clear();return;}}
  for(auto&item:file_drag_items)item.move=!copying;
  file_batch_queue=std::move(file_drag_items);file_batch_index=0;file_batch_active=!file_batch_queue.empty();file_batch_destination=destination;file_transfer_from_clipboard=false;
- if(file_batch_active){file_transfer.begin(file_batch_queue.front(),destination.c_str());file_transfer_seen=fileops::State::idle;focus=807;}
+ if(file_batch_active){const auto store=recycle_store();if(!copying&&store.empty()){file_batch_active=false;file_batch_queue.clear();explorer_report(*this,"The Recycle Bin is unavailable. The original was kept.");return;}file_transfer.begin(file_batch_queue.front(),destination.c_str(),false,store.empty()?nullptr:store.c_str());file_transfer_seen=fileops::State::idle;focus=807;}
 }
 void Shell::file_begin_rename(){
  if(file_selected<0||file_selected>=file_count||file_selection.size()>1)return;
@@ -1408,6 +1414,13 @@ void Shell::file_browser_action(int id){
  if(id==2102){std::snprintf(file_address,sizeof(file_address),"%s",file_path[0]?file_friendly_path(file_path).c_str():file_current_label().c_str());begin_text(TextTarget::file_address);text_selection=true;focus=2102;return;}
  if(id==2103){begin_text(TextTarget::file_search);text_selection=true;focus=2103;return;}
  if(id==2104){file_up();return;}if(id==2105){file_refresh();file_drive_next_scan=0;file_branches.clear();return;}
+ if(file_location==436&&(id==2179||id==2180)){
+  constexpr size_t batch=65535;
+  if(id==2179&&file_recycle_batch_offset)file_recycle_batch_offset-=std::min(batch,file_recycle_batch_offset);
+  else if(id==2180&&file_truncated)file_recycle_batch_offset+=batch;
+  else return;
+  file_selection.clear();file_selected=-1;file_scroll=file_page=file_compat_page=0;file_refresh();return;
+ }
  if(id==2106||id==2107||id==2108||id==2109){Rect anchor{mx,my,0,8};for(int i=0;i<count;++i)if(hits[i].id==id){anchor=hits[i].r;break;}file_popup(id==2106?3:id==2107?1:id==2108?2:4,anchor);return;}
  if(id>=2110&&id<=2115){int menu=file_menu_kind;file_context=false;file_menu_kind=0;if(id<=2113){bool same=file_sort==id-2110;file_sort=id-2110;file_sort_descending=same&&menu!=1?!file_sort_descending:file_sort==1;}else file_sort_descending=id==2115;file_sort_list();return;}
  if(id>=2120&&id<=2122){file_view=id-2120;file_scroll=file_page=file_compat_page=0;file_context=false;file_menu_kind=0;return;}
@@ -1491,7 +1504,8 @@ void Shell::file_browser_ui(Rect wr){
   }
  }
  round(file_search_bounds,5,page);add(file_search_bounds,2103);icon(file_search_bounds.x+file_search_bounds.w-29,file_search_bounds.y+10,17,7);
- if(text_target==TextTarget::file_search)draw_text_field(file_search_bounds.x+12,file_search_bounds.y+6,file_search_bounds.w-48,TextTarget::file_search,"Search this folder");else small_fit(file_search_bounds.x+12,file_search_bounds.y+10,file_search_bounds.w-44,file_query[0]?file_query:(file_path[0]?("Search "+file_current_label()).c_str():file_location==400?"Find a folder or drive":"Find a drive"),file_query[0]?ink():muted());
+ const bool recycle_batches=file_location==436&&(file_recycle_batch_offset||file_truncated);
+ if(text_target==TextTarget::file_search)draw_text_field(file_search_bounds.x+12,file_search_bounds.y+6,file_search_bounds.w-48,TextTarget::file_search,recycle_batches?"Search this batch":"Search this folder");else small_fit(file_search_bounds.x+12,file_search_bounds.y+10,file_search_bounds.w-44,file_query[0]?file_query:(recycle_batches?"Search this batch":file_path[0]?("Search "+file_current_label()).c_str():file_location==400?"Find a folder or drive":"Find a drive"),file_query[0]?ink():muted());
  if(file_query[0]){Rect clear{file_search_bounds.x+file_search_bounds.w-53,file_search_bounds.y+4,22,27};add(clear,2125);small_text(clear.x+7,clear.y+4,"x",muted());}
  // Windows command bar: icon commands and compact labelled dropdowns.
  rect({x+1,y+94,w-2,49},page);line(x+1,y+143,x+w-2,y+143,edge);
@@ -1556,11 +1570,12 @@ void Shell::file_browser_ui(Rect wr){
    if(marked||hover==id||focus==id)rect(r,marked?selected:over);
    int pad=file_select_mode?25:0;if(file_select_mode){rect({r.x+7,r.y+(r.h-14)/2,14,14},muted());rect({r.x+8,r.y+(r.h-14)/2+1,12,12},marked?blue:page);}
    const int kind=e.directory?5:SheetDocument::supports(e.name)?19:Paint::supports(e.name)?18:17;
-   if(file_view==2){icon(r.x+12+pad,r.y+15,34,kind);small_fit(r.x+58+pad,r.y+13,r.w-68-pad,e.name,ink());small_fit(r.x+58+pad,r.y+37,r.w-68-pad,explorer_type(e),muted(),6);}
-   else{icon(r.x+9+pad,r.y+(r.h-20)/2,20,kind);small_fit(r.x+41+pad,r.y+7,(file_view==0?namew:r.w)-48-pad,e.name,ink());if(file_view==0){explorer_metadata(*this,e);char modified[80]="";if(e.info.modified){std::time_t t=e.info.modified;if(auto value=std::localtime(&t))std::strftime(modified,sizeof(modified),"%m/%d/%Y %H:%M",value);}small_text(datex+3,r.y+8,modified,muted(),6);small_fit(typex+3,r.y+8,104,explorer_type(e),muted(),6);if(!e.directory&&e.info.regular)small_fit(sizex+3,r.y+8,78,explorer_size(e.info.size).c_str(),muted(),6);}}
+   const char *display=e.display_name.empty()?e.name:e.display_name.c_str();
+   if(file_view==2){icon(r.x+12+pad,r.y+15,34,kind);small_fit(r.x+58+pad,r.y+13,r.w-68-pad,display,ink());small_fit(r.x+58+pad,r.y+37,r.w-68-pad,explorer_type(e),muted(),6);}
+   else{icon(r.x+9+pad,r.y+(r.h-20)/2,20,kind);small_fit(r.x+41+pad,r.y+7,(file_view==0?namew:r.w)-48-pad,display,ink());if(file_view==0){explorer_metadata(*this,e);char modified[80]="";if(e.info.modified){std::time_t t=e.info.modified;if(auto value=std::localtime(&t))std::strftime(modified,sizeof(modified),"%m/%d/%Y %H:%M",value);}small_text(datex+3,r.y+8,modified,muted(),6);small_fit(typex+3,r.y+8,104,explorer_type(e),muted(),6);if(!e.directory&&e.info.regular)small_fit(sizex+3,r.y+8,78,explorer_size(e.info.size).c_str(),muted(),6);}}
   }
   file_scroll_track={left+listW-7,top,7,bottom-top};if(int(file_matches.size())>slots){int thumb=std::max(28,file_scroll_track.h*slots/int(file_matches.size())),travel=file_scroll_track.h-thumb;int st=file_scroll_track.y+travel*file_scroll/std::max(1,int(file_matches.size())-slots);round({file_scroll_track.x,st,5,thumb},2,muted());}
-  if(file_preview_pane){int px=left+listW+9;line(px-9,y+150,px-9,bottom,edge);small_text(px+10,y+163,"Preview",ink());if(chosen){const auto&e=files[file_selected];small_fit(px+10,y+200,245,e.name,ink());small_text(px+10,y+230,explorer_type(e),muted(),6);
+  if(file_preview_pane){int px=left+listW+9;line(px-9,y+150,px-9,bottom,edge);small_text(px+10,y+163,"Preview",ink());if(chosen){const auto&e=files[file_selected];small_fit(px+10,y+200,245,e.display_name.empty()?e.name:e.display_name.c_str(),ink());small_text(px+10,y+230,explorer_type(e),muted(),6);
     std::string path=std::string(file_path)+"/"+e.name;if(file_preview_for!=path){file_preview_for=path;file_preview[0]=0;if(!e.directory){const auto&io=fileops::system_io();int fd=io.open(io.context,path.c_str(),false);if(fd>=0){auto n=io.read(io.context,fd,file_preview,sizeof(file_preview)-1);io.close(io.context,fd);if(n>0){file_preview[n]=0;for(int j=0;j<n;++j)if((unsigned char)file_preview[j]<32&&file_preview[j]!='\n'&&file_preview[j]!='\r'&&file_preview[j]!='\t'){file_preview[0]=0;break;}}}}}
     if(file_preview[0]){std::string line;int yy=y+272;for(const char*p=file_preview;*p&&yy<bottom-35;++p){if(*p=='\r')continue;if(*p=='\n'||small_width((line+*p).c_str(),6)>238){small_text(px+10,yy,line.c_str(),ink(),6);yy+=21;line.clear();if(*p=='\n')continue;}line+=*p;}if(!line.empty()&&yy<bottom-15)small_text(px+10,yy,line.c_str(),ink(),6);}else small_fit(px+10,y+273,240,"Open this item to view its contents.",muted(),6);
    }else small_text(px+10,y+213,"Select a file to preview.",muted(),6);
@@ -1568,7 +1583,11 @@ void Shell::file_browser_ui(Rect wr){
  }
  // Explorer status bar.
  rect({x+1,y+h-34,w-2,33},page);line(x+1,y+h-34,x+w-2,y+h-34,edge);
- char status[160];size_t count=file_path[0]?file_matches.size():file_location==400?file_drives.size()+6:file_drives.size();std::snprintf(status,sizeof(status),"%zu%s items%s",count,file_truncated?"+":"",file_selection.empty()?"":"  |  ");std::string summary=status;if(!file_selection.empty())summary+=std::to_string(file_selection.size())+" selected";small_text(x+16,y+h-22,summary.c_str(),muted(),6);
+ char status[160];size_t count=file_path[0]?file_matches.size():file_location==400?file_drives.size()+6:file_drives.size();std::snprintf(status,sizeof(status),"%zu%s items%s%s",count,file_truncated?"+":"",recycle_batches?" in this batch":"",file_selection.empty()?"":"  |  ");std::string summary=status;if(!file_selection.empty())summary+=std::to_string(file_selection.size())+" selected";small_text(x+16,y+h-22,summary.c_str(),muted(),6);
+ if(file_location==436&&(file_recycle_batch_offset||file_truncated)){
+  if(file_recycle_batch_offset)button({x+w-270,y+h-30,88,25},2179,"Previous",0);
+  if(file_truncated)button({x+w-178,y+h-30,88,25},2180,"Next",0);
+ }
  if(file_path[0]){Rect details{x+w-67,y+h-29,26,25},tiles{x+w-34,y+h-29,26,25};add(details,2120);add(tiles,2122);for(int i=0;i<3;++i)line(details.x+6,details.y+7+i*5,details.x+20,details.y+7+i*5,muted());rect({tiles.x+6,tiles.y+6,14,13},edge);rect({tiles.x+7,tiles.y+7,12,11},page);}
 }
 } // namespace ww

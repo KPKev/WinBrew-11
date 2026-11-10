@@ -106,9 +106,13 @@ bool Shell::init(const char *root, uint32_t *frame, uint32_t *background,
   if (settings_file) {
     std::snprintf(preferences, sizeof(preferences), "%s", settings_file);
     load_preferences();
+    load_username();
     vapor_shortcuts.load(settings_file);
     load_desktop_icon_positions();
   }
+  // The high bits hold Start pins independently of the existing taskbar bits.
+  if (!(taskbar_hidden & (1ULL<<63))) taskbar_hidden |= (1ULL<<63)|(1ULL<<50);
+  if (!(desktop_hidden & (1ULL<<63))) desktop_hidden |= (1ULL<<63)|(1ULL<<33);
   load_web_history();
   tick();
   return ok;
@@ -396,6 +400,9 @@ void Shell::activate(int id) {
     activate(id);
     return;
   }
+  if (context && desktop_context_target && (id == 801 || id == 802 || id == 809 || id == 812 || id == 814 || id == 815)) {
+    context=false;file_context=true;file_action(id);return;
+  }
   if (context && id >= 1400 && id <= 1416) {
     if (id == 1400 || id == 1401 || id == 1404) {
       context_submenu = id == 1400 ? 1 : id == 1401 ? 2 : 3;
@@ -406,8 +413,9 @@ void Shell::activate(int id) {
     } else if (id == 1408) {
       context_classic = true;
       context_submenu = 0;
-      if (context_y > H - 54 - desktop_context::classic_height)
-        context_y = H - 54 - desktop_context::classic_height;
+      const int height = desktop_context::classic_height + (desktop_context_target ? 100 : 0);
+      if (context_y > H - 54 - height)
+        context_y = H - 54 - height;
       focus = -1;
     } else if (id == 1405 || id == 1406) {
       context = false;
@@ -437,7 +445,7 @@ void Shell::activate(int id) {
     }
     return;
   }
-  if (id >= 800 && id <= 819) {
+  if (id >= 800 && id <= 823) {
     if (id == 800) {
       if (!notepad_guard(id)) { file_context = false; return; }
       if (paint.defer_action(*this, id)) { file_context = false; return; }
@@ -449,7 +457,7 @@ void Shell::activate(int id) {
     if (id >= 740 && id <= 742) paint.activate(*this, id);
     return;
   }
-  if (id >= 600 && id <= 619) {
+  if (id >= 600 && id <= 639) {
     if (!dialog) notepad_action(id);
     return;
   }
@@ -458,9 +466,9 @@ void Shell::activate(int id) {
   if ((id >= 1420 && id <= 1424) || (id >= 36 && id <= 38)) {
     if (!(id == 37 && window == 5) && paint.defer_action(*this,id)) return;
     if (id == 37) { paint.show(*this); start=context=false; return; }
-    if (id == 36 && document.active) { window=4;start=context=false;begin_text(TextTarget::document);return; }
+    if (id == 36) { if (!document.active) notepad_tab_new(); window=4;start=context=false;begin_text(TextTarget::document);return; }
     if (id == 38 && sheet.storage.active) { window=6;start=context=false;end_text();return; }
-    new_document(id == 36 ? 1421 : id == 38 ? 1423 : id); return;
+    new_document(id == 38 ? 1423 : id); return;
   }
   if (id >= 700 && id <= 749) {
     paint.activate(*this, id);
@@ -540,11 +548,7 @@ void Shell::activate(int id) {
         steam->play(app);
       }
       else {
-        bool existing_quake = false;
-        if (app == 1089130) for (int j = 0; j < game_inventory.count; ++j)
-          if (game_inventory.entries[j].steam_app == app && game_inventory.entries[j].state != games::State::unavailable) existing_quake = true;
-        if (existing_quake) pending = Action::quake;
-        else { window = 1; file_games = true; library_downloads = false; steam_panel = false; steam_selection = int(i); steam_selected_app = app; }
+        window = 1; file_games = true; library_downloads = false; steam_panel = false; steam_selection = int(i); steam_selected_app = app;
       }
       break;
     }
@@ -711,14 +715,7 @@ void Shell::activate(int id) {
     file_games=false;window = 1;
     start = calendar = context = false;
   } else if (id == 11) {
-    char desktop[1024],trash[1100];desktop_folder(desktop,sizeof(desktop));
-    std::snprintf(trash,sizeof(trash),"%s/.winbrew-trash",desktop);
-    fileops::Info info{};
-    if(fileops::inspect(trash,info)<0){dialog=true;std::snprintf(message,sizeof(message),"Desktop Recycle Bin is empty.");return;}
-    window=1;file_games=false;file_open(trash);
-  } else if (id == 13 || id == 30) {
-    pending = Action::quake;
-    start = calendar = context = false;
+    file_location_open(436);
   } else if (id == 12 || id == 31) {
     pending = Action::playden;
     start = calendar = context = false;
@@ -793,6 +790,10 @@ void Shell::activate(int id) {
       focus = -1;
     } else
       save_preferences();
+  } else if (id == 330) {
+    begin_text(TextTarget::username);focus=330;
+  } else if (id == 331) {
+    if (save_username()) end_text();
   } else if (id >= 320 && id <= 329) {
     if (id == 320 && touchpad_deadzone > 0) --touchpad_deadzone;
     if (id == 321 && touchpad_deadzone < 12) ++touchpad_deadzone;
@@ -1061,13 +1062,13 @@ void Shell::key(Key k) {
         : files_busy() ? id != 807
         : file_rename_prompt ? !(id==2176||id==2177||id==2178||(touch_keyboard&&id>=200&&id<=248))
         : file_properties ? id != 806
-        : file_context ? !((id>=800&&id<=805)||id==808||id==809||id==811||id==812||id==814||id==815||id==816||id==817||id==818||(id>=2100&&id<2180)||((file_new||file_menu_kind==3)&&id>=1420&&id<=1424))
+        : file_context ? !((id>=800&&id<=805)||id==808||id==809||id==811||id==812||id==813||id==814||id==815||id==816||id==817||id==818||(id>=820&&id<=823)||(id>=2100&&id<2180)||((file_new||file_menu_kind==3)&&id>=1420&&id<=1424))
         : sheet_prompt   ? (id < 1530 || id > 1532)
         : notepad_modal() ? !notepad_modal_hit(id)
         : paint.modal()  ? (id < 740 || id > 742)
         : touch_keyboard ? (id < 200 || id > 248)
         : start          ? !((id >= 30 && id <= 44) || (id >= 1200 && id < 1328))
-        : context        ? (id < 1400 || id > 1431)
+        : context        ? !((id >= 1400 && id <= 1431) || (desktop_context_target && (id==801||id==802||id==809||id==812||id==814||id==815)))
         : calendar       ? (id < 45 || id > 47)
         : quick          ? (id != 105 && id != 150 && (id < 170 || id > 173))
         : tray           ? (id != 151 && id != 32 && id != 33 && id != 34)
@@ -1076,7 +1077,7 @@ void Shell::key(Key k) {
     if ((window && !start && !calendar && (id >= 10 && id <= 13)) || id == 89 ||
         id == 90 || id == 43)
       continue;
-    if (start && !touch_keyboard && !Rect{660, 365, 600, 645}.has(hits[i].r.x + hits[i].r.w / 2, hits[i].r.y + hits[i].r.h / 2))
+    if (start && !touch_keyboard && !(file_context && ((file_menu_kind==7 && id>=820 && id<=822)||(file_menu_kind==6 && id==813))) && !Rect{660, 365, 600, 645}.has(hits[i].r.x + hits[i].r.w / 2, hits[i].r.y + hits[i].r.h / 2))
       continue;
     if (context && !context_bounds().has(hits[i].r.x + hits[i].r.w / 2, hits[i].r.y + hits[i].r.h / 2) &&
         !(context_submenu && context_submenu_bounds().has(hits[i].r.x + hits[i].r.w / 2, hits[i].r.y + hits[i].r.h / 2)))
@@ -1206,8 +1207,7 @@ void Shell::key(Key k) {
 }
 void Shell::sort_desktop_by_name() {
   struct Item { std::uint64_t key; std::string name; };
-  std::vector<Item> items = {{10, "This PC"}, {11, "Recycle Bin"}, {35, "Vapor"},
-                             {13, "Quake II RTX"}, {34, "Web"}};
+  std::vector<Item> items = {{10, "This PC"}, {11, "Recycle Bin"}, {35, "Vapor"}, {34, "Web"}};
   for (std::size_t index = 0; index < vapor_shortcuts.count(); ++index) {
     const auto &entry = vapor_shortcuts.entries()[index];
     if (!(entry.placements & VaporShortcuts::Desktop)) continue;
@@ -1235,7 +1235,7 @@ void Shell::sort_desktop_by_name() {
 Rect Shell::context_bounds() const {
   return {context_x, context_y,
           context_classic ? desktop_context::classic_width : desktop_context::modern_width,
-          context_classic ? desktop_context::classic_height : desktop_context::modern_height};
+          (context_classic ? desktop_context::classic_height : desktop_context::modern_height) + (desktop_context_target ? 100 : 0)};
 }
 Rect Shell::context_submenu_bounds() const {
   using namespace desktop_context;
@@ -1408,9 +1408,14 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
   }
   if (!held)
     drag = false;
+  if(!down && input_device==InputDevice::mouse && start && file_context && (file_menu_kind==6 || file_menu_kind==7) &&
+     !Rect{660,365,600,645}.has(mx,my) && !file_context_bounds.has(mx,my)) {
+    file_context=start=false;focus=-1;return;
+  }
   if (!down)
     return;
   if (file_context && !file_context_bounds.has(mx, my) && !(file_new&&file_new_bounds.has(mx,my))) {
+    if(start && (file_menu_kind==6 || file_menu_kind==7) && !Rect{660,365,600,645}.has(mx,my))start=false;
     file_context = false;
     return;
   }
@@ -1428,6 +1433,7 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
     return;
   }
   if (start && !Rect{660, 365, 600, 645}.has(mx, my) &&
+      !(file_context && (file_menu_kind==6 || file_menu_kind==7) && file_context_bounds.has(mx,my)) &&
       !(touch_keyboard && Rect{460, 626, 1000, 388}.has(mx, my)) &&
       my < H - 54) {
     start = false;
@@ -1442,13 +1448,13 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
     if (hits[i].r.has(mx, my)) {
       int id = hits[i].id;
       if (context && id == 89) return;
-      if (context && id != 89 && (id < 1400 || id > 1431)) return;
+      if (context && id != 89 && !((id >= 1400 && id <= 1431) || (desktop_context_target && (id==801||id==802||id==809||id==812||id==814||id==815)))) return;
       if (dialog && id != 60 && !((steam_setup_confirmation_app || steam_manage_confirmation_app || recycle_confirmation) && id == 61))
         return;
       if (!dialog && files_busy() && id != 807) return;
       if (!dialog && file_rename_prompt && !(id==2176||id==2177||id==2178||(touch_keyboard&&id>=200&&id<=248)))return;
       if (!dialog && file_properties && id != 806) return;
-      if (!dialog && file_context && !((id>=2100&&id<2180)||(id>=800&&id<=819)||((file_new||file_menu_kind==3)&&id>=1420&&id<=1424))) return;
+      if (!dialog && file_context && !((id>=2100&&id<2180)||(id>=800&&id<=823)||((file_new||file_menu_kind==3)&&id>=1420&&id<=1424))) return;
       if (sheet_prompt && (id < 1530 || id > 1532)) return;
       if (notepad_modal() && !dialog && !notepad_modal_hit(id))
         return;

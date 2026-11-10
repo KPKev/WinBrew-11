@@ -5,6 +5,7 @@
 #include <ctime>
 #include <cerrno>
 #include "privilege.hpp"
+#include "notepad_search.hpp"
 #include <sys/stat.h>
 #ifdef _WIN32
 #include <direct.h>
@@ -41,7 +42,7 @@ void position(const TextDocument &d, int &line, int &column) {
 } // namespace
 void Shell::notepad_name_init() {
   const char *slash=std::strrchr(document.path,'/');
-  std::snprintf(notepad_filename,sizeof(notepad_filename),"%.255s",slash?slash+1:document.path);
+  std::snprintf(notepad_filename,sizeof(notepad_filename),"%.255s",document.path[0]?(slash?slash+1:document.path):"Untitled.txt");
   notepad_save_as_mode=false;notepad_replace=false;notepad_save_target.reset();
 }
 bool Shell::notepad_modal_hit(int id) const {
@@ -57,6 +58,7 @@ void Shell::notepad_save_finished() {
   notepad_pending_action=-1;notepad_pending_path[0]=0;notepad_save_target.reset();end_text();
   desktop_files_next_scan=0;
   if(action==-2){notepad_open(path);return;}
+  if(action==-3){notepad_tab_remove();return;}
   if(action==602){notepad_close();return;}
   if(action>=0){activate(action);return;}
   window=4;begin_text(TextTarget::document);
@@ -71,7 +73,10 @@ void Shell::notepad_save_submit() {
   if(filename.size()>255){dialog=true;focus=60;std::snprintf(message,sizeof(message),"That file name is too long.");return;}
   const char *slash=std::strrchr(document.path,'/');
   const int parent=slash?int(slash-document.path+1):0;
-  int n=std::snprintf(notepad_save_path,sizeof(notepad_save_path),"%.*s%s",parent,document.path,filename.c_str());
+  char folder[1024]{};
+  if (!document.path[0]) desktop_folder(folder, sizeof(folder));
+  int n=document.path[0] ? std::snprintf(notepad_save_path,sizeof(notepad_save_path),"%.*s%s",parent,document.path,filename.c_str()) : std::snprintf(notepad_save_path,sizeof(notepad_save_path),"%s/%s",folder,filename.c_str());
+  if (!document.path[0] && !folder[0]) { document.fail(DocumentResult::invalid_path); notepad_error(); return; }
   if(n<0 || n>=int(sizeof(notepad_save_path))){document.fail(DocumentResult::invalid_path);notepad_error();return;}
   if(!notepad_save_as_mode && !std::strcmp(notepad_save_path,document.path)){
     if(document.save())notepad_save_finished();else notepad_error();return;
@@ -99,6 +104,34 @@ void Shell::notepad_error() {
                     ? " Check that the location is writable and connected."
                     : "");
 }
+void Shell::notepad_tab_init() {
+  if (notepad_tabs.empty() && document.active) { notepad_tabs.push_back(std::make_unique<TextDocument>(document)); notepad_tab = 0; }
+}
+void Shell::notepad_tab_switch(int index) {
+  notepad_tab_init();
+  if (index < 0 || index >= int(notepad_tabs.size()) || index == notepad_tab) return;
+  *notepad_tabs[notepad_tab] = document;
+  document = *notepad_tabs[index]; notepad_tab = index;
+  notepad_first_line = notepad_first_column = 0; notepad_match = size_t(-1);
+  begin_text(TextTarget::document);
+}
+void Shell::notepad_tab_new() {
+  notepad_tab_init();
+  if (notepad_tabs.size() >= 8) { dialog=true; focus=60; std::snprintf(message,sizeof(message),"Close a tab before opening another."); return; }
+  if (!notepad_tabs.empty()) *notepad_tabs[notepad_tab] = document;
+  auto blank = std::make_unique<TextDocument>(); blank->active = true;
+  notepad_tabs.push_back(std::move(blank)); notepad_tab = int(notepad_tabs.size())-1;
+  document = *notepad_tabs[notepad_tab]; notepad_first_line = notepad_first_column = 0;
+  notepad_match = size_t(-1); begin_text(TextTarget::document);
+}
+void Shell::notepad_tab_remove() {
+  notepad_tab_init();
+  if (notepad_tabs.size() <= 1) { notepad_tabs.clear(); document.close(true); end_text(); window=1; focus=-1; return; }
+  notepad_tabs.erase(notepad_tabs.begin()+notepad_tab);
+  if (notepad_tab >= int(notepad_tabs.size())) notepad_tab = int(notepad_tabs.size())-1;
+  document = *notepad_tabs[notepad_tab]; notepad_first_line = notepad_first_column = 0;
+  begin_text(TextTarget::document);
+}
 bool Shell::notepad_open(const char *path) {
   if (!path || !*path)
     return false;
@@ -107,20 +140,13 @@ bool Shell::notepad_open(const char *path) {
     begin_text(TextTarget::document);
     return true;
   }
-  if (document.dirty()) {
-    std::snprintf(notepad_pending_path, sizeof(notepad_pending_path), "%s",
-                  path);
-    notepad_pending_action = -2;
-    notepad_prompt = true;notepad_name_init();
-    window = 4;
-    end_text();
-    focus = 612;
-    return false;
-  }
-  if (!document.load(path)) {
-    notepad_error();
-    return false;
-  }
+  notepad_tab_init();
+  for (int i=0;i<int(notepad_tabs.size());++i) if (i != notepad_tab && !std::strcmp(notepad_tabs[i]->path,path)) { notepad_tab_switch(i); window=4; return true; }
+  auto incoming=std::make_unique<TextDocument>();
+  if (!incoming->load(path)) { document.fail(incoming->result,incoming->error); notepad_error(); return false; }
+  if (notepad_tabs.size() >= 8) { dialog=true;focus=60;std::snprintf(message,sizeof(message),"Close a tab before opening another.");return false; }
+  if (!notepad_tabs.empty()) *notepad_tabs[notepad_tab]=document;
+  notepad_tabs.push_back(std::move(incoming));notepad_tab=int(notepad_tabs.size())-1;document=*notepad_tabs[notepad_tab];
   notepad_first_line = notepad_first_column = 0;
   window = 4;
   start = calendar = context = quick = tray = false;
@@ -133,9 +159,14 @@ bool Shell::notepad_guard(int id) {
     return id == 60 || notepad_modal_hit(id);
   if (!leaves_editor(id))
     return true;
+  notepad_tab_init();
+  if (!document.dirty()) {
+    for (int i=0;i<int(notepad_tabs.size());++i) if(i!=notepad_tab && notepad_tabs[i]->dirty()) { notepad_tab_switch(i); break; }
+  }
   if (!document.dirty()) {
     if (document.active)
       document.close();
+    notepad_tabs.clear();
     return true;
   }
   notepad_pending_action = id;
@@ -148,12 +179,8 @@ bool Shell::notepad_guard(int id) {
   return false;
 }
 void Shell::notepad_close() {
-  if (!notepad_guard(602))
-    return;
-  document.close();
-  end_text();
-  window = 1;
-  focus = -1;
+  if (document.dirty()) { notepad_pending_action=-3; notepad_prompt=true; notepad_name_init(); end_text(); focus=612; return; }
+  notepad_tab_remove();
 }
 void Shell::notepad_action(int id) {
   if(id==618 && notepad_modal() && !notepad_replace){begin_text(TextTarget::filename);text_selection=true;focus=618;return;}
@@ -195,6 +222,46 @@ void Shell::notepad_action(int id) {
     return;
   if (!document.active)
     return;
+  if (id >= 630 && id < 638) { notepad_tab_switch(id-630); return; }
+  if (id == 638) { notepad_tab_new(); return; }
+  if (id == 627 || id == 628) {
+    if (id == 627 ? document.undo() : document.redo()) { notepad_match=size_t(-1);text_selection=false;text_caret=int(document.caret); }
+    begin_text(TextTarget::document);return;
+  }
+  if (id == 620) { notepad_search_open = true; notepad_menu = 0; notepad_match = size_t(-1); notepad_search_message[0] = 0; begin_text(TextTarget::notepad_find); return; }
+  if (id == 621 || id == 622) { begin_text(id == 621 ? TextTarget::notepad_find : TextTarget::notepad_replace_text); return; }
+  if (id == 625) { notepad_search_open = false; notepad_match = size_t(-1); begin_text(TextTarget::document); return; }
+  if (id == 623) {
+    const size_t start = notepad_match == size_t(-1) ? document.caret : notepad_match + 1;
+    notepad_match = notepad_search::find_next(std::string_view(document.text, document.length), notepad_query, start);
+    if (notepad_match == size_t(-1)) std::snprintf(notepad_search_message, sizeof(notepad_search_message), "No matches found");
+    else { document.caret = notepad_match; std::snprintf(notepad_search_message, sizeof(notepad_search_message), "Match found"); }
+    return;
+  }
+  if (id == 626) {
+    const size_t q=std::strlen(notepad_query), r=std::strlen(notepad_replacement);
+    if (document.read_only) { document.fail(DocumentResult::read_only); notepad_error(); return; }
+    if (!q || notepad_match == size_t(-1) || notepad_match > document.length || q > document.length-notepad_match || std::memcmp(document.text+notepad_match,notepad_query,q)) {
+      std::snprintf(notepad_search_message,sizeof(notepad_search_message),"Find a match first"); return;
+    }
+    if (r > TextDocument::Capacity-(document.length-q)) { std::snprintf(notepad_search_message,sizeof(notepad_search_message),"Result too large"); return; }
+    document.checkpoint();
+    std::memmove(document.text+notepad_match+r,document.text+notepad_match+q,document.length-notepad_match-q+1);
+    std::memcpy(document.text+notepad_match,notepad_replacement,r);
+    document.length=document.length-q+r;document.caret=notepad_match+r;notepad_match=size_t(-1);
+    std::snprintf(notepad_search_message,sizeof(notepad_search_message),"Replaced");return;
+  }
+  if (id == 624) {
+    if (document.read_only) { document.fail(DocumentResult::read_only); notepad_error(); return; }
+    std::string result; size_t count = 0;
+    if (!notepad_search::replace_all(std::string_view(document.text, document.length), notepad_query, notepad_replacement, TextDocument::Capacity, result, count)) {
+      std::snprintf(notepad_search_message, sizeof(notepad_search_message), "Empty search or result too large"); return;
+    }
+    if (count && (result.size()!=document.length || std::memcmp(result.data(),document.text,document.length)!=0)) document.checkpoint();
+    std::memcpy(document.text, result.data(), result.size()); document.length = result.size(); document.text[document.length] = 0;
+    document.caret = std::min(document.caret, document.length); notepad_match = size_t(-1);
+    std::snprintf(notepad_search_message, sizeof(notepad_search_message), "%zu replacements", count); return;
+  }
   if (id == 600) {
     if (input_device == InputDevice::mouse && notepad_body.has(mx, my)) {
       int row = (my - notepad_body.y - 12) / 28 + notepad_first_line;
@@ -222,6 +289,10 @@ void Shell::notepad_action(int id) {
       document.caret = at;
     }
     begin_text(TextTarget::document);
+  }
+  if (id == 601 && document.path[0]) {
+    if (!document.save()) notepad_error();
+    return;
   }
   if (id == 601 || id==606) {
     notepad_name_init();notepad_save_as_mode=id==606;notepad_save_dialog=true;
@@ -274,23 +345,25 @@ void Shell::notepad_ui(Rect wr) {
   button({x, wr.y + 46, 72, 36}, 613, "File");
   button({x + 80, wr.y + 46, 72, 36}, 614, "Edit");
   button({x + 162, wr.y + 46, 100, 36}, 615, "View");
-  button({x+280,wr.y+46,80,36},601,"Save");
-  button({x+368,wr.y+46,110,36},606,"Save As");
-  const char *name = std::strrchr(document.path, '/');
-  char title[300];
-  std::snprintf(title, sizeof(title), "%s%.256s", document.dirty() ? "* " : "",
-                name ? name + 1 : document.path);
-  round({wr.x+132,wr.y+4,350,38},7,dark?0xff292929:0xfff3f3f3);
-  text_fit(wr.x+145,wr.y+14,300,title,0,ink());
-  button({wr.x+445,wr.y+6,34,32},602,"x");
-  button({wr.x+490,wr.y+6,36,32},1421,"+");
+  notepad_tab_init();
+  const int tab_width = std::min(210, (wr.w-340)/std::max(1,int(notepad_tabs.size())+1));
+  for (int i=0;i<int(notepad_tabs.size());++i) {
+    const TextDocument &tab = i==notepad_tab ? document : *notepad_tabs[i];
+    const char *name=std::strrchr(tab.path,'/'); char title[300];
+    std::snprintf(title,sizeof(title),"%s%.255s",tab.dirty()?"* ":"",tab.path[0]?(name?name+1:tab.path):"Untitled");
+    Rect r{wr.x+132+i*tab_width,wr.y+4,tab_width-2,38};
+    round(r,6,i==notepad_tab?(dark?0xff393939:0xfff7f7f7):(dark?0xff272727:0xffe8e8e8));
+    add(r,630+i);text_fit(r.x+8,r.y+10,r.w-(i==notepad_tab?40:16),title,0,ink());
+    if (i==notepad_tab) button({r.x+r.w-30,r.y+3,27,30},602,"x");
+  }
+  button({wr.x+132+int(notepad_tabs.size())*tab_width,wr.y+6,36,32},638,"+");
   Rect paper{wr.x+1,wr.y+91,wr.w-2,wr.h-139};
   if (touch_keyboard && paper.y + paper.h > 610)
     paper.h = 610 - paper.y;
   if (paper.h < 80)
     paper.h = 80;
   notepad_body = paper;
-  round(paper, 5, dark ? 0xff292623 : 0xffffffff);
+  rect(paper, dark ? 0xff1f1f1f : 0xffffffff);
   add(paper, 600);
   const int visible_lines = (paper.h - 26) / 28;
   int caret_line = 0, caret_column = 0;
@@ -346,6 +419,18 @@ void Shell::notepad_ui(Rect wr) {
     const int top = paper.y + 12 + row * 28;
     if (text_selection && count)
       round({paper.x + 10, top, width(line) + 4, 25}, 2, accent_color());
+    else if (notepad_search_open && notepad_match != size_t(-1)) {
+      const size_t visible_start=at+first, visible_end=visible_start+count;
+      const size_t match_end=notepad_match+std::strlen(notepad_query);
+      const size_t lo=std::max(visible_start,notepad_match), hi=std::min(visible_end,match_end);
+      if (hi>lo) {
+        const size_t left=lo-visible_start, right=hi-visible_start;
+        const char saved_left=line[left], saved_right=line[right];
+        line[left]=0; const int x_offset=width(line); line[left]=saved_left;
+        line[right]=0; const int extent=width(line); line[right]=saved_right;
+        round({paper.x+12+x_offset,top,extent-x_offset,25},2,dark?0xff594d28:0xff88c9f9);
+      }
+    }
     text(paper.x + 12, top, line, 0, text_selection ? 0xffffffff : ink());
     if (caret_here && !text_selection && text_target == TextTarget::document) {
       size_t prefix = document.caret - at - first;
@@ -360,31 +445,45 @@ void Shell::notepad_ui(Rect wr) {
   }
   char status[200];
   std::snprintf(status, sizeof(status),
-                "Ln %d, Col %d  |  %zu / 65536 bytes  |  %s%s", caret_line + 1,
-                caret_column + 1, document.length,
-                document.read_only ? "Read-only"
-                : document.dirty() ? "Unsaved changes"
-                                   : "Saved",
-                document.bom ? "  |  UTF-8 BOM" : "  |  ASCII");
+                "Ln %d, Col %d    |    %s    |    %s%s", caret_line + 1,
+                caret_column + 1,
+                document.newline == TextDocument::Newline::crlf ? "Windows (CRLF)" :
+                document.newline == TextDocument::Newline::cr ? "Macintosh (CR)" : "Unix (LF)",
+                document.bom ? "UTF-8 BOM" : "ASCII",
+                document.read_only ? "    |    Read-only" : "");
   text_fit(x + 4, paper.y + paper.h + 15, wr.w - 280, status, 0, muted());
-  button({wr.x + wr.w - 226, paper.y + paper.h + 5, 94, 38}, 603, "Page up");
-  button({wr.x + wr.w - 122, paper.y + paper.h + 5, 98, 38}, 604, "Page down");
   if (notepad_menu) {
-    Rect menu{x + (notepad_menu - 1) * 80, wr.y + 85, 250, notepad_menu == 3 ? 90 : notepad_menu==1?180:138};
+    Rect menu{x + (notepad_menu - 1) * 80, wr.y + 85, 250, notepad_menu == 3 ? 90 : notepad_menu==1?180:264};
     panel(menu);
     if (notepad_menu == 1) {
-      button({menu.x+5,menu.y+5,240,40},1421,"New text document");
+      button({menu.x+5,menu.y+5,240,40},638,"New tab     Ctrl+T");
       button({menu.x+5,menu.y+47,240,40},601,"Save       Ctrl+S");
       button({menu.x+5,menu.y+89,240,40},606,"Save As   Ctrl+Shift+S");
       button({menu.x+5,menu.y+131,240,40},602,"Close      Ctrl+W");
     } else if (notepad_menu == 2) {
-      button({menu.x+5,menu.y+5,240,40},605,"Select all   Ctrl+A");
-      button({menu.x+5,menu.y+47,240,40},616,"Delete selection");
-      button({menu.x+5,menu.y+89,240,40},617,"Insert date / time");
+      button({menu.x+5,menu.y+5,240,40},627,"Undo       Ctrl+Z");
+      button({menu.x+5,menu.y+47,240,40},628,"Redo       Ctrl+Y");
+      button({menu.x+5,menu.y+89,240,40},605,"Select all   Ctrl+A");
+      button({menu.x+5,menu.y+131,240,40},616,"Delete selection");
+      button({menu.x+5,menu.y+173,240,40},617,"Insert date / time");
+      button({menu.x+5,menu.y+215,240,40},620,"Find / replace  Ctrl+F");
     } else {
       button({menu.x+5,menu.y+5,240,40},603,"Page up");
       button({menu.x+5,menu.y+47,240,40},604,"Page down");
     }
+  }
+  if (notepad_search_open) {
+    const Rect box{wr.x+wr.w-690, wr.y+91, 670, 174}; panel(box);
+    const Rect query{box.x+12,box.y+12,290,42}, replacement{box.x+12,box.y+61,290,42};
+    round(query,4,dark?0xff191919:0xffffffff); round(replacement,4,dark?0xff191919:0xffffffff);
+    add(query,621); add(replacement,622);
+    text_fit(query.x+8,query.y+10,query.w-16,notepad_query[0]?notepad_query:"Find",0,notepad_query[0]?ink():muted());
+    text_fit(replacement.x+8,replacement.y+10,replacement.w-16,notepad_replacement[0]?notepad_replacement:"Replace with",0,notepad_replacement[0]?ink():muted());
+    button({box.x+314,box.y+12,140,42},623,"Find next");
+    button({box.x+314,box.y+61,140,42},626,"Replace");
+    button({box.x+464,box.y+61,190,42},624,"Replace all");
+    button({box.x+544,box.y+12,110,42},625,"Close");
+    text_fit(box.x+12,box.y+120,box.w-24,notepad_search_message,0,muted());
   }
 }
 } // namespace ww

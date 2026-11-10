@@ -1,29 +1,25 @@
-# WinBrew 11 / Vapor — Explorer, Office and console-storage development update
+# WinBrew 11 / Vapor — Notepad, Start and Recycle Bin development update
 
-**Release:** `desktop-storage-dev-v1` · **Date:** November 7, 2026 (America/Chicago) · **Application:** PPSA77382, system version 01.016.000.
+**Release:** `notepad-start-recycle-dev-v1` · **Date:** November 10, 2026 · **Application:** PPSA77382.
 
-> [!WARNING]
-> This project is in active development. Games may unexpectedly stop working after changes, even if they worked earlier. **Skyrim Special Edition is currently reported down.** Another affected title has not been identified. Please check back often for updates and fixes; compatibility listings are not guarantees for the current build.
+WinBrew is an independent, Windows 11-inspired PS5 homebrew desktop. It does not install Microsoft Windows. Vapor and the existing CS2 and Blender runtime bundles remain included.
 
-## Included
+## What's new
 
-- Windows-style Explorer tabs, address/breadcrumb/search bars, left-aligned tree/details, drive cards, sorting/views/selection, preview, contexts and drag/drop.
-- Verified copy/cut/paste, no-overwrite rename, recoverable Delete, confirmed Empty Recycle Bin, progress/cancel, compact centered menus and wrapped notices.
-- Notepad Save As and editable save/close names with replacement confirmation; Paint and bounded CSV/XLSX editing with workbook-part preservation.
-- Large console-backed C: (`/data`), personal folders at `C:\WinBrew\Users\Default`, verified first-start copying with retained originals, duplicate D: hidden, and Console Root.
-- Actual mounted-device detection and real USB capacity/hotplug behavior. Native PRX modes and managed storage-query compatibility are corrected.
-- Gold Vapor status and pulsing Preparing/Starting Play feedback. CS2/Blender runtime bundles remain unchanged.
+- **Notepad:** refreshed interface, tabs, find and replace, undo/redo, Save and Save As, editable names and replacement confirmation. Unsaved edits are protected by prompts. The owner confirmed physical-keyboard typing on the preceding PS5 build.
+- **Desktop and Start:** mouse right-click and controller Circle offer the same contextual actions, including cut, copy, paste and delete on desktop files. Start and All Apps keep the selected app visible behind its context menu. Built-in apps can be pinned or unpinned from the desktop, Start and taskbar; built-in All Apps entries remain available.
+- **Personalization:** change the display name shown in Start. Its default is `WinBrew`. The actual personal folder remains at `C:\WinBrew\Users\Default`, avoiding moves or broken paths when the display name changes.
+- **Recycle Bin:** deleted items are collected in the bin and can be removed individually. Empty asks for confirmation, with Cancel available. Older recovery locations are collected before emptying, including from connected volumes; copying from another drive is verified before the original is removed. Large bins can be browsed in batches; search and sorting apply to the current batch.
+- The built-in Quake II shortcut and legacy search launch were removed. Vapor remains available; no game files are included or removed by this update.
 
-## Acceptance and limits
+## Verification and limits
 
-The exact executable was installed/readback-verified; all 3,675 package hashes/modes were checked. Startup/runtime logs were reviewed, and the owner confirmed Explorer/device/storage/profile behavior. Personal copies were independently byte-compared with retained originals. Editor/file/profile/Office/XLSX host/native fixtures passed. Not every game or advanced workbook action was physically re-tested.
+The preceding executable was installed and readback-verified on the owner's PS5. The owner confirmed physical-keyboard typing. Local tests cover Notepad, Start and desktop context input, Recycle Bin confirmation/cancellation, individual deletion, legacy recovery, large bins and cross-drive transfers. An isolated PS5-native file-operation fixture passed with its own temporary files. The final release executable, including the last legacy-search correction, has not been launched or visually tested on the console. Tests do not guarantee every game or filesystem case.
 
-Enshrouded is owner-confirmed running after scoped recovery. CS2's earlier result is offline bots; official authentication/matchmaking remain unsupported. Blender's interactive repair is retained. Kane's Wrath is splash-only, Splitgate authentication-blocked, and co-op/LAN work unqualified. See [compatibility](compatibility.md) and the [multi-workstream report](reports/development-20261107.md).
+This is an active development build. The owner reports Skyrim Special Edition is not working; another affected title is unidentified. Previous game compatibility reports are historical and online multiplayer is not established. See [compatibility](compatibility.md) and [current status](current-status.md).
 
-## Downloads and updating
+## Downloads and update
 
-Download **WinBrew-11-Desktop-Storage-Dev-v1.zip**, **fix-vapor-install-modes.py**, **SHA256SUMS.txt** and **INSTALL.md** from this release. A first installation also needs the unchanged [Vapor-base-kit-0.13.zip](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip); its hash is included in the new checksum list. Existing correctly installed base kits do not need replacement.
+Download **WinBrew-11-Notepad-Start-Recycle-Dev-v1.zip**, **SHA256SUMS.txt**, **INSTALL.md** and **fix-vapor-install-modes.py** from this release. For a first installation also download the unchanged [Vapor-base-kit-0.13.zip](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip); existing correctly installed base kits can be retained.
 
-Unchanged runtime corresponding sources: [CS2](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/cs2-runtime-corresponding-source.zip) and [Blender](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/blender-runtime-corresponding-source.zip). The new source archive and Git commits contain the updated app/tests/docs. No commercial game files, account data, saves or private logs are included.
-
-Close WinBrew and save work before copying the complete app. Back up the app and both private/new personal-file locations. First successful startup stages/verifies six known personal folders, retains originals and uses the published profile thereafter. Internal settings/Steam state stays private. Rollback to an older app does not copy new-profile edits back. No partition resizing occurs. Follow [installation](getting-started.md) and [migration](explorer-storage.md).
+Save work, close WinBrew and back up your app and personal files before updating. Follow the [installation guide](getting-started.md). The source archive and GitHub tag contain application source and tests; they are not a ready-to-run app. CS2 and Blender corresponding source archives remain available on the [combined release](https://github.com/KPKev/WinBrew-11/releases/tag/combined-blender-v1). No commercial game files, accounts or saves are included.

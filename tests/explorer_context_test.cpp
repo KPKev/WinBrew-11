@@ -129,7 +129,7 @@ int main() {
   assert(!s.file_context && s.window == 1);
   s.pointer(20, 20, false);
   s.open_context();
-  assert(s.file_context && !s.context && s.shortcut_context_id==10);
+  assert(s.context && s.desktop_context_target && !s.file_context && s.shortcut_context_id==10);
   s.key(ww::Key::back);
   assert(!s.context && !s.file_context);
   // Controller focus selects the row even when the pointer is elsewhere.
@@ -167,14 +167,14 @@ int main() {
   fs::create_directories(root/"Desktop");put(root/"Desktop"/"note.txt","Desktop test");
   s.desktop_files_next_scan=0;s.draw();
   auto desktop=hit(s,2000);s.pointer(desktop.x+5,desktop.y+5,false);s.open_context();
-  assert(s.file_context&&s.file_context_item);click(s,801);assert(s.file_clipboard.ready);
+  assert(s.context&&s.desktop_context_target&&s.file_context_item);click(s,801);assert(s.file_clipboard.ready);
   s.draw();s.pointer(desktop.x+5,desktop.y+5,false);s.open_context();capture(s,"build/context-desktop-menu.ppm");click(s,809);
   assert(!fs::exists(root/"Desktop"/"note.txt")&&s.dialog);s.activate(60);
-  s.draw();auto quake=hit(s,30);s.pointer(quake.x+5,quake.y+5,false);s.open_context();
-  assert(s.shortcut_context_id==30&&s.shortcut_context_taskbar);capture(s,"build/context-taskbar-menu.ppm");click(s,811);s.draw();
-  assert(!has_hit(s,30));
+  s.draw();auto vapor=hit(s,35);s.pointer(vapor.x+5,vapor.y+5,false);s.open_context();
+  assert(s.shortcut_context_id==35&&s.shortcut_context_taskbar);capture(s,"build/context-taskbar-menu.ppm");click(s,811);s.draw();
+  for(int i=0;i<s.count;++i)assert(!(s.hits[i].id==35&&s.hits[i].r.y>=ww::H-54));
   ww::Shell reloaded;std::snprintf(reloaded.preferences,sizeof(reloaded.preferences),"%s",s.preferences);reloaded.load_preferences();
-  assert(reloaded.taskbar_hidden & (1ULL<<30));assert(s.pending==ww::Action::none);
+  assert(reloaded.taskbar_hidden & (1ULL<<35));assert(s.pending==ww::Action::none);
   // Reopening a deleted item's stale menu cannot delete a replacement.
   s.window=1;s.file_open(root.string().c_str());context(s,"alpha.txt");
   put(root/"alpha.txt","replacement");click(s,809);assert(get(root/"alpha.txt")=="replacement");
