@@ -1,5 +1,13 @@
 # Changelog
 
+## November 14, 2026 — Recycle Bin fix
+
+- Fixed a long-running PS5 Recycle Bin issue that prevented older deleted items from being collected and produced access errors.
+- Deleted files now appear directly in the bin. Restore returns an item to its recorded original location, and items can be deleted individually or by confirming Empty Recycle Bin.
+- Added a narrowly scoped helper for Recycle Bin operations, with checks that keep changed or inaccessible items instead of blindly deleting them. Older nested recovery entries are handled without exposing internal folders as the deleted file.
+- I tested the installed update on my PS5: deleting, viewing, restoring and emptying the bin all worked. Separate PS5 fixture tests checked cancellation, recovery, restore and deletion while preserving a file outside the test bin.
+- Added desktop drag selection/icon placement and controller Triangle for parent folder, Square for back. Existing game compatibility cautions still apply.
+
 ## November 10, 2026 — notepad-start-recycle-dev-v1 development update
 
 - Redesigned Notepad with tabs, find/replace, undo/redo and improved save prompts; owner confirmed physical-keyboard typing on the preceding PS5 build.

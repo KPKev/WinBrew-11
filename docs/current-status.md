@@ -1,6 +1,6 @@
 # Current verification
 
-**November 10 update:** Notepad, Start/context menus and Recycle Bin changes are included in the new development release. The owner confirmed keyboard typing on the preceding PS5 build; isolated PS5-native Recycle Bin operations and local UI fixtures passed. The final release executable has not been launched or visually tested on the PS5. The earlier observations below retain their original scope.
+**November 14 update:** I tested the Recycle Bin fix on my PS5. Deleted files appear in the bin, restore to their original location, and Empty Recycle Bin works. The installed executable and manifest were also checked after the update. The earlier observations below retain their original scope.
 
 The earlier **desktop-storage-dev-v1** development release contained an owner-installed **PPSA77382** app (system version `01.016.000`); its 3,675 packaged files, including the manifest, passed content/mode checks. The release tag distinguishes updates; the system version alone does not.
 
@@ -27,8 +27,8 @@ Pinned CS2/Blender runtimes are retained. Native/runtime modes and package hashe
 
 ## Installed identity
 
-- Executable SHA256: `58ef324568b3235500d9baaa14bb7e78baefa30624427810a0feafd5e1ca673e`
-- Manifest SHA256: `8f83086ba79a152c6926140828c45e361c8cc57e2894dac5a19c9e3c03d2b4a8`
+- Executable SHA256: `fe113046912baebb0650c92638c8752dc35629f2707a7fdfa2e38ccbf110b631`
+- Manifest SHA256: `ce72ad04d1ee8a0a862f318dc16f2bd66296d06c75994886a0c0ac61c1b2c4e6`
 - Matched CS2 ntdll remains `4f9f9fd45c65be0320794186f94bc2611be0d223199955a06d1e984cd295d94b`.
 
 See the [development report](reports/development-20261107.md), [machine-readable summary](current-verification.json), [storage guide](explorer-storage.md), [Office limits](office-apps.md) and [release notes](release-notes-next.md). Private logs and owner documents are excluded.

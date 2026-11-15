@@ -29,3 +29,9 @@ Right-click files, folders, sidebar locations and drives for available actions. 
 Removable roots are rechecked about every two seconds while Explorer is open. Entries appear after mounting and disappear after removal. Already observed devices are retained during brief credential-lock contention rather than blinking out during another filesystem operation. Disconnected listings and tree caches are invalidated.
 
 C: and Console Root expose real console files. Use Vapor or the console uninstall flow for registered games; deleting their directories manually can leave broken registrations. File operations do not provide automatic recovery for every system edit.
+
+## Recycle Bin
+
+When you delete a file, it appears directly in the Recycle Bin. You can restore an item to its recorded original location, delete it individually, or choose **Empty Recycle Bin** and confirm the prompt. Older deleted items are collected from known WinBrew recovery locations; internal recovery folders are not meant to appear as extra layers around each file. If an item cannot be safely checked or moved, WinBrew keeps it and reports the problem.
+
+The Recycle Bin helper is limited to WinBrew's recovery locations and user folders. It checks items before removing them, and a verified copy is made before a source is removed when recovery or restore requires a copy. Keep elfldr running on port 9021 as described in the [installation guide](getting-started.md).

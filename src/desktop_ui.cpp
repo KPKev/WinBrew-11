@@ -2,6 +2,8 @@
 #include "shell.hpp"
 #include "desktop_context_layout.hpp"
 #include "owner_check_dispatch.hpp"
+#include <algorithm>
+#include <cstdlib>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
@@ -852,7 +854,7 @@ void Shell::desktop_ui() {
       int s = icon_size == 2 ? 64 : icon_size == 1 ? 46 : 36;
       Rect r = desktop_icon_position(std::uint64_t(ids[i]), {12, 18 + positions[i] * spacing, 108, spacing - 5});
       add(r, ids[i]);
-      if (hover == ids[i] || focus == ids[i])
+      if (hover == ids[i] || focus == ids[i] || desktop_is_selected(std::uint64_t(ids[i])))
         round(r, 4, 0x406fabed);
       icon(r.x + (r.w - s) / 2, r.y + 4, s, kinds[i]);
       center(r.x + 1, r.y + s + 15, r.w, labels[i], 0, color(10, 30, 55));
@@ -867,20 +869,22 @@ void Shell::desktop_ui() {
       Rect r = desktop_icon_position(0x100000000ULL | vapor_shortcuts.entries()[i].app,
                                     {12+((9+row)/std::max(1,(H-80)/spacing))*120,18+((9+row++)%std::max(1,(H-80)/spacing))*spacing,108,spacing-5});
       add(r, 1200 + int(i));
-      if (hover == 1200 + int(i) || focus == 1200 + int(i)) round(r, 4, 0x406fabed);
+      if (hover == 1200 + int(i) || focus == 1200 + int(i) || desktop_is_selected(0x100000000ULL | vapor_shortcuts.entries()[i].app)) round(r, 4, 0x406fabed);
       vapor_shortcut_icon(vapor_shortcuts.entries()[i].app, r.x + (r.w - size) / 2, r.y + 4, size, shortcut_labels[i].c_str());
       text_fit(r.x + 2, r.y + size + 14, r.w - 4, shortcut_labels[i].c_str(), 0, 0xffffffff);
     }
   }
   if(show_icons){int spacing=icon_size==2?134:icon_size==1?112:94;int per_column=std::max(1,(H-80)/spacing),size=icon_size==2?64:icon_size==1?46:36,game_count=0;
     for(std::size_t i=0;i<vapor_shortcuts.count();++i)if(vapor_shortcuts.entries()[i].placements&VaporShortcuts::Desktop)++game_count;
-    for(int i=0;i<desktop_file_count;++i){int index=9+game_count+i;Rect r{12+(index/per_column)*120,18+(index%per_column)*spacing,108,spacing-5};if(r.x+r.w>W)break;
-      int length=std::snprintf(desktop_rendered_paths[i],sizeof(desktop_rendered_paths[i]),"%s/%s",desktop_folder_path,desktop_files[i].name);if(length<0||length>=int(sizeof(desktop_rendered_paths[i]))){desktop_rendered_paths[i][0]=0;continue;}add(r,2000+i);
-      if(hover==2000+i||focus==2000+i)round(r,4,0x406fabed);
+    for(int i=0;i<desktop_file_count;++i){int index=9+game_count+i;Rect r{12+(index/per_column)*120,18+(index%per_column)*spacing,108,spacing-5};
+      int length=std::snprintf(desktop_rendered_paths[i],sizeof(desktop_rendered_paths[i]),"%s/%s",desktop_folder_path,desktop_files[i].name);if(length<0||length>=int(sizeof(desktop_rendered_paths[i]))){desktop_rendered_paths[i][0]=0;continue;}
+      const auto key=desktop_icon_key(2000+i,r);r=desktop_icon_position(key,r);if(r.x+r.w>W)continue;add(r,2000+i);
+      if(hover==2000+i||focus==2000+i||desktop_is_selected(key))round(r,4,0x406fabed);
       icon(r.x+(r.w-size)/2,r.y+4,size,desktop_files[i].directory?5:SheetDocument::supports(desktop_files[i].name)?19:Paint::supports(desktop_files[i].name)?18:17);
       text_fit(r.x+3,r.y+size+14,r.w-6,desktop_files[i].name,0,0xffffffff);
     }
   }
+  if(desktop_box_active){const int x=std::min(desktop_box_x,mx),y=std::min(desktop_box_y,my),w=std::abs(mx-desktop_box_x),h=std::abs(my-desktop_box_y);rect({x,y,w,h},0x406fabed);line(x,y,x+w,y,0xffd0a060);line(x,y,x,y+h,0xffd0a060);line(x+w,y,x+w,y+h,0xffd0a060);line(x,y+h,x+w,y+h,0xffd0a060);}
   Rect wr = maximized ? Rect{0, 0, W, H - 54} : Rect{wx, wy, 1200, 780};
   if (window) {
     panel(wr);

@@ -65,6 +65,7 @@ if [[ "${WINE11_EXPERIMENT_CANCEL_CLEANUP:-0}" == 1 ]]; then
 else
   python3 tools/prepare_steam_quiescence.py "$src"
 fi
+python3 tools/build-recycle-helper.py "$src/recycle_helper_blob.cpp"
 python3 tools/hash-steam-native-snapshot.py record
 for source in "$src"/*.cpp; do
   "$sdk/bin/prospero-clang++" -std=c++20 -O2 -ffunction-sections -fdata-sections -fno-exceptions -fno-rtti \

@@ -1,6 +1,6 @@
 # Current source and build entry points
 
-The default **main** branch is the current source tree. The `notepad-start-recycle-dev-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
+The default **main** branch is the current source tree. The `recycle-bin-fix-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
 
 **Only want to install it on your jailbroken PS5? Follow [the installation walkthrough](getting-started.md).** You do not need this page, Git, a compiler, or a PS5 SDK to use the ready-made release. This page is for developers rebuilding the app.
 
@@ -81,3 +81,5 @@ Focused regression files include `tests/console_profile_test.cpp`, `explorer_bro
 Native storage queries must use the checked managed-title libkernel `_fstatfs` resolution. Ordinary `statvfs`/`statfs` imports can resolve differently in an unmanaged payload and a managed app; a passing payload-only test does not qualify the managed UI. External drives require the returned mount name to match the requested root. The profile copy keeps the app's qualified per-operation root gate and creator ownership; PS5 UID 0 does not automatically bypass UID 1-only permissions.
 
 The profile initializer copies only six known personal folders, including their recovery stores, into a fresh staging tree; unsupported links, unknown destinations, stale stages and changed sources are refused. It publishes the verified profile marker only after copy verification. Existing verified profiles remain authoritative across launches, so later edits are not overwritten by stale original files.
+
+The current native build generates and embeds the confined Recycle Bin helper from `src/recycle_helper_main.cpp`; `elfldr` on port 9021 is required for its operation on the console.

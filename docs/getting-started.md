@@ -1,6 +1,6 @@
 # Install WinBrew 11 and Vapor
 
-Current release line: **notepad-start-recycle-dev-v1**, November 10, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
+Current release line: **recycle-bin-fix-v1**, November 14, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
 
 Start with a **PS5 that already has its jailbreak running**. This guide explains how to install the ready-made app. You do not need to compile code or install Windows. WinBrew 11 is the desktop; Vapor is the Steam library inside it.
 
@@ -32,11 +32,11 @@ Web File Manager starts looking for a free port at **8888** and can choose **888
 
 ## 1. Download the right files
 
-On your computer, open the [notepad-start-recycle-dev-v1 development release](https://github.com/KPKev/WinBrew-11/releases/tag/notepad-start-recycle-dev-v1). Save the new app, checksum list and matching permission helper from **Assets**. For a first installation, also download the unchanged [base kit](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip). Keep these four files together:
+On your computer, open the [recycle-bin-fix-v1 development release](https://github.com/KPKev/WinBrew-11/releases/tag/recycle-bin-fix-v1). Save the new app, checksum list and matching permission helper from **Assets**. For a first installation, also download the unchanged [base kit](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip). Keep these four files together:
 
 | File | What it is for |
 | --- | --- |
-| `WinBrew-11-Notepad-Start-Recycle-Dev-v1.zip` | The complete app, including the fixed CS2 and Blender runtimes. |
+| `WinBrew-11-Recycle-Bin-Fix-v1.zip` | The complete app, including the fixed CS2 and Blender runtimes. |
 | `Vapor-base-kit-0.13.zip` | The shared game runtime needed for a first installation. |
 | `SHA256SUMS.txt` | Expected download fingerprints, used to check the files. |
 | `fix-vapor-install-modes.py` | Checks/restores file permissions after copying. |
@@ -50,7 +50,7 @@ A SHA-256 checksum is a file's fingerprint. Checking it catches incomplete or ch
 On Windows, open the download folder, right-click empty space, and choose **Open in Terminal**. In PowerShell run:
 
 ```powershell
-Get-FileHash .\WinBrew-11-Notepad-Start-Recycle-Dev-v1.zip -Algorithm SHA256
+Get-FileHash .\WinBrew-11-Recycle-Bin-Fix-v1.zip -Algorithm SHA256
 Get-FileHash .\Vapor-base-kit-0.13.zip -Algorithm SHA256
 Get-FileHash .\fix-vapor-install-modes.py -Algorithm SHA256
 ```
@@ -61,7 +61,7 @@ On Linux, use `sha256sum FILENAME`; on macOS, use `shasum -a 256 FILENAME`. Repl
 
 ## 2. Extract both ZIPs on your computer
 
-1. Right-click `WinBrew-11-Notepad-Start-Recycle-Dev-v1.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
+1. Right-click `WinBrew-11-Recycle-Bin-Fix-v1.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
 2. Extract `Vapor-base-kit-0.13.zip` separately. Find the **playden-kit** folder.
 3. Check that `PPSA77382` contains `eboot.bin`, `manifest.json`, `sce_sys`, and `runtime`. Check that `playden-kit` contains `manifest.json` and its runtime files.
 

@@ -45,6 +45,12 @@ void Shell::controller_input(bool connected, uint32_t buttons, int lx, int ly,
     library_downloads = true; steam_panel = false; focus = -1;
     return;
   }
+  // In File Explorer, Triangle goes to the parent and Square follows Back.
+  // Let dialogs and menus own the face buttons until they are dismissed.
+  const bool browser_open=window==1 && !file_games && !modal_open && !start && !calendar && !quick && !tray;
+  if(window==1 && !file_games && modal_open && (edge & (0x1000u|0x8000u)))return;
+  if(browser_open && (edge & 0x1000u)){file_up();return;}
+  if(browser_open && (edge & 0x8000u)){file_history_move(-1);return;}
   struct Binding {
     uint32_t bit;
     Key key;

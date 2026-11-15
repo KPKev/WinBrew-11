@@ -177,11 +177,9 @@ void Shell::touchpad_input(bool connected, unsigned fingers, int x, int y, int f
       for (int i = count - 1; !draggable && i >= 0; --i)
         if (hits[i].r.has(mx, my)) {
           const auto hit = hits[i]; const int id = hit.id;
-          if (hit.r.w == 108 && hit.r.y < H - 54 &&
-              (id == 10 || id == 11 || id == 13 || id == 34 || id == 35 ||
-               (id >= 1200 && id < 1328 && rendered_shortcut_apps[id - 1200] &&
-                (vapor_shortcuts.placements(rendered_shortcut_apps[id - 1200]) & VaporShortcuts::Desktop)))) {
-            pad_touch_icon_key = id >= 1200 ? 0x100000000ULL | rendered_shortcut_apps[id - 1200] : std::uint64_t(id);
+          const auto desktop_key=(!start && !context && !file_context && !dialog)?desktop_icon_key(id,hit.r):0;
+          if (desktop_key) {
+            pad_touch_icon_key = desktop_key;
             pad_touch_icon_dx = mx - hit.r.x; pad_touch_icon_dy = my - hit.r.y;
             set_desktop_icon_position(pad_touch_icon_key, hit.r.x, hit.r.y);
             pad_touch_drag_locked = true;

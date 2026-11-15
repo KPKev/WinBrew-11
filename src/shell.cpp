@@ -977,6 +977,8 @@ void Shell::key(Key k) {
     return;
   }
   if (k == Key::back) {
+    if(desktop_drag_pending){if(desktop_drag_moved)for(const auto &item:desktop_drag_items)set_desktop_icon_position(item.key,item.x,item.y);desktop_drag_pending=desktop_drag_moved=false;desktop_drag_items.clear();return;}
+    if(desktop_box_pending){desktop_selection=desktop_box_initial;desktop_box_pending=desktop_box_active=false;desktop_box_initial.clear();return;}
     if(file_drag_active||file_drag_pending){file_drag_active=file_drag_pending=false;file_drag_items.clear();pad_touch_drag_locked=false;return;}
     if (dialog) {
       if(recycle_confirmation){recycle_confirmation=false;file_purge.cancel();}
@@ -1340,6 +1342,22 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
   int right = W - bounds.w - safe_area, bottom = H - bounds.h - safe_area;
   mx = x < safe_area ? safe_area : x > right ? right : x;
   my = y < safe_area ? safe_area : y > bottom ? bottom : y;
+  if(desktop_drag_pending){
+    const int dx=mx-desktop_drag_origin_x,dy=my-desktop_drag_origin_y;
+    if(held && (desktop_drag_moved || std::abs(dx)>6 || std::abs(dy)>6)){
+      desktop_drag_moved=true;for(const auto &item:desktop_drag_items)set_desktop_icon_position(item.key,item.x+dx,item.y+dy);return;
+    }
+    if(!held){const bool moved=desktop_drag_moved;desktop_drag_pending=desktop_drag_moved=false;desktop_drag_items.clear();
+      if(moved){if(preferences[0]&&!save_desktop_icon_positions()){dialog=true;focus=60;std::snprintf(message,sizeof(message),"Desktop positions could not be saved.");}return;}}
+  }
+  if(desktop_box_pending){
+    if(held && (desktop_box_active || std::abs(mx-desktop_box_x)>4 || std::abs(my-desktop_box_y)>4)){
+      desktop_box_active=true;desktop_selection=desktop_box_initial;const int left=std::min(mx,desktop_box_x),right=std::max(mx,desktop_box_x),top=std::min(my,desktop_box_y),bottom=std::max(my,desktop_box_y);
+      for(int i=0;i<count;++i){const auto &hit=hits[i];const auto key=desktop_icon_key(hit.id,hit.r);if(!key || hit.r.x>=right || hit.r.x+hit.r.w<=left || hit.r.y>=bottom || hit.r.y+hit.r.h<=top)continue;if(!desktop_is_selected(key))desktop_selection.push_back(key);}
+      return;
+    }
+    if(!held){if(!desktop_box_active)desktop_selection=desktop_box_initial;desktop_box_pending=desktop_box_active=false;desktop_box_initial.clear();return;}
+  }
   if (context && !down && context_bounds().has(mx, my) &&
       !(context_submenu && context_submenu_bounds().has(mx, my))) {
     const int relative = my - context_y;
@@ -1475,15 +1493,26 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
         file_drag_pending=index>=0&&!file_selection.empty();file_drag_x=mx;file_drag_y=my;
         return;
       }
-      if (((id >= 10 && id <= 13) || (id >= 1200 && id < 1328 && hits[i].r.x < 130 && hits[i].r.y < H - 54) ||
-           ((id == 34 || id == 35 || (id >= 36 && id <= 38)) && hits[i].r.x < 130) || (id>=2000&&id<2064)) &&
-          !doubleclick) {
-        focus = id;
+      const auto desktop_key=desktop_icon_key(id,hits[i].r);
+      if(desktop_key && !doubleclick){
+        focus=id;
+        if(input_device==InputDevice::mouse && !start && !context && !file_context && !dialog){
+          const bool control=(file_modifiers&0x11)!=0;
+          if(control){auto at=std::find(desktop_selection.begin(),desktop_selection.end(),desktop_key);if(at==desktop_selection.end())desktop_selection.push_back(desktop_key);else desktop_selection.erase(at);}
+          else if(!desktop_is_selected(desktop_key)){desktop_selection.clear();desktop_selection.push_back(desktop_key);}
+          desktop_drag_items.clear();
+          if(desktop_is_selected(desktop_key))for(int j=0;j<count;++j){const auto &hit=hits[j];const auto key=desktop_icon_key(hit.id,hit.r);if(key && desktop_is_selected(key) && std::none_of(desktop_drag_items.begin(),desktop_drag_items.end(),[&](const DesktopDragItem &entry){return entry.key==key;}))desktop_drag_items.push_back({key,hit.r.x,hit.r.y});}
+          desktop_drag_pending=!desktop_drag_items.empty();desktop_drag_moved=false;desktop_drag_origin_x=mx;desktop_drag_origin_y=my;
+        }
         return;
       }
       activate(id);
       return;
     }
+  if(input_device==InputDevice::mouse && my<H-54 && !dialog && !start && !context && !file_context && !quick && !tray && !calendar && !touch_keyboard){
+    desktop_box_pending=true;desktop_box_active=false;desktop_box_x=mx;desktop_box_y=my;
+    desktop_box_initial=(file_modifiers&0x11)?desktop_selection:std::vector<std::uint64_t>{};focus=-1;return;
+  }
   if (!context) start = calendar = false;
 }
 void Shell::result(bool ok, uint32_t code, const char *stage) {

@@ -1,0 +1,14 @@
+#include "../src/shell.hpp"
+#include <cassert>
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <iostream>
+namespace fs=std::filesystem;
+static ww::Rect hit(const ww::Shell &s,int id){for(int i=s.count-1;i>=0;--i)if(s.hits[i].id==id && s.hits[i].r.w==108)return s.hits[i].r;assert(false);return {};}
+int main(){const auto root=fs::temp_directory_path()/("wb-desktop-"+std::to_string(std::chrono::steady_clock::now().time_since_epoch().count())),desktop=root/"Desktop",prefs=root/"settings.ini";fs::create_directories(desktop);std::ofstream(desktop/"note.txt")<<"keep";
+ auto s=std::make_unique<ww::Shell>();assert(s->init("assets",nullptr,nullptr,nullptr,prefs.string().c_str()));s->desktop_files_refresh();s->input_device=ww::InputDevice::mouse;s->draw();const auto first=hit(*s,10),second=hit(*s,11);
+ s->pointer(1,1,true,true);s->pointer(125,second.y+second.h,false,true);s->pointer(125,second.y+second.h,false,false);assert(s->desktop_is_selected(10)&&s->desktop_is_selected(11));
+ s->pointer(first.x+10,first.y+10,true,true);s->pointer(first.x+410,first.y+210,false,true);s->pointer(first.x+410,first.y+210,false,false);s->draw();const auto moved1=hit(*s,10),moved2=hit(*s,11);assert(moved1.x==first.x+400&&moved1.y==first.y+200&&moved2.x==second.x+400&&moved2.y==second.y+200);
+ const auto file=hit(*s,2000);const auto key=s->desktop_icon_key(2000,file);assert(key);s->pointer(file.x+10,file.y+10,true,true);s->pointer(file.x+310,file.y-40,false,true);s->pointer(file.x+310,file.y-40,false,false);s->draw();const auto movedfile=hit(*s,2000);assert(movedfile.x==file.x+300&&movedfile.y==file.y-50);s->pointer(movedfile.x+10,movedfile.y+10,true,true);s->pointer(movedfile.x+90,movedfile.y+40,false,true);s->key(ww::Key::back);s->pointer(movedfile.x+10,movedfile.y+10,false,false);s->draw();const auto canceled=hit(*s,2000);assert(canceled.x==movedfile.x&&canceled.y==movedfile.y);s->pointer(movedfile.x+10,movedfile.y+10,false,false);s->open_context();assert(s->desktop_context_target&&std::string(s->file_context_path)==(desktop/"note.txt").string());s->context=false;
+ auto t=std::make_unique<ww::Shell>();assert(t->init("assets",nullptr,nullptr,nullptr,prefs.string().c_str()));t->desktop_files_refresh();t->draw();const auto persisted=hit(*t,2000);assert(persisted.x==movedfile.x&&persisted.y==movedfile.y);t->pointer(persisted.x+10,persisted.y+10,false,false);t->touchpad_input(true,1,500,500,1,true,1000000);t->touchpad_input(true,1,500,500,1,true,2000000);assert(t->pad_touch_drag_locked&&t->pad_touch_icon_key==key);t->touchpad_input(true,1,500,500,1,false,2001000);t->touchpad_input(true,1,550,500,1,false,2016000);t->finish_touchpad_drag();assert(t->desktop_icon_position(key,persisted).x>persisted.x);assert(fs::exists(desktop/"note.txt"));assert(root.parent_path()==fs::temp_directory_path());fs::remove_all(root);std::cout<<"PASS: desktop box selection, group dragging, file icon movement, context and persistence\n";}

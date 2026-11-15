@@ -244,6 +244,12 @@ g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/explorer_tre
 ./build/explorer-treeops-test
 g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/explorer_purge_test.cpp -o build/explorer-purge-test
 ./build/explorer-purge-test
+g++ -std=c++20 -O2 tests/recycle_helper_protocol_test.cpp -o build/recycle-helper-protocol-test
+./build/recycle-helper-protocol-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/recycle_restore_test.cpp -o build/recycle-restore-test
+./build/recycle-restore-test
+g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/recycle_anchor_test.cpp -Wl,--wrap=open -Wl,--wrap=openat -o build/recycle-anchor-test
+./build/recycle-anchor-test
 g++ -std=c++20 -O2 tests/recovery_snapshot_test.cpp -o build/recovery-snapshot-test
 ./build/recovery-snapshot-test
 g++ -std=c++20 -O2 src/explorer_fileops.cpp src/privilege.cpp tests/recovery_huge_purge_test.cpp -Wl,--wrap=fsync -o build/recovery-huge-purge-test

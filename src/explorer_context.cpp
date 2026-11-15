@@ -120,17 +120,18 @@ bool Shell::file_context_open() {
                 file_path);
   std::snprintf(file_context_path, sizeof(file_context_path), "%s", file_path);
   if (file_context_item) {
-    if (!joined(file_context_path, sizeof(file_context_path), file_path,
-                files[selected].name)) {
+    const auto selected_path=file_entry_path(files[selected]);
+    if (selected_path.size()>=sizeof(file_context_path)) {
       report(*this, "This path is too long to open.");
       return true;
     }
+    std::snprintf(file_context_path,sizeof(file_context_path),"%s",selected_path.c_str());
     if (files[selected].directory)
       std::snprintf(file_context_folder, sizeof(file_context_folder), "%s",
                     file_context_path);
   }
   file_context_info={};if(file_context_item)fileops::inspect(file_context_path,file_context_info);
-  const int h = file_context_item ? (files[selected].directory?296:264) : 264;
+  const int h = file_context_item && file_location==436 && std::string(file_path)==recycle_store() ? 104 : file_context_item ? (files[selected].directory?296:264) : 264;
   int x = mx, y = my;
   if (anchor.w) {
     x = anchor.x + 60;
@@ -143,10 +144,13 @@ bool Shell::file_context_open() {
   file_new = false;
   context = start = calendar = quick = tray = false;
   end_text();
-  focus = file_context_item ? 800 : file_clipboard.ready ? 803 : 805;
+  focus = file_context_item && file_location==436 ? 823 : file_context_item ? 800 : file_clipboard.ready ? 803 : 805;
   return true;
 }
 std::string Shell::recycle_store() const {
+  const auto profile=file_user_root();
+  if(profile.empty() || profile=="." || profile=="/" || profile=="/data" || profile=="/app0" || profile=="/mnt" ||
+     (console_storage_root[0] && profile==file_c_root()))return {};
   char desktop[1024]{},store[1024]{};desktop_folder(desktop,sizeof(desktop));
   return desktop[0] && fileops::recovery_location(desktop,store,sizeof(store)) ? std::string(store) : std::string();
 }
@@ -175,25 +179,28 @@ bool Shell::begin_recycle_collection(int resume_action) {
   if(file_recycle_active)return false;
   if(file_recovery_scan_ready){file_recovery_scan_ready=false;return true;}
   char desktop[1024]{};desktop_folder(desktop,sizeof(desktop));const auto store=recycle_store();
+  // Recovery is limited to WinBrew user data and its known old private folders.
+  // Never scan the console storage root, game directories, or mounted drives.
+  const auto profile=file_user_root();
+  // Fail closed if personal storage was not configured: a missing profile
+  // must never turn recovery into a scan of the current or console root.
+  if(profile.empty() || profile=="." || profile=="/" ||
+     (console_storage_root[0] && profile==file_c_root()))return false;
   if(!desktop[0] || store.empty() || !fileops::ensure_folder(desktop) || !fileops::ensure_folder(store.c_str()))return false;
-  std::vector<std::string> roots{file_c_root(),file_user_root()};
+  std::vector<std::string> roots{profile};
   std::string legacy=preferences;std::replace(legacy.begin(),legacy.end(),'\\','/');
   const auto slash=legacy.find_last_of('/');legacy=slash==std::string::npos?".":slash==0?"/":legacy.substr(0,slash);
-  if(legacy!=file_user_root())for(const char *name:{"Desktop","Downloads","Documents","Pictures","Music","Videos"}){
+  if(legacy!="." && legacy!="/" && legacy!=profile && (!console_storage_root[0] || legacy!=file_c_root()))for(const char *name:{"Desktop","Downloads","Documents","Pictures","Music","Videos"}){
     const auto folder=legacy+"/"+name;fileops::Info info{};const int result=fileops::inspect(folder.c_str(),info);
     if(result==-ENOENT)continue;if(result<0 || !info.directory)return false;roots.push_back(folder);
   }
-  // Earlier versions kept a hidden store next to each deleted item. Discover
-  // those stores on drives that Explorer has positively identified as mounted.
-  file_drive_refresh();
-  for(const auto &drive:file_drives)if(drive.location!=402 && drive.location!=409 && drive.path!=file_user_root())
-    roots.push_back(drive.path);
   auto walker=std::make_unique<fileops::RecoveryWalker>();
   if(!walker->begin(roots,store.c_str()))return false;
   const auto &found_roots=walker->pending;
   if(found_roots.size()==file_recovery_scanned_roots.size() && !found_roots.empty() &&
      std::equal(found_roots.begin(),found_roots.end(),file_recovery_scanned_roots.begin(),[](const auto &a,const auto &b){return a.path==b.path && a.device==b.device && a.inode==b.inode;}))return true;
   file_recovery_pending_roots=found_roots;
+  file_recovery_partial=false;file_recovery_cacheable=false;
   file_recovery_walker=std::move(walker);file_recycle_queue.clear();file_recycle_index=0;file_cross_in_progress=false;file_recovery_stores.clear();file_recovery_more=false;
   file_recycle_resume=resume_action;file_recycle_active=true;file_context=context=false;focus=807;return false;
 }
@@ -201,14 +208,15 @@ void Shell::empty_recycle_request(const char *folder) {
   if(file_transfer.busy() || file_purge.busy() || file_recycle_active)return;
   (void)folder;const auto store=recycle_store();
   file_context=context=false;
-  if(store.empty() || !begin_recycle_collection(814)) {
+  if(store.empty()) {report(*this,"The Recycle Bin is unavailable. Nothing was deleted.");return;}
+  if(!begin_recycle_collection(814)) {
     if(file_recycle_active)return;
-    report(*this,"Not all Recycle Bin locations could be checked. Nothing was permanently deleted; some items may have been moved into the bin.");return;
+    file_recovery_partial=true;
   }
   if(!file_purge.prepare(store.c_str())){report(*this,"The Recycle Bin could not be checked. Nothing was permanently deleted.");return;}
-  if(!file_purge.ready){report(*this,"This Recycle Bin is already empty.");return;}
+  if(!file_purge.ready){report(*this,file_recovery_partial?"The visible Recycle Bin is empty. Some older locations could not be checked.":"This Recycle Bin is already empty.");return;}
   recycle_single=false;dialog=recycle_confirmation=true;focus=60;
-  std::snprintf(message,sizeof(message),"Are you sure you want to permanently delete everything in the Recycle Bin? This cannot be undone.");
+  std::snprintf(message,sizeof(message),"%s",file_recovery_partial?"Permanently delete everything in the visible Recycle Bin? Some older locations could not be checked and may still contain items. This cannot be undone.":"Are you sure you want to permanently delete everything in the Recycle Bin? This cannot be undone.");
 }
 void Shell::file_action(int id) {
   if (id>=820 && id<=822 && file_context && file_menu_kind==7) {
@@ -238,6 +246,7 @@ void Shell::file_action(int id) {
   if(id==815 && file_context && shortcut_context_id==11){file_context=false;activate(11);return;}
   if (id == 807) {
     file_batch_active=false;file_batch_queue.clear();
+    if(file_restore_active){if(file_restore_cleanup)file_purge.cancel();else file_cross_recycle.cancel();file_restore_active=false;file_restore_cleanup=false;file_refresh();report(*this,"Restore stopped. Check the Recycle Bin and destination for any remaining items.");return;}
     if(file_recycle_active){if(file_recovery_walker){file_recovery_walker->cancel();file_recovery_walker.reset();}if(file_cross_in_progress){file_cross_recycle.cancel();file_cross_in_progress=false;}file_recycle_active=false;file_recycle_resume=0;file_recovery_scan_ready=false;file_recycle_queue.clear();file_refresh();desktop_files_next_scan=0;report(*this,"Recycling stopped. Check the Recycle Bin and any remaining original items.");return;}
     if(file_purge.busy()){
       file_purge.cancel();
@@ -257,6 +266,27 @@ void Shell::file_action(int id) {
   if (!file_context && !(id == 800 && file_context_path[0]))
     return;
   file_context = false;
+  if(id==823){
+    const auto store=recycle_store(),profile=file_user_root();
+    if(!file_context_item || file_context_desktop || file_location!=436 || std::string(file_path)!=store || file_selection.size()>1){report(*this,"Select one Recycle Bin item to restore.");return;}
+    const std::string source=file_context_path;const auto slash=source.find_last_of('/');
+    if(slash==std::string::npos){report(*this,"This item cannot be restored.");return;}
+    fileops::Info now{};if(fileops::inspect(source.c_str(),now)<0 || !fileops::unchanged(now,file_context_info)){report(*this,"This item changed. Refresh and try again.");return;}
+    const auto parent=source.substr(0,slash),name=source.substr(slash+1);
+    std::string child,original;fileops::Info wrapped{};
+    const bool wrapper=parent!=store && parent.compare(0,store.size()+1,store+"/")==0 && parent.find('/',store.size()+1)==std::string::npos && fileops::recovery_container_item(parent.c_str(),child,wrapped) && child==name && fileops::unchanged(wrapped,now);
+    const bool recorded=wrapper && fileops::recovery_original_path(parent.c_str(),name.c_str(),original);
+    std::string destination=profile+"/Desktop";
+    if(recorded){const auto at=original.find_last_of('/');const auto from=original.substr(0,at);if((from==profile || from.compare(0,profile.size()+1,profile+"/")==0) && from.find("/.winbrew-trash")==std::string::npos)destination=from;}
+    file_restore_wrapper.clear();file_restore_marker.clear();file_restore_cleanup=false;
+    if(wrapper){
+      if(fileops::inspect(parent.c_str(),file_restore_wrapper_info)<0 || !file_restore_wrapper_info.directory){report(*this,"This item changed. Refresh and try again.");return;}
+      file_restore_wrapper=parent;
+      if(recorded){file_restore_marker=parent+(name==".winbrew-original-location"?"/.winbrew-original-location-1":"/.winbrew-original-location");if(fileops::inspect(file_restore_marker.c_str(),file_restore_marker_info)<0 || !file_restore_marker_info.regular){report(*this,"This item's location could not be checked.");return;}}
+    }
+    fileops::Clipboard clip;if(!clip.copy(source.c_str()) || !fileops::unchanged(clip.info,now) || !file_cross_recycle.begin_restore(clip,destination.c_str(),store.c_str(),profile.c_str())){report(*this,"Restore could not start. The item remains in the Recycle Bin.");return;}
+    file_restore_active=true;focus=807;return;
+  }
   if(id==811 || id==812){
     if(!shortcut_context_id)return;
     const auto placement=id==811?VaporShortcuts::Taskbar:VaporShortcuts::Desktop;
@@ -272,8 +302,18 @@ void Shell::file_action(int id) {
   if(id==809){
     fileops::Info info{};char recovery[1024]{};
     if(fileops::recovery_location(file_context_path,recovery,sizeof(recovery)) && std::string(file_context_path).compare(0,std::strlen(recovery),recovery)==0 && file_context_path[std::strlen(recovery)]=='/') {
+      if(std::string(recovery)!=recycle_store()){report(*this,"Only items in WinBrew's Recycle Bin can be permanently deleted here.");return;}
       if(!file_context_desktop && file_selection.size()>1){report(*this,"Select one Recycle Bin item at a time to delete it permanently.");return;}
-      if(fileops::inspect(file_context_path,info)<0 || !fileops::unchanged(info,file_context_info) || !file_purge.prepare_item(recovery,file_context_path)) { report(*this,"This item could not be checked. Nothing was deleted.");return; }
+      if(fileops::inspect(file_context_path,info)<0 || !fileops::unchanged(info,file_context_info)){report(*this,"This item could not be checked. Nothing was deleted.");return;}
+      // If the displayed item is inside a verified one-item wrapper, delete
+      // the wrapper as a unit so no empty internal folders accumulate.
+      std::string target=file_context_path;const auto split=target.find_last_of('/');
+      if(split!=std::string::npos){const auto parent=target.substr(0,split);std::string child;fileops::Info item{};
+        if(parent.size()>std::strlen(recovery) && parent.compare(0,std::strlen(recovery),recovery)==0 &&
+           parent[std::strlen(recovery)]=='/' && parent.find('/',std::strlen(recovery)+1)==std::string::npos &&
+           fileops::recovery_container_item(parent.c_str(),child,item) && child==target.substr(split+1) && fileops::unchanged(item,info))target=parent;
+      }
+      if(!file_purge.prepare_item(recovery,target.c_str())) { report(*this,"This item could not be checked. Nothing was deleted.");return; }
       recycle_single=true;dialog=recycle_confirmation=true;focus=60;
       std::snprintf(message,sizeof(message),"Permanently delete this item from the Recycle Bin? This cannot be undone.");return;
     }
@@ -348,15 +388,60 @@ void Shell::file_action(int id) {
     focus = 806;
   }
 }
+namespace {
+void cleanup_legacy_wrapper(Shell &shell,const char *source){
+#ifdef __PROSPERO__
+  (void)shell; (void)source; return;
+#endif
+  if(shell.file_recycle_resume!=436 && shell.file_recycle_resume!=814)return;
+  const std::string path(source?source:"");
+  for(const auto &store:shell.file_recovery_stores)if(path.compare(0,store.size()+1,store+"/")==0){
+    if(!fileops::remove_empty_legacy_wrapper(store.c_str(),source)){shell.file_recovery_partial=true;shell.file_recovery_cacheable=false;}
+    return;
+  }
+}
+}
 void Shell::file_operations_tick() {
+  if(file_restore_active){
+    if(!file_restore_cleanup){
+      file_cross_recycle.step();if(file_cross_recycle.busy())return;
+      if(file_cross_recycle.state!=fileops::State::complete){file_restore_active=false;file_refresh();report(*this,"Restore stopped. Check the Recycle Bin and destination for any remaining items.");return;}
+      #ifdef __PROSPERO__
+      file_restore_active=false;file_refresh();desktop_files_next_scan=0;report(*this,"The item was restored.");return;
+      #endif
+      if(file_restore_wrapper.empty()){file_restore_active=false;file_refresh();desktop_files_next_scan=0;report(*this,"The item was restored.");return;}
+      const auto store=recycle_store();const auto relative=file_restore_wrapper.substr(store.size()+1);
+      if(store.empty() || !file_purge.prepare_item(store.c_str(),file_restore_wrapper.c_str())){file_restore_active=false;file_refresh();report(*this,"The item was restored, but its empty Recycle Bin container could not be removed.");return;}
+      size_t checked=0;bool safe=true;
+      for(auto *entry=file_purge.entries.last();entry;entry=entry->previous){
+        const std::string path=entry->path;++checked;
+        if(path==relative){if(!fileops::identity(entry->info,file_restore_wrapper_info))safe=false;}
+        else if(!file_restore_marker.empty() && path==file_restore_marker.substr(store.size()+1)){if(!fileops::unchanged(entry->info,file_restore_marker_info))safe=false;}
+        else safe=false;
+      }
+      if(!safe || checked!=(file_restore_marker.empty()?1u:2u) || !file_purge.begin()){file_purge.cancel();file_restore_active=false;file_refresh();report(*this,"The item was restored, but its Recycle Bin container changed and was kept.");return;}
+      file_restore_cleanup=true;return;
+    }
+    file_purge.step();if(file_purge.busy())return;
+    const bool ok=file_purge.state==fileops::State::complete;file_restore_active=false;file_restore_cleanup=false;file_refresh();desktop_files_next_scan=0;
+    report(*this,ok?"The item was restored.":"The item was restored, but its Recycle Bin container could not be removed.");return;
+  }
   if(file_recycle_active){
     if(file_recovery_walker){
       file_recovery_walker->step();if(file_recovery_walker->active)return;
       std::vector<fileops::Clipboard> found;const auto store=recycle_store();
       file_recovery_stores=std::move(file_recovery_walker->stores);
-      const bool ok=file_recovery_walker->complete && !store.empty() && fileops::collect_recovery_batch(file_recovery_stores,store.c_str(),found,file_recovery_more);
+      file_recovery_cacheable=file_recovery_walker->complete;
+      file_recovery_partial=file_recovery_walker->incomplete || !file_recovery_walker->complete;
+      // Some earlier versions accidentally placed an entire generated bin
+      // inside the current bin. Only treat it as a store if every entry has
+      // the known timestamp-container shape; otherwise keep it untouched.
+      const auto nested=store+"/.winbrew-trash";fileops::Info nested_info{};const int nested_result=fileops::inspect(nested.c_str(),nested_info);
+      if(nested_result==0 && nested_info.directory && fileops::legacy_nested_store(nested.c_str()))file_recovery_stores.push_back(nested);
+      else if(nested_result<0 && nested_result!=-ENOENT){file_recovery_partial=true;file_recovery_cacheable=false;}
+      const bool ok=!store.empty() && fileops::collect_recovery_batch(file_recovery_stores,store.c_str(),found,file_recovery_more);
       file_recovery_walker.reset();
-      if(!ok){const int resume=file_recycle_resume;file_recycle_active=false;file_recycle_resume=0;file_recovery_scan_ready=false;if(resume==436&&!store.empty())file_open(store.c_str());else file_refresh();report(*this,"Not all Recycle Bin locations could be checked. Nothing was permanently deleted.");return;}
+      if(!ok){file_recovery_partial=true;file_recovery_cacheable=false;file_recovery_more=false;found.clear();}
       file_recycle_queue=std::move(found);file_recycle_index=0;
     }
     if(file_cross_in_progress){
@@ -364,30 +449,43 @@ void Shell::file_operations_tick() {
       if(file_cross_recycle.busy())return;
       file_cross_in_progress=false;
       if(file_cross_recycle.state!=fileops::State::complete){const int resume=file_recycle_resume;file_recycle_active=false;file_recycle_resume=0;file_recycle_queue.clear();const auto store=recycle_store();if(resume==436&&!store.empty())file_open(store.c_str());else file_refresh();desktop_files_next_scan=0;report(*this,"Recycling could not finish. Check the Recycle Bin and any remaining original items.");return;}
+      if(file_recycle_index<file_recycle_queue.size())cleanup_legacy_wrapper(*this,file_recycle_queue[file_recycle_index].path);
       ++file_recycle_index;
     }
     if(file_recycle_index<file_recycle_queue.size()){
       const auto&item=file_recycle_queue[file_recycle_index];char recovery[1024];
       const auto store=recycle_store();
-      fileops::Info destination{};
-      if(!store.empty() && fileops::ensure_folder(store.c_str()) && fileops::inspect(store.c_str(),destination)==0 && destination.device!=item.info.device){
-        if(!file_cross_recycle.begin(item,store.c_str())){const int resume=file_recycle_resume;file_recycle_active=false;file_recycle_resume=0;file_recycle_queue.clear();if(resume==436)file_open(store.c_str());else file_refresh();report(*this,"The item could not be copied to the Recycle Bin. The original was kept.");return;}
+      fileops::Info destination{};std::string contained,original;fileops::Info contained_info{};
+      const bool recorded_container=(file_recycle_resume==436 || file_recycle_resume==814) && item.info.directory && fileops::recovery_container_item(item.path,contained,contained_info) && fileops::recovery_original_path(item.path,contained.c_str(),original);
+      if(!store.empty() && fileops::ensure_folder(store.c_str()) && fileops::inspect(store.c_str(),destination)==0 && (destination.device!=item.info.device || recorded_container
+#ifdef __PROSPERO__
+        || file_recycle_resume==436 || file_recycle_resume==814
+#endif
+        )){
+        file_cross_recycle.transfer.stage[0]=0;
+        const std::string source=item.path;const bool in_nested=source.compare(0,store.size()+16,store+"/.winbrew-trash/")==0;
+        if(!(in_nested?file_cross_recycle.begin_nested_recovery(item,store.c_str()):file_cross_recycle.begin(item,store.c_str()))){const int resume=file_recycle_resume;file_recycle_active=false;file_recycle_resume=0;file_recycle_queue.clear();if(resume==436)file_open(store.c_str());else file_refresh();char detail[240];std::snprintf(detail,sizeof(detail),"An older item could not be moved. It was kept. Diagnostic: %s (%d).",file_cross_recycle.transfer.stage[0]?file_cross_recycle.transfer.stage:"Access",file_cross_recycle.error);report(*this,detail);return;}
         file_cross_in_progress=true;return;
       }
       if(store.empty() || !fileops::trash(item.path,item.info,recovery,sizeof(recovery),store.c_str())){const int resume=file_recycle_resume;file_recycle_active=false;file_recycle_resume=0;if(resume==436&&!store.empty())file_open(store.c_str());else file_refresh();desktop_files_next_scan=0;report(*this,"Some items could not be recycled. Items already moved are in the Recycle Bin; remaining files were kept.");return;}
+      cleanup_legacy_wrapper(*this,item.path);
       ++file_recycle_index;
     }
     if(file_recycle_index>=file_recycle_queue.size()&&file_recovery_more&&(file_recycle_resume==436||file_recycle_resume==814)){
       std::vector<fileops::Clipboard> found;const auto store=recycle_store();
       if(store.empty()||!fileops::collect_recovery_batch(file_recovery_stores,store.c_str(),found,file_recovery_more)){
-        const int resume=file_recycle_resume;file_recycle_active=false;file_recycle_resume=0;file_recovery_scan_ready=false;file_recycle_queue.clear();file_recovery_stores.clear();file_recovery_more=false;
-        if(resume==436&&!store.empty())file_open(store.c_str());else file_refresh();
-        report(*this,"Not all Recycle Bin locations could be checked. Nothing was permanently deleted.");return;
+        file_recovery_partial=true;file_recovery_cacheable=false;file_recycle_queue.clear();file_recycle_index=0;file_recovery_more=false;
       }
       file_recycle_queue=std::move(found);file_recycle_index=0;
       if(!file_recycle_queue.empty())return;
     }
-    if(file_recycle_index>=file_recycle_queue.size()){const int resume=file_recycle_resume;file_recycle_active=false;file_recycle_resume=0;file_recycle_queue.clear();file_recovery_stores.clear();file_recovery_more=false;file_refresh();desktop_files_next_scan=0;if(resume==436||resume==814){file_recovery_scan_ready=true;file_recovery_scanned_roots=std::move(file_recovery_pending_roots);}if(resume==436){file_location_open(436);return;}if(resume==814){empty_recycle_request(nullptr);return;}report(*this,"The selected items were moved to their Recycle Bin.");}
+    if(file_recycle_index>=file_recycle_queue.size()){const int resume=file_recycle_resume;const auto store=recycle_store();const auto nested=store+"/.winbrew-trash";if((resume==436||resume==814) && std::find(file_recovery_stores.begin(),file_recovery_stores.end(),nested)!=file_recovery_stores.end() &&
+#ifdef __PROSPERO__
+      ([&]{fileops::Info i{};return fileops::inspect(nested.c_str(),i)!=-ENOENT;})()
+#else
+      !fileops::remove_empty_nested_store(store.c_str())
+#endif
+      ){file_recovery_partial=true;file_recovery_cacheable=false;}file_recycle_active=false;file_recycle_resume=0;file_recycle_queue.clear();file_recovery_stores.clear();file_recovery_more=false;file_refresh();desktop_files_next_scan=0;if(resume==436||resume==814){file_recovery_scan_ready=true;if(file_recovery_cacheable)file_recovery_scanned_roots=std::move(file_recovery_pending_roots);else file_recovery_scanned_roots.clear();}if(resume==436){file_location_open(436);return;}if(resume==814){empty_recycle_request(nullptr);return;}report(*this,"The selected items were moved to their Recycle Bin.");}
     return;
   }
   if(file_purge.busy()){
@@ -396,7 +494,7 @@ void Shell::file_operations_tick() {
       desktop_files_next_scan=0;
       if(file_clipboard.ready && std::string(file_clipboard.path).find(file_purge.root+"/")==0)file_clipboard.ready=false;
       if(window==1 && !file_games && std::string(file_path).find(file_purge.root)==0)file_open(file_purge.root.c_str());
-      report(*this,file_purge.state==fileops::State::complete?(file_purge.selected.empty()?"The Recycle Bin is empty.":"The selected item was permanently deleted."):"Deletion stopped because an item changed or could not be removed. Some items may already be permanently deleted. Remaining items were kept.");
+      report(*this,file_purge.state==fileops::State::complete?(file_purge.selected.empty()?(file_recovery_partial?"The visible Recycle Bin is empty. Some older locations could not be checked.":"The Recycle Bin is empty."):"The selected item was permanently deleted."):"Deletion stopped because an item changed or could not be removed. Some items may already be permanently deleted. Remaining items were kept.");
     }
     return;
   }
@@ -473,6 +571,13 @@ void Shell::file_actions_ui() {
       item(0,811,pinned?"Unpin from taskbar":"Pin to taskbar",true);
       if(!shortcut_context_taskbar)item(1,812,"Remove desktop shortcut",true);
 
+    } else if (file_context_item && !file_context_desktop && file_location==436 && std::string(file_path)==recycle_store()) {
+      std::string original;const std::string source=file_context_path;const auto slash=source.find_last_of('/');
+      const bool recorded=slash!=std::string::npos && fileops::recovery_original_path(source.substr(0,slash).c_str(),source.substr(slash+1).c_str(),original);
+      const auto profile=file_user_root();const auto at=original.find_last_of('/');const auto from=at==std::string::npos?std::string():original.substr(0,at);
+      const bool safe=recorded && (from==profile || from.compare(0,profile.size()+1,profile+"/")==0) && from.find("/.winbrew-trash")==std::string::npos;
+      item(0,823,safe?"Restore":"Restore to Desktop",file_selection.size()<=1);
+      item(1,809,"Delete permanently",file_selection.size()<=1);
     } else if (file_context_item) {
       const bool multiple=!file_context_desktop&&file_selection.size()>1;
       const bool folder=file_context_info.directory&&!file_context_desktop;
@@ -541,6 +646,7 @@ void Shell::file_actions_ui() {
     if(text_target==TextTarget::file_rename&&!text_selection){char prefix[256];std::snprintf(prefix,sizeof(prefix),"%.*s",std::max(0,text_caret),file_rename_name);rect({field.x+12+std::min(field.w-28,width(prefix)),field.y+9,2,25},accent_color());}
     button({r.x+492,r.y+192,146,42},2176,"Rename");button({r.x+652,r.y+192,146,42},2177,"Cancel");
   }
+  if(file_restore_active){rect({0,0,W,H},0x38000000);Rect r{540,350,840,280};panel(r);text(r.x+30,r.y+28,"Restoring item",1,ink());text(r.x+30,r.y+90,"Verifying the restored copy",0,ink());button({r.x+r.w-174,r.y+r.h-70,144,44},807,"Stop");}
   if(file_recycle_active){rect({0,0,W,H},0x38000000);Rect r{540,350,840,280};panel(r);text(r.x+30,r.y+28,file_recovery_walker?"Searching for older deleted items":"Moving items to Recycle Bin",1,ink());char status[100];if(file_recovery_walker)std::snprintf(status,sizeof(status),"%zu folders checked",file_recovery_walker->directories);else std::snprintf(status,sizeof(status),"%zu of %zu items",file_recycle_index,file_recycle_queue.size());text(r.x+30,r.y+90,status,0,ink());button({r.x+r.w-174,r.y+r.h-70,144,44},807,"Stop");}
   if(file_purge.busy()){
     rect({0,0,W,H},0x38000000);const Rect r{540,350,840,300};panel(r);

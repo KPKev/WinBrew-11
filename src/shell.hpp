@@ -10,6 +10,7 @@
 #include "explorer_fileops.hpp"
 #include <cstddef>
 #include <cstdint>
+#include <unordered_map>
 namespace ww {
 constexpr int W = 1920, H = 1080;
 constexpr int HitCapacity = 512;
@@ -132,7 +133,7 @@ struct Shell {
   std::uint64_t file_drive_next_scan=0;
   char file_address[1024]{},file_query[256]{},file_rename_name[256]{},file_rename_path[1024]{};
   fileops::Info file_rename_expected;
-  bool files_busy() const { return file_transfer.busy() || file_purge.busy() || file_batch_active || file_recycle_active; }
+  bool files_busy() const { return file_transfer.busy() || file_purge.busy() || file_batch_active || file_recycle_active || file_restore_active; }
   void file_browser_ui(Rect);
   void file_sort_list();
   void file_update_matches();
@@ -144,6 +145,7 @@ struct Shell {
   int file_hit_index(int) const;
   void file_select_row(int,bool=false);
   void file_context_selected();
+  std::string file_entry_path(const FileEntry &) const;
   void file_address_submit();
   void file_history_record();
   void file_history_move(int);
@@ -378,6 +380,8 @@ struct Shell {
                       bool pressed, std::uint64_t timestamp_us);
   void touchpad_focus();
   void finish_touchpad_drag();
+  std::uint64_t desktop_icon_key(int id, Rect bounds) const;
+  bool desktop_is_selected(std::uint64_t key) const;
   Rect desktop_icon_position(std::uint64_t key, Rect fallback) const;
   void set_desktop_icon_position(std::uint64_t key, int x, int y);
   void load_desktop_icon_positions();
@@ -424,5 +428,15 @@ struct Shell {
   size_t file_recycle_batch_offset = 0, file_recycle_batch_seen = 0;
   std::vector<std::string> file_recovery_stores;
   bool file_recovery_more = false;
+  bool file_recovery_partial = false, file_recovery_cacheable = false;
+  std::unordered_map<std::string,std::string> file_recycle_paths;
+  bool file_restore_active = false, file_restore_cleanup = false;
+  std::string file_restore_wrapper, file_restore_marker;
+  fileops::Info file_restore_wrapper_info{}, file_restore_marker_info{};
+  struct DesktopDragItem { std::uint64_t key; int x, y; };
+  std::vector<std::uint64_t> desktop_selection, desktop_box_initial;
+  std::vector<DesktopDragItem> desktop_drag_items;
+  bool desktop_drag_pending=false, desktop_drag_moved=false, desktop_box_pending=false, desktop_box_active=false;
+  int desktop_drag_origin_x=0, desktop_drag_origin_y=0, desktop_box_x=0, desktop_box_y=0;
 };
 } // namespace ww

@@ -56,7 +56,7 @@ struct RecoveryWalker {
   size_t name_index = 0, directories = 0;
   size_t name_offset = 0;
   bool names_more = false;
-  bool active = false, complete = false, failed = false;
+  bool active = false, complete = false, failed = false, incomplete = false;
   bool begin(const std::vector<std::string> &roots, const char *exclude);
   void step(size_t budget = 64);
   void cancel();
@@ -148,13 +148,16 @@ struct TreeTransfer {
 struct CrossVolumeRecycle {
   State state = State::idle;
   TreeTransfer transfer;
-  bool removing = false;
+  bool removing = false, restoring = false;
   size_t remaining = 0, removed = 0;
   int error = 0, parent_fd = -1, store_fd = -1;
   std::string parent, leaf, store_path;
   Info parent_info{}, store_info{};
   bool busy() const { return state == State::copying || state == State::verifying; }
   bool begin(const Clipboard &, const char *store);
+  bool begin_nested_recovery(const Clipboard &, const char *store);
+  bool begin_restore(const Clipboard &, const char *destination, const char *store, const char *profile);
+  bool begin_checked(const Clipboard &, const char *destination);
   void step();
   void cancel();
   bool fail(int);
@@ -188,6 +191,14 @@ struct Purge {
 bool recovery_location(const char *, char *, size_t);
 // Return the original item name from an old generated recovery container.
 bool legacy_recovery_name(const char *, std::string &);
+// Recognize only a generated one-item container and return its actual child.
+bool recovery_container_item(const char *, std::string &, Info &);
+// Read a recorded original path, if this container has trustworthy metadata.
+bool recovery_original_path(const char *, const char *, std::string &);
+// Remove only an empty generated legacy wrapper within the supplied store.
+bool remove_empty_legacy_wrapper(const char *, const char *);
+bool legacy_nested_store(const char *);
+bool remove_empty_nested_store(const char *);
 // Read-only, bounded discovery of legacy per-folder recovery stores. The
 // output is published only after a complete scan of the requested tree.
 bool discover_recovery_stores(const char *, std::vector<std::string> &);

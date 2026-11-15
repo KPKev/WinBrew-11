@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "shell.hpp"
+#include <algorithm>
 #include <cerrno>
 #include <cstdio>
 #include <cstring>
@@ -46,6 +47,15 @@ bool Shell::save_username() {
   if(!ok){dialog=true;focus=60;std::snprintf(message,sizeof(message),"Could not save the display name.");return false;}
   return true;
 }
+std::uint64_t Shell::desktop_icon_key(int id,Rect bounds) const {
+  if(bounds.w!=108 || bounds.y>=H-54)return 0;
+  if(id>=2000 && id<2064){const char *path=desktop_rendered_paths[id-2000];if(!*path)return 0;std::uint64_t hash=1469598103934665603ULL;for(const unsigned char *p=reinterpret_cast<const unsigned char *>(path);*p;++p){hash^=*p;hash*=1099511628211ULL;}return 0x2000000000000000ULL|(hash&0x0fffffffffffffffULL);}
+  if(id>=1200 && id<1328){const auto app=rendered_shortcut_apps[id-1200];return app && (vapor_shortcuts.placements(app)&VaporShortcuts::Desktop)?0x100000000ULL|app:0;}
+  return id==10 || id==11 || id==13 || id==33 || id==34 || id==35 || (id>=36 && id<=38) ? std::uint64_t(id) : 0;
+}
+bool Shell::desktop_is_selected(std::uint64_t key) const {
+  return key && std::find(desktop_selection.begin(),desktop_selection.end(),key)!=desktop_selection.end();
+}
 Rect Shell::desktop_icon_position(std::uint64_t key, Rect fallback) const {
   for (int i = 0; i < desktop_position_count; ++i)
     if (desktop_positions[i].key == key) { fallback.x = desktop_positions[i].x; fallback.y = desktop_positions[i].y; break; }
@@ -69,8 +79,8 @@ void Shell::load_desktop_icon_positions() {
     unsigned long long key; int x, y, used = 0;
     if (count == 133 || std::sscanf(line, "%llu %d %d%n", &key, &x, &y, &used) != 3 ||
         line[used] != '\n' || line[used + 1] || x < 0 || x > W - 108 || y < 0 || y > H - 170 ||
-        !((key == 10 || key == 11 || key == 13 || key == 34 || key == 35) ||
-          ((key >> 32) == 1 && std::uint32_t(key) != 0))) { ok = false; break; }
+        !((key == 10 || key == 11 || key == 13 || (key >= 33 && key <= 38)) ||
+          ((key >> 32) == 1 && std::uint32_t(key) != 0) || (key >> 60) == 2)) { ok = false; break; }
     for (int i = 0; i < count; ++i) if (loaded[i].key == key) ok = false;
     if (ok) loaded[count++] = {key, x, y};
   }

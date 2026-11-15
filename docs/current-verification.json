@@ -1,14 +1,14 @@
 {
   "schema": "winbrew-public-verification/1",
-  "updated_local_date": "2026-11-07",
+  "updated_local_date": "2026-11-14",
   "timezone": "America/Chicago",
-  "release_tag": "desktop-storage-dev-v1",
+  "release_tag": "recycle-bin-fix-v1",
   "application": {
     "title_id": "PPSA77382",
     "version": "01.016.000",
     "package_files_including_manifest": 3675,
-    "executable_sha256": "58ef324568b3235500d9baaa14bb7e78baefa30624427810a0feafd5e1ca673e",
-    "manifest_sha256": "8f83086ba79a152c6926140828c45e361c8cc57e2894dac5a19c9e3c03d2b4a8",
+    "executable_sha256": "fe113046912baebb0650c92638c8752dc35629f2707a7fdfa2e38ccbf110b631",
+    "manifest_sha256": "ce72ad04d1ee8a0a862f318dc16f2bd66296d06c75994886a0c0ac61c1b2c4e6",
     "installed_readback_verified": true,
     "startup_verified": true,
     "owner_confirmed": [
@@ -16,7 +16,10 @@
       "USB hotplug/real capacity",
       "large C replaces D",
       "Desktop files present",
-      "Console Root visible"
+      "Console Root visible",
+      "Recycle Bin receives deleted files",
+      "Recycle Bin restore returns files to their original location",
+      "Empty Recycle Bin removes the deleted items"
     ],
     "personal_migration_byte_verified": true,
     "original_personal_files_retained": true
