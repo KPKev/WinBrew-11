@@ -1,0 +1,8 @@
+#include "../src/steam_integration/blender_shared_upgrade.hpp"
+#include <cassert>
+struct A {std::string artifact_id,identity,sha256;};
+int main(){using ww::steam_integration::CanMigrateBlenderSharedRelease;
+std::vector<A> wanted={{"runtime","wine-wow64-blender-019.3",std::string(64,'a')},{"recipe","recipe-v1",std::string(64,'b')},{"compatibility-title","blender-019.3-title",ww::steam_integration::kBlenderSharedReleasePin}};
+const std::pair<const char*,const char*> releases[]={{"019.3","d0bcb55c66fbfcc84531b99ebceb1f2847532c0b5580b7e9c5ad08440777406e"},{"019.1","2191c6d66d0964fb3916cc797d992204729e3bcf3ac0db73f57a4630ef1f2644"},{"019.2","b01d6c5dd932d51f5990a5b7dcafbcf954cca03a5d4e0414cc6976594315f712"},{"019.3-owner","04ed27785c1c726362652d038db71de4482626b0e2a2cb349e241d0f9473a97e"}};
+for(const auto&[version,pin]:releases){auto old=wanted;old[0].identity=std::string("wine-wow64-blender-")+version;old[2]={"compatibility-title",std::string("blender-")+version+"-title",pin};assert(CanMigrateBlenderSharedRelease(365670,old,wanted));assert(!CanMigrateBlenderSharedRelease(730,old,wanted));for(int i=0;i<3;i++){auto bad=old;bad[i].sha256=std::string(64,'c');assert(!CanMigrateBlenderSharedRelease(365670,bad,wanted));}auto bad=wanted;bad[2].sha256=std::string(64,'c');assert(!CanMigrateBlenderSharedRelease(365670,old,bad));old.push_back(old[0]);assert(!CanMigrateBlenderSharedRelease(365670,old,wanted));}
+auto legacy=wanted;legacy.resize(2);legacy[0]={"runtime","wine-wow64-031302d-kit-0.13","6f5d2365ad5553819a21a390edb57c739d3af99b2392b16141b7fc8c140a5adb"};assert(CanMigrateBlenderSharedRelease(365670,legacy,wanted));legacy[1].identity="different-recipe";assert(!CanMigrateBlenderSharedRelease(365670,legacy,wanted));}

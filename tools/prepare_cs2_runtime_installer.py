@@ -233,4 +233,20 @@ def runtime_host(text: str) -> str:
         'for (const auto& artifact : c.kit->view.artifacts) {': 'for (const auto& artifact : c.installer->ExpectedArtifacts(target)) {'}
     for old, new in replacements.items():
         text = once(text, old, new)
+    text = once(text, '#include "blender_runtime_files.hpp"', '#include "blender_runtime_files.hpp"\n#include "blender_artifact_migration.hpp"')
+    text = once(text, '        if (target.artifacts.size() == c.installer->ExpectedArtifacts(target).size()) {',
+                '        const bool legacy_blender = ww::steam_integration::CanMigrateLegacyBlenderArtifacts(target.runtime_number, target.artifacts, c.installer->ExpectedArtifacts(target)) || ww::steam_integration::CanMigrateBlenderInlineEditors(target.runtime_number, target.artifacts, c.installer->ExpectedArtifacts(target));\n        if (target.artifacts.size() == c.installer->ExpectedArtifacts(target).size() || legacy_blender) {')
+    text = once(text, '                if (artifact.artifact_id != "runtime" && bound.sha256 != artifact.sha256) same_set = false;',
+                '                if (artifact.artifact_id != "runtime" && bound.sha256 != artifact.sha256 && !(legacy_blender && artifact.artifact_id == "compatibility-title")) same_set = false;')
+    text = once(text, '            same_set = same_set && found;',
+                '            same_set = same_set && (found || (legacy_blender && artifact.artifact_id == "compatibility-title"));')
     return text
+
+# All normal source-preparation paths include the shared-folder release overlay.
+import prepare_blender_shared_runtime as _blender_shared
+_package_source_base = package_source
+_runtime_host_base = runtime_host
+def package_source(text: str) -> str:
+    return _blender_shared.package_source(_package_source_base(text))
+def runtime_host(text: str) -> str:
+    return _blender_shared.runtime_host(_runtime_host_base(text))

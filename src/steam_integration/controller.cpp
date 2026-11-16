@@ -37,6 +37,22 @@ void Controller::SignOut() {
 void Controller::Refresh() {
   if (!account_id_) return;
   if (view_.account != AccountState::online && view_.account != AccountState::offline) return;
+  // An offline session must be renewed before asking Steam for newly added games.
+  // Keep the visible library while the worker retries the saved sign-in.
+  if (view_.account == AccountState::offline) {
+    library_.Invalidate(generation_);
+    library_request_ = 0;
+    view_.account = AccountState::signing_in;
+    view_.library = LibraryState::loading;
+    auth_request_ = auth_.RestoreSession();
+    return;
+  }
+  // Repeated clicks must not cancel a refresh while cached rows are visible.
+  if (library_request_) return;
+  LoadLibrary();
+}
+void Controller::LoadLibrary() {
+  view_.library_error = playden::steam::LibraryError::kNone;
   view_.library = LibraryState::loading;
   library_request_ = view_.account == AccountState::offline
       ? library_.LoadCached(account_id_, generation_)
@@ -74,7 +90,7 @@ void Controller::Process(const playden::steam::SteamEvent& e) {
       view_.challenge_url.clear(); view_.email_domain.clear();
       view_.account = e.kind == SteamEventKind::kAuthenticated ? AccountState::online : AccountState::offline;
       view_.account_name = e.account_name; account_id_ = e.steam_id; view_.account_id = e.steam_id;
-      auth_request_ = 0; Refresh(); break;
+      auth_request_ = 0; LoadLibrary(); break;
     case SteamEventKind::kCanceled:
       auth_request_ = 0; view_ = View{}; break;
     case SteamEventKind::kFailure:
@@ -91,7 +107,9 @@ void Controller::Process(playden::LibraryEvent& e) {
     case playden::LibraryEventKind::kCached:
     case playden::LibraryEventKind::kComplete:
       view_.games = std::move(e.games); view_.metadata_partial = e.metadata_partial;
-      view_.library = LibraryState::ready;
+      // A cached result is an interim view while the online request is running.
+      view_.library = e.kind == playden::LibraryEventKind::kCached && view_.account == AccountState::online
+          ? LibraryState::loading : LibraryState::ready;
       if (e.kind == playden::LibraryEventKind::kComplete || view_.account == AccountState::offline)
         library_request_ = 0;
       break;

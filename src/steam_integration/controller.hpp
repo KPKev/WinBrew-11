@@ -36,6 +36,7 @@ class Controller {
   const View& view() const { return view_; }
  private:
   void ResetLibrary();
+  void LoadLibrary();
   void Process(const playden::steam::SteamEvent&);
   void Process(playden::LibraryEvent&);
   playden::steam::SteamService& auth_;

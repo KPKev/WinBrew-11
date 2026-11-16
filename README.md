@@ -5,7 +5,15 @@ A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created b
 > [!WARNING]
 > **Active development: game compatibility can change between builds.** Some previously working games may temporarily fail to launch or behave unexpectedly after code changes. **Skyrim Special Edition is currently reported not working.** Earlier compatibility reports are historical results, not guarantees for this build. Please check back often for updates and fixes.
 
-**November 14, 2026 update:** The Recycle Bin problem that has been hanging around for a while is finally fixed. Deleted files show up in the bin, you can restore them to their original location, and Empty Recycle Bin works with a confirmation. I tested the update on my PS5. See the [release notes](docs/release-notes-next.md) for the details.
+**November 16, 2026 — [automatic Blender integration release](https://github.com/KPKev/WinBrew-11/releases/tag/blender-shared-files-v1):** Vapor now applies Blender's matched runtime, shared Documents/Desktop access, inline Save As/Preferences, recoverable file-browser deletion and old-project layout compatibility during normal preparation. Notepad now supports text files up to **5 MiB**. The owner confirmed the repaired workflows on PS5. Read the [release notes](docs/release-notes-next.md), [verification scope](docs/blender-shared-verification.json), and [detailed engineering report](docs/reports/blender-automatic-integration-20261116.md).
+
+## Blender: download, install, Play
+
+Once WinBrew and its standard console prerequisites are installed, open **Vapor**, sign into the Steam account containing Blender, refresh the library, then **download/install Blender and press Play**. Normal preparation applies the compatibility fixes automatically. No Python-console commands, title-folder renaming, permission repair experiments or manual copying between Wine and WinBrew Documents are part of Blender setup.
+
+For an existing Blender installation, update WinBrew and press **Play in Vapor once** so its managed runtime and folder access are upgraded. The PS5 Home tile then uses the same launcher. Blender's Documents/Desktop shortcuts point to WinBrew's actual folders; seeing the virtual Windows user name `prospero` does not mean a second copy is being saved.
+
+The work crossed Steam application filtering, runtime receipt migration, Wine profile mapping, PS5 filesystem permissions, secondary-window rendering and a missing Windows recycle API. Fixing only the launch or Save As path was not sufficient. The [engineering report](docs/reports/blender-automatic-integration-20261116.md) explains the failures, safeguards, tests and remaining limits in detail.
 
 ## Game status and earlier reports
 
@@ -15,7 +23,7 @@ A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created b
 | **Enshrouded** | Owner confirmed the game starts and runs after scoped preparation-state recovery. Long-session, save/load and multiplayer coverage remain unverified. |
 | **Counter-Strike 2 / Steam app 730** | Earlier owner-confirmed offline gameplay with bots; the fixed runtime is preserved. Official in-game Steam authentication/matchmaking remain unsupported. |
 | **Schedule I; Blackjack 21; Golf With Your Friends** | Earlier owner-reported working results. They have not all been re-tested against this desktop/storage build. |
-| **Blender** | Earlier repaired workspace, pointer/menus and wheel zoom confirmed. Full render/export and long-session coverage remain unverified. |
+| **Blender** | Automatic Vapor preparation; owner-confirmed shared Documents/Desktop save/reopen, visible Save As, file-browser recycling without black windows, and normal opening of the original project. Large scenes, rendering/exporting and long sessions remain unverified. |
 | **Kane's Wrath** | First splash only; no confirmed menu/gameplay. A path-handling experiment remains unqualified and is not a promised fix in this release. |
 | **Splitgate** | Reaches login but is blocked by server authentication; no playable result confirmed. Community offline/LAN ideas remain untested here. |
 
@@ -38,13 +46,13 @@ Vapor uses Playden's underlying runtime, so the console still needs its supporti
 
 ### Download and install
 
-1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/recycle-bin-fix-v1). Under **Assets**, download **WinBrew-11-Recycle-Bin-Fix-v1.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. For a first installation, also download the unchanged [Vapor-base-kit-0.13.zip](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip).
+1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/blender-shared-files-v1). Under **Assets**, download **WinBrew-11-Blender-Shared-Files-v1.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. For a first installation, also download the unchanged [Vapor-base-kit-0.13.zip](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip).
 2. Extract the ZIPs on your computer. Copy the complete **PPSA77382** folder to **`/data/homebrew/PPSA77382`** on the PS5. Copy **playden-kit** to **`/data/wine11/kits/playden-kit`**. Keep every file and subfolder; copying only `eboot.bin` is incomplete.
 3. Check the copied files' permissions using the supplied helper, let your homebrew loader scan the app folder, then launch **WinBrew 11** from Home. Open **Vapor** inside it and sign into your own Steam account.
 
 **Follow the [step-by-step installation guide](docs/getting-started.md) for the full walkthrough**, including download checks, exact folder layouts, permission commands, and first-launch checks. Already installed? Use its [update steps](docs/getting-started.md#updating-an-existing-installation). Stuck? See [troubleshooting](docs/troubleshooting.md).
 
-The app download above is the `recycle-bin-fix-v1` development release. The base kit and runtime corresponding-source downloads remain unchanged from `combined-blender-v1`. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
+The app download above is the `blender-shared-files-v1` development release. The base kit is unchanged; use the matching Blender runtime and corresponding-source assets from this release. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
 
 Clone or pull **main** for current code and documentation. SDKs, downloaded runtimes, and generated outputs are separate from Git. The [source-build guide](docs/source-build.md) explains the prerequisites and full target, `tools/build-vapor-cs2.sh`. The historical desktop-only `build-ps5.sh` is not the complete current Steam/Vapor application.
 

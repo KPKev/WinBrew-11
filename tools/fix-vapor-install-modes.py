@@ -10,7 +10,9 @@ from pathlib import PurePosixPath
 
 APP = '/data/homebrew/PPSA77382'
 KIT = '/data/wine11/kits/playden-kit'
-APP_PIN = ('9ee6608da3b66738f65cfdcc60c27744a0c537fa7773b83a0aee7101a3bda8d4',
+APP_PIN = ('9f03dc34fe9eae07d47678af40a2d7f434c8a327b1f4c33aac1bfb1518b5869a',
+           'f777e27496f316748ab17dda286a36a99c579d14407e6cfbb96f7df7451daefb',
+           '9ee6608da3b66738f65cfdcc60c27744a0c537fa7773b83a0aee7101a3bda8d4',
            '933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be',
            'a712a3d69ad0eae2829415486053790ce38361156f4bab6442d2838e4a9b4c4c',
            'e245bfab1cc296be9e586bac86bd61160073b6ba99c22faf84da71c2ea203f12',
@@ -20,7 +22,7 @@ KIT_PIN = '1cd63397e5c560fddbc0f3b8baea3bf87ace1e0ba997a46ee0ed4acf4dac8dfc'
 RUNTIME_PIN = 'd7cf3ed3221f8e8a7eb571522363efc21a5540699b6b20b3226cf30012732259'
 PREFIX = 'runtime/compatibility/steam-730-cs2-v1/'
 BLENDER_PREFIX = 'runtime/compatibility/steam-365670-blender-v1/'
-BLENDER_PIN = '2191c6d66d0964fb3916cc797d992204729e3bcf3ac0db73f57a4630ef1f2644'
+BLENDER_PIN = '4021aa951c421d520e3c2ddfc719315428f6369b4ee588a11af1c0d9491be9e2'
 
 class Client:
     def __init__(self, host, port): self.base = f'http://{host}:{port}'

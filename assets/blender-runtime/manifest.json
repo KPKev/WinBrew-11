@@ -10555,9 +10555,9 @@
       "size": 3394804
     }
   ],
-  "id": "blender-019.1",
+  "id": "blender-019.3",
   "qualification": {
-    "delivery": "portable production launcher and installer verified separately; not console-deployed",
+    "delivery": "Automatic shared-folder setup; acceptance evidence shipped with release",
     "not_established": [
       "large-scene stability",
       "rendering/export",
@@ -10566,24 +10566,40 @@
     "owner_confirmed": [
       "stable workspace",
       "smooth pointer and menus",
-      "responsive wheel zoom"
+      "responsive wheel zoom",
+      "same-window Save As opens on PS5",
+      "shared Documents and Desktop save/reopen",
+      "Vapor launch and same-window Save As",
+      "shared Blender file recycle deletion"
     ]
   },
   "schema": "vapor-game-compatibility/1",
-  "source_receipt": "runtime-patches/blender/source-receipt.json",
+  "source_receipt": "runtime-patches/blender/automatic-bridge-source-receipt.json",
   "steam_app_id": 365670,
   "title_files": [
     {
       "mode": "0755",
       "path": "title/eboot.bin",
-      "sha256": "2ebb762ab3170a10905540ebc5e2c3dfe7922341ae286feb162fb554e432aaf4",
-      "size": 211513
+      "sha256": "6d18870bc8b3ceae54be945426e7dd2ce509627b519e5afe83a758695748d40e",
+      "size": 222745
+    },
+    {
+      "mode": "0644",
+      "path": "title/lapy-manifest.json",
+      "sha256": "f02e6408bc1e43737f719ca136ba9844b55ac52eb32a7d7cf3d45c8bcf2b4b54",
+      "size": 741
+    },
+    {
+      "mode": "0755",
+      "path": "title/lapy.elf",
+      "sha256": "decdc69a718522f64f504af9f759791e60be05f52b80fb9dcca7e2925f94ab33",
+      "size": 173080
     },
     {
       "mode": "0644",
       "path": "title/native-title-build.json",
-      "sha256": "f01251e8e96b1af04340dd4eb454a3e12f260721f635519d94eddfcd1b59c86f",
-      "size": 814
+      "sha256": "6127df3a3c43eb5d5ef5cba0ff66367f04f2b6a2daddb85a338a59fdabbd1500",
+      "size": 829
     },
     {
       "mode": "0644",

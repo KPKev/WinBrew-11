@@ -36,3 +36,7 @@ The package includes default profiles for Skyrim Special Edition, Terraria, Brot
 ## Report a result
 
 Open a GitHub issue with the game/app ID, game build, WinBrew release, launch route, graphics/input settings, and observed result. Distinguish an accepted launch, a visible menu, offline gameplay, LAN gameplay, and official online matchmaking. Remove account identifiers, tokens, and other private data from attachments.
+
+## November16 Blender automatic integration
+
+Blender's normal Vapor preparation now applies the matched runtime, shared WinBrew Documents/Desktop and interface compatibility policy automatically. Owner-confirmed scope includes shared save/reopen and visible Save As; on the final corrective build, file-browser recycling works without black windows and the original project opens normally. Large scenes, rendering/exporting, long sessions and other consoles are not certified. See the [engineering report](reports/blender-automatic-integration-20261116.md) and [verification receipt](blender-shared-verification.json).

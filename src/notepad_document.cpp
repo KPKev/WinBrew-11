@@ -196,7 +196,7 @@ const char *document_result_message(DocumentResult result) {
   case DocumentResult::read:
     return "The file could not be read completely.";
   case DocumentResult::too_large:
-    return "This file exceeds Notepad's 64 KB editing limit. It was not "
+    return "This file exceeds Notepad's 5 MiB editing limit. It was not "
            "changed.";
   case DocumentResult::binary:
     return "This is not a supported text file. It was not changed.";
@@ -226,7 +226,7 @@ const char *document_result_message(DocumentResult result) {
   case DocumentResult::replace:
     return "The original file could not be replaced. Your edits remain open.";
   case DocumentResult::capacity:
-    return "The 64 KB editing limit has been reached.";
+    return "The 5 MiB editing limit has been reached.";
   }
   return "This action could not be completed.";
 }
@@ -450,23 +450,29 @@ bool TextDocument::close(bool discard) {
   error = 0;
   return true;
 }
+namespace {
+void remember_edit(std::vector<TextDocument::EditState>& history, const char* text, size_t length, size_t caret) {
+  size_t bytes=0;for(const auto& state:history)bytes+=state.text.size();
+  while(!history.empty() && (history.size()>=32 || bytes+length>TextDocument::HistoryBytes)) {
+    bytes-=history.front().text.size();history.erase(history.begin());
+  }
+  history.push_back({std::string(text,length),caret});
+}
+}
 void TextDocument::checkpoint() {
   if (!active) return;
-  if (undo_history.size() == 32) undo_history.erase(undo_history.begin());
-  undo_history.push_back({std::string(text,length),caret});
+  remember_edit(undo_history,text,length,caret);
   redo_history.clear();
 }
 bool TextDocument::undo() {
   if (!active || undo_history.empty()) return false;
-  if (redo_history.size()==32) redo_history.erase(redo_history.begin());
-  redo_history.push_back({std::string(text,length),caret});
+  remember_edit(redo_history,text,length,caret);
   EditState state=std::move(undo_history.back());undo_history.pop_back();
   length=state.text.size();std::memcpy(text,state.text.data(),length);text[length]=0;caret=std::min(state.caret,length);return true;
 }
 bool TextDocument::redo() {
   if (!active || redo_history.empty()) return false;
-  if (undo_history.size()==32) undo_history.erase(undo_history.begin());
-  undo_history.push_back({std::string(text,length),caret});
+  remember_edit(undo_history,text,length,caret);
   EditState state=std::move(redo_history.back());redo_history.pop_back();
   length=state.text.size();std::memcpy(text,state.text.data(),length);text[length]=0;caret=std::min(state.caret,length);return true;
 }
@@ -904,7 +910,7 @@ bool SheetDocument::set(int r, int c, const char *value) {
     cells[r * Columns + c] = old;
     std::snprintf(
         status, sizeof(status),
-        "Worksheet exceeds the 64 KB CSV limit. Edit retained in formula bar.");
+        "Worksheet exceeds the 5 MiB CSV limit. Edit retained in formula bar.");
     return false;
   }
   if (old == value)

@@ -1,34 +1,23 @@
 # Current verification
 
-**November 14 update:** I tested the Recycle Bin fix on my PS5. Deleted files appear in the bin, restore to their original location, and Empty Recycle Bin works. The installed executable and manifest were also checked after the update. The earlier observations below retain their original scope.
+The November16 `blender-shared-files-v1` release integrates automatic Blender preparation, Steam software-library refresh, shared Documents/Desktop, inline Save As/Preferences, recoverable Blender file-browser deletion and5MiB Notepad.
 
-The earlier **desktop-storage-dev-v1** development release contained an owner-installed **PPSA77382** app (system version `01.016.000`); its 3,675 packaged files, including the manifest, passed content/mode checks. The release tag distinguishes updates; the system version alone does not.
+The owner confirmed that the final corrective build recycles a disposable file inside Blender without errors or black windows, and opens the original Untitled.blend normally. Earlier acceptance in the same repair series covers Blender's library entry, Save As, saving/reopening in Documents/Desktop and Explorer visibility, WinBrew permanent recycle deletion, and Notepad editing beyond the former1MiB limit. These earlier checks were not all repeated after the last layout/recycle-only correction.
 
-> [!WARNING]
-> Previously working games can regress. **Skyrim Special Edition is currently owner-reported not working**, and another affected title remains unidentified. Earlier reports are not current-build guarantees. Check back often for fixes and review [compatibility](compatibility.md).
+Five installed Blender title files match the final runtime. The normal Vapor session confirms the shared group and embedded compatibility policy. Host tests cover actual runtime installation/reinstallation and older artifact migration, enrollment/refusal, project/settings preservation, recoverable deletion and WinBrew restore interoperability. Disposable PS5 fixtures cover profile migration, rollback, repeat setup, mixed ownership, hidden-file preservation and recycle metadata access.
 
-## Owner-confirmed desktop/storage
+## Final artifact identity
 
-- Explorer opens; navigation/file layout was reviewed through owner screenshots.
-- Real USB capacity, unplug removal and reconnect appearance confirmed; empty connection slots are hidden.
-- C: represents the large console storage previously shown as D:. D: is hidden, Desktop files are present and Console Root is visible.
-- First-profile migration copied and verified six known folders including recovery contents. Independent native comparison established byte equality with retained originals. Internal account/settings state was not relocated.
-- Earlier Notepad opening/saving feedback is retained. Automated editor/workbook coverage is broader than the physically tested workflow.
+- Application: PPSA77382, version01.017.000.
+- Executable SHA256: `e4c2092b3194f43c8338f08bbcce03495029133be9a491f64eafc301e0ec2811`.
+- Full-package manifest SHA256: `9f03dc34fe9eae07d47678af40a2d7f434c8a327b1f4c33aac1bfb1518b5869a`.
+- Blender runtime manifest SHA256: `4021aa951c421d520e3c2ddfc719315428f6369b4ee588a11af1c0d9491be9e2`.
+- Full package:3,725 application files plus the manifest. Its build-time console_tested flag predates qualification; the separate receipt records later acceptance of the same executable/helper/runtime bytes.
 
-## Game reports and limits
+## Scope and historical reports
 
-Enshrouded starts/runs after scoped recovery, owner-confirmed. CS2 offline bots, Schedule I, Blackjack 21 and Golf With Your Friends have earlier working reports; this final build has not been re-tested against every game. Skyrim's earlier success is superseded by the current failure report. Blender's repaired workspace/input was previously confirmed. Kane's Wrath remains splash-only and Splitgate authentication-blocked. No new online/co-op compatibility is claimed.
+Qualification is on the owner's PS5. Other firmware/consoles, large scenes, rendering/exporting and long sessions are not certified. The final corrective Blender recycle format was restored using WinBrew's actual host implementation; the final UI recycle action was tested on PS5. Do not describe that host restore test as a new PS5 UI restore test.
 
-## Automated/native verification
+The November14 Recycle Bin release already had owner-confirmed viewing, restoration and emptying; those fixes are retained. Earlier CS2 offline bots, Schedule I, Blackjack21, Golf With Your Friends and Enshrouded reports remain historical. Skyrim Special Edition has an unresolved reported regression. No new online/co-op support is claimed.
 
-Host checks passed for actual Explorer/profile migration/restart, Notepad input/save/conflict/close, desktop contexts/preferences, file/tree failure retention, confirmed purge, Paint/CSV and XLSX interoperability. Native fixtures passed exact profile migration under UID1 with root-gated access, originals retained, recovery included and internal/game files excluded. The final native image added no undefined imports relative to the earlier owner-confirmed storage build.
-
-Pinned CS2/Blender runtimes are retained. Native/runtime modes and package hashes were verified. Historical rendering figures are host benchmarks, not PS5 FPS. Every advanced application operation and game has not been physically re-tested.
-
-## Installed identity
-
-- Executable SHA256: `fe113046912baebb0650c92638c8752dc35629f2707a7fdfa2e38ccbf110b631`
-- Manifest SHA256: `ce72ad04d1ee8a0a862f318dc16f2bd66296d06c75994886a0c0ac61c1b2c4e6`
-- Matched CS2 ntdll remains `4f9f9fd45c65be0320794186f94bc2611be0d223199955a06d1e984cd295d94b`.
-
-See the [development report](reports/development-20261107.md), [machine-readable summary](current-verification.json), [storage guide](explorer-storage.md), [Office limits](office-apps.md) and [release notes](release-notes-next.md). Private logs and owner documents are excluded.
+See the [verification receipt](blender-shared-verification.json), [engineering report](reports/blender-automatic-integration-20261116.md), [runtime details](blender-runtime.md), [compatibility](compatibility.md) and [release notes](release-notes-next.md). Private logs and owner documents are excluded.

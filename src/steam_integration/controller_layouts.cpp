@@ -14,6 +14,12 @@ constexpr const char *kHeader = "wine11-controller-layouts 1";
 // the game's executable directly (Playden COMPATIBILITY.md, PR #408).
 constexpr std::uint32_t kSkyrimSpecialEdition = 489830;
 constexpr const char *kSkyrimProgram = "SkyrimSE.exe";
+// Steam advertises an EA launcher URI for The Sims 4, which cannot be a
+// Prospero executable. Select the installed game, still subject to normal
+// PE/runtime validation and any EA authentication required by the game.
+constexpr std::uint32_t kSims4 = 1222670;
+constexpr const char *kSims4Program = "Game/Bin/TS4_x64.exe";
+constexpr std::uint64_t kSims4SettingsEpoch = 1ull << 32;
 // Controller choices were already published at revisions 1, 2, ... before
 // Vapor supplied a Skyrim program. A schema range forces those choices to
 // republish with the executable change, even when the layout is unchanged.
@@ -167,7 +173,7 @@ std::uint64_t ControllerLayoutStore::Set(std::uint32_t app, ControllerLayout lay
 std::optional<playden::runtime::GameSettingsRecord> ControllerLayoutStore::Record(std::uint32_t app) const {
   std::lock_guard<std::mutex> lock(mutex_);
   const auto found = entries_.find(app);
-  if (found == entries_.end() && app != kSkyrimSpecialEdition) return std::nullopt;
+  if (found == entries_.end() && app != kSkyrimSpecialEdition && app != kSims4) return std::nullopt;
   playden::runtime::GameSettingsRecord record;
   if (found != entries_.end()) {
     record.overrides = ControllerLayoutOverrides(found->second.layout);
@@ -179,6 +185,13 @@ std::optional<playden::runtime::GameSettingsRecord> ControllerLayoutStore::Recor
     record.overrides["program"] = kSkyrimProgram;
     record.overrides["launch_option"] = playden::runtime::kProgramEntryId;
     record.revision += kSkyrimSettingsEpoch;
+  }
+  if (app == kSims4) {
+    if (found == entries_.end())
+      record.overrides = ControllerLayoutOverrides(ControllerLayout::gamepad);
+    record.overrides["program"] = kSims4Program;
+    record.overrides["launch_option"] = playden::runtime::kProgramEntryId;
+    record.revision += kSims4SettingsEpoch;
   }
   // Playden republishes saved settings only when their revision is newer than
   // the prepared title's. A controller choice already supplies that revision.

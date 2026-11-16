@@ -12,10 +12,12 @@ class Runtime(unittest.TestCase):
     def test_committed_manifest_and_compiled_table_agree(self):
         bundle.check_header()
         files=bundle.entries()
-        self.assertEqual(len(files),1768)
+        self.assertEqual(len(files),1770)
         self.assertEqual(next(f['sha256'] for f in files if f['path']=='lib/wine/x86_64-unix/win32u.prx'),
                          '3f942103da2f100fdb68abe4fee91e0716a050e97a6c83acd26fcd90787f5af4')
         self.assertTrue(any(f['path']=='title/eboot.bin' and f['mode']=='0755' for f in files))
+        self.assertTrue(any(f['path']=='title/lapy.elf' and f['mode']=='0755' for f in files))
+        self.assertTrue(any(f['path']=='title/lapy-manifest.json' and f['mode']=='0644' for f in files))
 
     def test_corrupt_archive_refused_before_extraction(self):
         with tempfile.TemporaryDirectory() as d:

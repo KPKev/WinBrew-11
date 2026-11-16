@@ -1,6 +1,6 @@
 # Current source and build entry points
 
-The default **main** branch is the current source tree. The `recycle-bin-fix-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
+The default **main** branch is the current source tree. The `blender-shared-files-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
 
 **Only want to install it on your jailbroken PS5? Follow [the installation walkthrough](getting-started.md).** You do not need this page, Git, a compiler, or a PS5 SDK to use the ready-made release. This page is for developers rebuilding the app.
 
@@ -57,7 +57,7 @@ Check a prepared network snapshot with `python3 tools/verify-steam-tested-inputs
 
 For the Windows preview, the current `tools/build-preview.cmd` calls Visual Studio 2022 Professional's `vcvars64.bat` at a fixed path. If you use another edition/location, adjust that local toolchain path first. The preview cannot verify PS5 installation, console payloads, or game compatibility.
 
-For the combined update, run `python3 tools/prepare-blender-runtime.py` to download and verify the matching published `blender-runtime-019.1.zip` asset. A local copy is accepted with `--archive /path/to/blender-runtime-019.1.zip`. Its source and output pins are documented in [Blender runtime details](blender-runtime.md).
+For the current Blender 019.3 release, place the pinned `blender-runtime-019.3.zip` in `build/` or run `python3 tools/prepare-blender-runtime.py --archive /path/to/blender-runtime-019.3.zip`. Use the 019.3 asset from this release; the older combined release contains 019.1. Source and output pins are documented in [Blender runtime details](blender-runtime.md).
 
 Once prerequisites exist:
 
@@ -82,4 +82,6 @@ Native storage queries must use the checked managed-title libkernel `_fstatfs` r
 
 The profile initializer copies only six known personal folders, including their recovery stores, into a fresh staging tree; unsupported links, unknown destinations, stale stages and changed sources are refused. It publishes the verified profile marker only after copy verification. Existing verified profiles remain authoritative across launches, so later edits are not overwritten by stale original files.
 
-The current native build generates and embeds the confined Recycle Bin helper from `src/recycle_helper_main.cpp`; `elfldr` on port 9021 is required for its operation on the console.
+## Automatic Blender bridge
+
+The normal full-build target now builds the PPSA77382 helper from `runtime-patches/blender/winbrew-bridge-helper` and the assembler requires its exact pin. Runtime-host preparation includes title enrollment and supported older-runtime upgrades; it does not depend on an owner title ID. The public Blender runtime is pinned in `assets/blender-runtime/manifest.json`. See [Blender runtime](blender-runtime.md) for corresponding source and rebuild steps. The prepared-machine prerequisites above still apply.

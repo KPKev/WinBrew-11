@@ -23,5 +23,11 @@ int main(void) {
     assert(!strcmp(script[6],"custom-script-value") && !script[7]);
     const char *full[]={"wine","blender.exe","--debug-gpu",NULL};
     assert(pw_blender_default_backend(full,3,4)==-1 && !strcmp(full[2],"--debug-gpu") && !full[3]);
+    const char *ui[9]={"wine","blender.exe","scene.blend","--","arg",NULL};
+    n=pw_blender_inline_editors(ui,5,9);
+    assert(n==7 && !strcmp(ui[2],"scene.blend") && !strcmp(ui[3],"--python-expr"));
+    assert(strstr(ui[4],"filebrowser_display_type") && strstr(ui[4],"winbrew.recycle") && strstr(ui[4],"use_load_ui = False") && !strcmp(ui[5],"--") && !strcmp(ui[6],"arg") && !ui[7]);
+    const char *limited[]={"wine","blender.exe",NULL};
+    assert(pw_blender_inline_editors(limited,2,3)==-1 && !limited[2]);
     puts("PASS: portable Blender identity, explicit backend, preserved arguments, script boundary and capacity");
 }

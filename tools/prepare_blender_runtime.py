@@ -12,11 +12,11 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / 'assets/blender-runtime/manifest.json'
-MANIFEST_SHA256 = '2191c6d66d0964fb3916cc797d992204729e3bcf3ac0db73f57a4630ef1f2644'
-ARCHIVE_SHA256 = 'e26970ea6270afcf16a5bad8b3ed05fbadbbf338cb995c106773c1e41911ee84'
-ARCHIVE_URL = 'https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/blender-runtime-019.1.zip'
+MANIFEST_SHA256 = '4021aa951c421d520e3c2ddfc719315428f6369b4ee588a11af1c0d9491be9e2'
+ARCHIVE_SHA256 = '142c9df31f6a8c151ae3f94c73e403784a2ac30536559362444f92bcf6a3d3e9'
+ARCHIVE_URL = 'https://github.com/KPKev/WinBrew-11/releases/download/blender-shared-files-v1/blender-runtime-019.3.zip'
 PREFIX = 'runtime/compatibility/steam-365670-blender-v1/'
-DEFAULT = ROOT / 'build/blender-runtime-v1'
+DEFAULT = ROOT / 'build/blender-runtime-v4'
 NOTICES = ROOT / 'runtime-patches/blender/upstream-notices'
 
 def digest(data): return hashlib.sha256(data).hexdigest()
@@ -25,7 +25,7 @@ def entries():
     raw = MANIFEST.read_bytes()
     if digest(raw) != MANIFEST_SHA256: raise ValueError('Blender manifest differs from its compiled pin')
     manifest = json.loads(raw)
-    if manifest['steam_app_id'] != 365670 or manifest['id'] != 'blender-019.1':
+    if manifest['steam_app_id'] != 365670 or manifest['id'] != 'blender-019.3':
         raise ValueError('Unexpected Blender runtime identity')
     result = (list(manifest['files']) + [dict(path='vapor-runtime.json', size=len(raw), sha256=MANIFEST_SHA256, mode='0644')] +
               list(manifest['title_files']) + [dict(path='title/vapor-compatibility.json', size=len(raw), sha256=MANIFEST_SHA256, mode='0644')])
@@ -39,7 +39,7 @@ def entries():
     return result
 
 def notice_files():
-    return {'runtime/compatibility-notices/blender-019.1/' + p.relative_to(NOTICES).as_posix(): p
+    return {'runtime/compatibility-notices/blender-019.3/' + p.relative_to(NOTICES).as_posix(): p
             for p in NOTICES.rglob('*') if p.is_file() and not p.is_symlink()}
 
 def expected_hashes():
@@ -66,7 +66,7 @@ def prepare(destination=DEFAULT, archive=None):
     destination = Path(destination)
     if destination.exists(): return verify(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    cached = Path(archive) if archive else ROOT / 'build/blender-runtime-019.1.zip'
+    cached = Path(archive) if archive else ROOT / 'build/blender-runtime-019.3.zip'
     if not cached.exists():
         if archive: raise ValueError('Specified runtime archive is missing')
         if not ARCHIVE_URL: raise ValueError('Supply the matching Blender runtime ZIP using --archive or place it at ' + str(cached))

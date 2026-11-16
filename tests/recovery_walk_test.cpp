@@ -44,7 +44,16 @@ int main(){
   {std::ofstream f(root/"Large/.winbrew-trash");f<<"unexpected";}
   assert(walker.begin({root.string()},known.string().c_str()));
   for(int i=0;walker.active&&i<20000;++i)walker.step(64);
-  assert(walker.failed&&!walker.complete&&walker.stores.empty()&&fs::exists(other/"box/old.txt"));
+  assert(walker.failed&&!walker.complete&&fs::exists(other/"box/old.txt"));
+#ifndef _WIN32
+  fs::remove(root/"Large/.winbrew-trash");fs::create_directory(root/"Large/protected");
+  assert(chmod((root/"Large/protected").c_str(),0)==0);
+  assert(walker.begin({root.string()},known.string().c_str()));
+  for(int i=0;walker.active&&i<20000;++i)walker.step(64);
+  assert(walker.complete&&!walker.failed&&walker.incomplete);
+  assert(walker.stores.size()==1&&walker.stores.front()==other.string()&&fs::exists(other/"box/old.txt"));
+  assert(chmod((root/"Large/protected").c_str(),0700)==0);
+#endif
   assert(root.parent_path()==fs::temp_directory_path());fs::remove_all(root);
   std::cout<<"PASS: incremental legacy discovery, large directories, cancellation and unsafe-store refusal\n";
 }

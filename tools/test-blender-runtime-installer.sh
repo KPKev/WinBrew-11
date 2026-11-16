@@ -8,6 +8,8 @@ cp -a build/vapor-host-local-source/. "$output/source/"
 cp vendor/playden-source/tests/runtime_package_installer_test.cpp "$output/source/tests/"
 cp tests/blender_runtime_installer_test.cpp "$output/source/tests/"
 cp src/steam_integration/blender_runtime_files.hpp "$output/source/src/"
+cp src/steam_integration/blender_artifact_migration.hpp "$output/source/src/"
+cp src/steam_integration/blender_shared_release_policy.hpp "$output/source/src/"
 python3 - "$output/source" <<'PY'
 from pathlib import Path
 import sys
@@ -28,6 +30,6 @@ p.write_text(s)
 PY
 cmake -S "$output/source" -B "$output/cmake" -G Ninja \
   -DPLAYDEN_PROSPERO_SOURCE_DIR="$root/build/steam-host-deps/prospero-win" \
-  -DPLAYDEN_STEAM_PREFIX="$root/build/vapor-host-network" > "$output/configure.log" 2>&1
+  -DPLAYDEN_STEAM_PREFIX="${STEAM_TEST_PREFIX:-$root/build/vapor-host-network}" > "$output/configure.log" 2>&1
 cmake --build "$output/cmake" --target blender_runtime_installer_test -j 4 > "$output/build.log" 2>&1
 "$output/cmake/blender_runtime_installer_test" "$@"

@@ -8,4 +8,6 @@ int pw_blender_target(uint32_t app_id, const char *executable);
 /* Append the Vulkan default before script arguments. Explicit backend wins.
  * argc excludes the trailing NULL; capacity includes it. -1 leaves argv intact. */
 int pw_blender_default_backend(const char **argv, int argc, size_t capacity);
+/* Set temporary editors to render in the main window for this launch. */
+int pw_blender_inline_editors(const char **argv, int argc, size_t capacity);
 #endif

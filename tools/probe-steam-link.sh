@@ -55,6 +55,8 @@ mkdir -p "$build"
 # prevents a stale vendor UID guard from silently winning symbol resolution.
 python3 tools/prepare_steam_uid_guard.py vendor/playden-source/src/platform/effective_uid.cpp "$build/guarded_effective_uid.cpp"
 python3 tools/prepare_steam_depot_estimates.py vendor/playden-source/src/steam/backend/cm_app_details.cpp "$build/guarded_cm_app_details.cpp"
+python3 tools/prepare_vapor_library_refresh.py vendor/playden-source/src/steam/backend/entitled_library.cpp "$build/refresh_entitled_library.cpp"
+python3 tools/prepare_vapor_library_refresh.py --owned vendor/playden-source/src/steam/backend/library_client.cpp "$build/refresh_library_client.cpp"
 sources=(tests/steam_runtime_link_probe.cpp src/steam_integration/runtime.cpp src/steam_integration/artwork.cpp src/steam_integration/controller.cpp src/steam_integration/downloads.cpp src/steam_integration/ready_launch.cpp src/steam_integration/preparation.cpp src/steam_integration/launch_details.cpp vendor/playden-source/src/steam/app_details_service.cpp vendor/playden-source/src/steam/store_details_service.cpp "$build/guarded_cm_app_details.cpp" src/steam_integration/ui_adapter.cpp src/steam_integration/remember_setting.cpp src/steam_integration/controller_layouts.cpp
  vendor/playden-source/src/installs/install_service.cpp vendor/playden-source/src/steam/install_volumes.cpp
  vendor/playden-source/src/steam/local_session_repository.cpp vendor/playden-source/src/steam/session_store.cpp
@@ -62,7 +64,7 @@ sources=(tests/steam_runtime_link_probe.cpp src/steam_integration/runtime.cpp sr
  vendor/playden-source/src/platform/managed_directory.cpp vendor/playden-source/src/platform/managed_file_lock.cpp
  "$build/guarded_effective_uid.cpp" vendor/playden-source/src/platform/random_id.cpp
  vendor/playden-source/src/library/cache.cpp
- vendor/playden-source/src/steam/backend/cm_client.cpp vendor/playden-source/src/steam/backend/entitled_library.cpp
+ vendor/playden-source/src/steam/backend/cm_client.cpp "$build/refresh_entitled_library.cpp"
  vendor/playden-source/src/steam/backend/family_groups.cpp vendor/playden-source/src/steam/backend/ws_client.cpp
  vendor/playden-source/src/steam/backend/binary_kv.cpp vendor/playden-source/src/steam/backend/gzip.cpp
  vendor/playden-source/src/steam/backend/app_info.cpp vendor/playden-source/src/steam/backend/vdf.cpp
@@ -71,7 +73,7 @@ sources=(tests/steam_runtime_link_probe.cpp src/steam_integration/runtime.cpp sr
  vendor/playden-source/src/steam/backend/auth_messages.cpp vendor/playden-source/src/steam/backend/cm_messages.cpp
  vendor/playden-source/src/steam/backend/json.cpp vendor/playden-source/src/steam/backend/token_claims.cpp
  vendor/playden-source/src/steam/backend/proto_wire.cpp vendor/playden-source/src/steam/backend/password_crypto.cpp
- vendor/playden-source/src/steam/backend/library_client.cpp vendor/playden-source/src/steam/backend/http_client.cpp
+ "$build/refresh_library_client.cpp" vendor/playden-source/src/steam/backend/http_client.cpp
  vendor/playden-source/src/steam/backend/native_network.cpp)
 sources+=(src/steam_integration/cloud_runtime.cpp src/steam_integration/cloud_preflight.cpp
   vendor/playden-source/src/steam/cloud_service.cpp vendor/playden-source/src/steam/backend/cloud_messages.cpp

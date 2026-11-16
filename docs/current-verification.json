@@ -1,44 +1,92 @@
 {
-  "schema": "winbrew-public-verification/1",
-  "updated_local_date": "2026-11-14",
-  "timezone": "America/Chicago",
-  "release_tag": "recycle-bin-fix-v1",
-  "application": {
-    "title_id": "PPSA77382",
-    "version": "01.016.000",
-    "package_files_including_manifest": 3675,
-    "executable_sha256": "fe113046912baebb0650c92638c8752dc35629f2707a7fdfa2e38ccbf110b631",
-    "manifest_sha256": "ce72ad04d1ee8a0a862f318dc16f2bd66296d06c75994886a0c0ac61c1b2c4e6",
-    "installed_readback_verified": true,
-    "startup_verified": true,
-    "owner_confirmed": [
-      "Explorer opening/layout",
-      "USB hotplug/real capacity",
-      "large C replaces D",
-      "Desktop files present",
-      "Console Root visible",
-      "Recycle Bin receives deleted files",
-      "Recycle Bin restore returns files to their original location",
-      "Empty Recycle Bin removes the deleted items"
+  "schema": "winbrew-verification-history/1",
+  "current_release": {
+    "schema": "winbrew-release-qualification/1",
+    "release": "blender-shared-files-v1",
+    "status": "release-prepared-owner-PS5-qualified",
+    "application_title": "PPSA77382",
+    "version": "01.017.000",
+    "application_sha256": "e4c2092b3194f43c8338f08bbcce03495029133be9a491f64eafc301e0ec2811",
+    "blender_runtime_manifest_sha256": "4021aa951c421d520e3c2ddfc719315428f6369b4ee588a11af1c0d9491be9e2",
+    "notepad_limit_bytes": 5242880,
+    "checks_passed": [
+      "public runtime1770-file verification",
+      "full actual-runtime installer: first install/reinstall, legacy upgrade, settings preservation, refusal paths",
+      "strict known-version migration predicate",
+      "dedicated title enrollment, revocation and unlisted-title refusal",
+      "PS5 disposable profile migration, missing-profile behavior, metadata rollback, repeat setup, mixed ownership, hidden-file preservation",
+      "actual profile marker/ancestry read-only validation",
+      "canonical source preparation byte-equal to candidate installer/runtime host",
+      "eleven PS5 staged files hash verification",
+      "five installed final Blender title hashes match release runtime",
+      "normal Vapor session confirms shared-group access and embedded compatibility policy installed",
+      "recoverable delete path: host refusal/content tests and actual WinBrew restore interoperability",
+      "PS5 shared recycle metadata access fixture"
     ],
-    "personal_migration_byte_verified": true,
-    "original_personal_files_retained": true
+    "earlier_owner_confirmed": [
+      "Blender visible after Steam software-library repair",
+      "Vapor launch and visible Save As",
+      "Documents/Desktop save and reopen",
+      "shared-file permanent recycle deletion",
+      "Notepad edit beyond former1MiB limit",
+      "automatic shared-folder candidate saves/reopens in Documents/Desktop and files appear in WinBrew"
+    ],
+    "pending": [],
+    "limits": [
+      "one owner PS5; no other firmware certified",
+      "no large scene/render/export or extended-session certification",
+      "existing game regression reports remain unresolved",
+      "final corrective build changes recycle/load-layout policy; prior save/reopen and Notepad acceptance retained, not rerun after this correction",
+      "full package has same tested executable/helper/runtime bytes; manifest console_tested flag records pre-test assembly, this receipt records later acceptance"
+    ],
+    "owner_confirmed_final": [
+      "Blender file-browser Move to Recycle Bin succeeds without black windows",
+      "Original Untitled.blend opens normally without overwriting it"
+    ],
+    "release_url": "https://github.com/KPKev/WinBrew-11/releases/tag/blender-shared-files-v1"
   },
-  "game_regressions": {
-    "skyrim_special_edition": "owner reports currently not working; earlier success historical; cause unconfirmed",
-    "additional_affected_title": "not identified"
-  },
-  "games": {
-    "enshrouded": "starts/runs owner-confirmed after scoped recovery; long-session/save/network unverified",
-    "cs2_app_730": "earlier offline bots confirmed; matched runtime preserved; official matchmaking unsupported",
-    "blender": "earlier interactive repair confirmed; render/export unverified",
-    "kanes_wrath": "first splash only",
-    "splitgate": "authentication blocked; no qualified LAN workaround"
-  },
-  "limits": [
-    "Not every game re-tested on final build",
-    "Advanced XLSX physical testing incomplete",
-    "Host render timings are not PS5 FPS"
-  ],
-  "private_diagnostics_published": false
+  "historical_previous": {
+    "schema": "winbrew-public-verification/1",
+    "updated_local_date": "2026-11-14",
+    "timezone": "America/Chicago",
+    "release_tag": "recycle-bin-fix-v1",
+    "application": {
+      "title_id": "PPSA77382",
+      "version": "01.016.000",
+      "package_files_including_manifest": 3675,
+      "executable_sha256": "fe113046912baebb0650c92638c8752dc35629f2707a7fdfa2e38ccbf110b631",
+      "manifest_sha256": "ce72ad04d1ee8a0a862f318dc16f2bd66296d06c75994886a0c0ac61c1b2c4e6",
+      "installed_readback_verified": true,
+      "startup_verified": true,
+      "owner_confirmed": [
+        "Explorer opening/layout",
+        "USB hotplug/real capacity",
+        "large C replaces D",
+        "Desktop files present",
+        "Console Root visible",
+        "Recycle Bin receives deleted files",
+        "Recycle Bin restore returns files to their original location",
+        "Empty Recycle Bin removes the deleted items"
+      ],
+      "personal_migration_byte_verified": true,
+      "original_personal_files_retained": true
+    },
+    "game_regressions": {
+      "skyrim_special_edition": "owner reports currently not working; earlier success historical; cause unconfirmed",
+      "additional_affected_title": "not identified"
+    },
+    "games": {
+      "enshrouded": "starts/runs owner-confirmed after scoped recovery; long-session/save/network unverified",
+      "cs2_app_730": "earlier offline bots confirmed; matched runtime preserved; official matchmaking unsupported",
+      "blender": "earlier interactive repair confirmed; render/export unverified",
+      "kanes_wrath": "first splash only",
+      "splitgate": "authentication blocked; no qualified LAN workaround"
+    },
+    "limits": [
+      "Not every game re-tested on final build",
+      "Advanced XLSX physical testing incomplete",
+      "Host render timings are not PS5 FPS"
+    ],
+    "private_diagnostics_published": false
+  }
 }

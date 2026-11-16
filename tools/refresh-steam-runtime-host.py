@@ -17,6 +17,11 @@ from prepare_vapor_publication_permissions import transform as publication_permi
 root = Path(__file__).resolve().parents[1]
 shutil.copy2(root/'src/steam_integration/cs2_runtime_files.hpp', root/'build/steam-host-dedicated-source/src/cs2_runtime_files.hpp')
 shutil.copy2(root/'src/steam_integration/blender_runtime_files.hpp', root/'build/steam-host-dedicated-source/src/blender_runtime_files.hpp')
+shutil.copy2(root/'src/steam_integration/blender_shared_release_policy.hpp', root/'build/steam-host-dedicated-source/src/blender_shared_release_policy.hpp')
+shutil.copy2(root/'src/steam_integration/blender_shared_upgrade.hpp', root/'build/steam-host-dedicated-source/src/blender_shared_upgrade.hpp')
+shutil.copy2(root/'src/steam_integration/blender_shared_enrollment.hpp', root/'build/steam-host-dedicated-source/src/blender_shared_enrollment.hpp')
+
+shutil.copy2(root/'src/steam_integration/blender_artifact_migration.hpp', root/'build/steam-host-dedicated-source/src/blender_artifact_migration.hpp')
 subprocess.run([sys.executable, str(root / 'tools/prepare-steam-runtime-host-experiment.py')], check=True)
 generated = (root / 'build/steam-native-experiment/runtime-host/runtime_host.cpp').read_text()
 old_cache = 'const auto cache = HostPath(config_.package_paths.console_data_root + "/playden/redist").string();'
@@ -27,7 +32,14 @@ target = root / 'build/steam-host-dedicated-source/src/homebrew/runtime_host.cpp
 previous = generated.replace(old_cache, new_cache)
 expected = cs2.runtime_host(title_trash(previous))
 actual = target.read_text()
-if actual not in (expected, previous_installer.runtime_host(title_trash(previous)), title_trash(previous), previous, previous.replace(RECONCILE, '', 1)):
+legacy_only = expected.replace(' || ww::steam_integration::CanMigrateBlenderInlineEditors(target.runtime_number, target.artifacts, c.installer->ExpectedArtifacts(target))', '', 1).replace(
+    ' && !(legacy_blender && artifact.artifact_id == "compatibility-title")', '', 1)
+pre_migration = legacy_only.replace('#include "blender_artifact_migration.hpp"\n', '', 1).replace(
+    '        const bool legacy_blender = ww::steam_integration::CanMigrateLegacyBlenderArtifacts(target.runtime_number, target.artifacts, c.installer->ExpectedArtifacts(target));\n        if (target.artifacts.size() == c.installer->ExpectedArtifacts(target).size() || legacy_blender) {',
+    '        if (target.artifacts.size() == c.installer->ExpectedArtifacts(target).size()) {', 1).replace(
+    '            same_set = same_set && (found || (legacy_blender && artifact.artifact_id == "compatibility-title"));',
+    '            same_set = same_set && found;', 1)
+if actual not in (cs2._runtime_host_base(title_trash(previous)), expected, legacy_only, pre_migration, previous_installer.runtime_host(title_trash(previous)), title_trash(previous), previous, previous.replace(RECONCILE, '', 1)):
     raise SystemExit('Preserved dedicated host has independent edits; refusing overwrite')
 if actual != expected:
     target.write_text(expected)
@@ -40,7 +52,7 @@ for name, transform in [('package_installer.h', cs2.package_header), ('install_s
     if name == 'package_installer.cpp': original = title_permissions(original)
     updated = transform(original)
     legacy = getattr(previous_installer, transform.__name__)(original)
-    if path.read_text() not in (original, legacy, updated):
+    if path.read_text() not in (original, legacy, updated, cs2._package_source_base(original) if name == "package_installer.cpp" else updated):
         raise SystemExit('Independent installer edits: ' + name)
     path.write_text(updated)
 publication = root / 'build/steam-host-dedicated-source/src/runtime/settings_publication.cpp'

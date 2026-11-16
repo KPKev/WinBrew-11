@@ -24,8 +24,8 @@
       "size": 5190
     },
     "blender/launcher-source.tar.gz": {
-      "sha256": "a8bb7a419359d444de8420ecf6aa1777f5f5332dc3b589fcd9084ff0ec49a686",
-      "size": 700079
+      "sha256": "5b99e933988a6d2469ef33f9b0d75fa6a6d9bfb4ee557908c3a6f13f4501715b",
+      "size": 707353
     },
     "blender/link-win32u.sh": {
       "sha256": "e5e4259abfe4de4f1669a7276304451ab2e2484fe93f061b9b6f991a1fd8011f",
@@ -40,9 +40,10 @@
       "size": 3198
     }
   },
-  "launcher_archive_sha256": "a8bb7a419359d444de8420ecf6aa1777f5f5332dc3b589fcd9084ff0ec49a686",
-  "launcher_rebuild_in_second_directory": "byte-identical executable and ELF",
-  "launcher_sha256": "2ebb762ab3170a10905540ebc5e2c3dfe7922341ae286feb162fb554e432aaf4",
+  "launcher_archive_sha256": "5b99e933988a6d2469ef33f9b0d75fa6a6d9bfb4ee557908c3a6f13f4501715b",
+  "launcher_rebuild_in_second_directory": "019.2 historical only; 019.3 source and output pinned separately",
+  "launcher_sha256": "6d18870bc8b3ceae54be945426e7dd2ce509627b519e5afe83a758695748d40e",
+  "qualification_note": "Owner confirms final Blender recycle action without black windows and original Untitled opens normally. Earlier automatic candidate Documents/Desktop save/reopen confirmed. Final title hashes and normal-session startup policy verified.",
   "rebuild_instructions": "docs/blender-runtime.md",
   "schema": "vapor-blender-source/1",
   "shared_cs2_sources_modified": false,

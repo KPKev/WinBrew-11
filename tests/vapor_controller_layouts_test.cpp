@@ -98,6 +98,25 @@ int main(int argc, char **argv) {
     assert(skyrim_default->overrides.at("controller_preset") == "none");
     assert(skyrim_default->overrides.at("program") == "SkyrimSE.exe");
     assert(skyrim_default->overrides.at("launch_option") == kProgramEntryId);
+    const auto sims_default = store.Record(1222670);
+    assert(sims_default && sims_default->revision == (1ull << 32));
+    const auto sims_choices = RecipeChoicesFrom(*sims_default);
+    assert(sims_choices.program == "Game/Bin/TS4_x64.exe" && !sims_choices.try_anyway);
+    GameRecipe sims = skyrim;
+    sims.app_id = 1222670;
+    sims.id = "generated-steam-1222670";
+    sims.launch_entries = {{"launch-1", "The Sims 4", "link2ea://launchgame/1222670?platform=steam", "", ""}};
+    EffectiveSettings sims_settings;
+    SettingsError sims_error;
+    assert(BuildEffectiveSettings(sims, nullptr, sims_default->overrides, kit, &sims_settings, &sims_error));
+    assert(sims_settings.launch && sims_settings.launch->executable == "Game/Bin/TS4_x64.exe");
+    ProsperoProfile sims_profile;
+    assert(RenderProsperoProfile(sims, sims_settings, {"wine11-steam-1222670", "/data/wine11/wine11-games/1222670"}, &sims_profile, &reason));
+    assert(sims_profile.text.find("TS4_x64.exe") != std::string::npos);
+    assert(sims_profile.text.find("link2ea://") == std::string::npos);
+    assert(store.Set(1222670, ControllerLayout::mouse) == 1);
+    assert(store.Record(1222670)->overrides.at("program") == "Game/Bin/TS4_x64.exe");
+    assert(store.Record(1222670)->revision == sims_default->revision + 1);
     assert(!store.Record(3594780));                        // other games keep Playden defaults
     assert(store.Set(489830, ControllerLayout::gamepad_pointer) == 1);
     assert(store.Set(489830, ControllerLayout::mouse) == 2);  // revisions only grow

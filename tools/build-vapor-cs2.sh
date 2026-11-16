@@ -6,6 +6,9 @@ cd "$(dirname "$0")/.."
 name="${1:?Usage: bash tools/build-vapor-cs2.sh NEW_BUILD_NAME}"
 [[ "$name" =~ ^[a-zA-Z0-9][a-zA-Z0-9_-]*$ ]] || { echo 'Invalid build name' >&2; exit 1; }
 [[ ! -e "build/$name-review" && ! -e "build/$name-isolated" && ! -e "build/$name-assets" ]] || { echo 'Build output already exists' >&2; exit 1; }
+python3 runtime-patches/blender/winbrew-bridge-helper/tools/build_owned_daemon.py \
+  --sdk "${PS5_PAYLOAD_SDK:-$PWD/vendor/playden-source/deps/ps5-payload-sdk}" \
+  --logging-client vendor/ps5log --elf-helper --title PPSA77382
 python3 tools/prepare-cs2-runtime.py
 python3 tools/prepare-blender-runtime.py
 python3 tools/refresh-steam-runtime-host.py

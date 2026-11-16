@@ -54,13 +54,13 @@ def create(kit, wine, launcher, module, output):
     for rel in ['eboot.bin','native-title-build.json']:
         name='title/'+rel;payload[name]=(launcher/rel).read_bytes();modes[name]=0o755 if rel=='eboot.bin' else 0o644
     def entry(n): return dict(path=n,size=len(payload[n]),sha256=sha(payload[n]),mode=f'{modes[n]:04o}')
-    manifest=dict(schema='vapor-game-compatibility/1',id='blender-019.1',steam_app_id=365670,
+    manifest=dict(schema='vapor-game-compatibility/1',id='blender-019.2',steam_app_id=365670,
         upstream_kit_sha256=KIT_SHA,upstream_wine_archive_sha256=WINE_SHA,
         files=[entry(n) for n in runtime_paths],
         title_files=[entry(n) for n in sorted(payload) if n.startswith('title/')],
-        qualification=dict(owner_confirmed=['stable workspace','smooth pointer and menus','responsive wheel zoom'],
+        qualification=dict(owner_confirmed=['stable workspace','smooth pointer and menus','responsive wheel zoom','same-window Save As opens on PS5'],
           not_established=['large-scene stability','rendering/export','cause of one prior unexpected exit'],
-          delivery='portable production launcher and installer verified separately; not console-deployed'),
+          delivery='candidate only; shared Documents unverified'),
         source_receipt='runtime-patches/blender/source-receipt.json')
     raw=(json.dumps(manifest,indent=2,sort_keys=True)+'\n').encode();pin=sha(raw)
     mpath=ROOT/'assets/blender-runtime/manifest.json';mpath.parent.mkdir(parents=True,exist_ok=True);mpath.write_bytes(raw)
@@ -87,7 +87,7 @@ def create(kit, wine, launcher, module, output):
         h += [f'  {{"{n}", {len(payload[n])}, "{sha(payload[n])}", {modes[n]:04o}}},' for n in names]
         h+=['}; }']
     h+=['inline void ConfigureBlenderRuntime(playden::runtime::FilesystemPackageInstaller& installer, const std::filesystem::path& runtime) {',
-        '  installer.SetGameRuntimeOverride({365670, runtime / "compatibility/steam-365670-blender-v1", "blender-019.1", kBlenderRuntimeManifestSha256, BlenderRuntimeFiles(), BlenderTitleFiles()});','}','}']
+        '  installer.SetGameRuntimeOverride({365670, runtime / "compatibility/steam-365670-blender-v1", "blender-019.2", kBlenderRuntimeManifestSha256, BlenderRuntimeFiles(), BlenderTitleFiles()});','}','}']
     (ROOT/'src/steam_integration/blender_runtime_files.hpp').write_text('\n'.join(h)+'\n',newline='\n')
     helper=ROOT/'tools/fix-vapor-install-modes.py'
     if helper.exists(): helper.write_text(re.sub(r"BLENDER_PIN = '[0-9a-f]+'",f"BLENDER_PIN = '{pin}'",helper.read_text()),newline='\n')

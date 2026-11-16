@@ -2,6 +2,7 @@
 #include "runtime_package_installer_test.cpp"
 #undef main
 #include "blender_runtime_files.hpp"
+#include "blender_artifact_migration.hpp"
 
 GameRuntimeOverride BlenderFixture(Fixture& f) {
   GameRuntimeOverride r{365670,f.temporary.path/"blender-runtime","blender-019.1",RealHashBytes("receipt"),{},{}};
@@ -45,7 +46,13 @@ int main(int argc,char**argv) {
     auto project=f.host_data/"playden/games/install-hl2/library/prefixes/game/drive_c/scene.blend";
     auto preference=f.host_data/"playden/games/install-hl2/library/profiles/user-choice.txt";
     Write(project,"owner-scene");Write(preference,"owner-preference");
-    installer.SetGameRuntimeOverride(BlenderFixture(f));r.artifacts=installer.ExpectedArtifacts(r);
+    installer.SetGameRuntimeOverride(BlenderFixture(f));
+    auto desired=installer.ExpectedArtifacts(r);
+    r.artifacts={{"runtime","wine-wow64-031302d-kit-0.13","6f5d2365ad5553819a21a390edb57c739d3af99b2392b16141b7fc8c140a5adb"},
+                 {"recipe",desired[1].identity,desired[1].sha256}};
+    CHECK(ww::steam_integration::CanMigrateLegacyBlenderArtifacts(r.runtime_number,r.artifacts,desired));
+    CHECK(installer.RefreshTitle(r).state==PackageActionState::kFailed); // Legacy binding cannot be copied directly.
+    r.artifacts=desired; // RuntimeHost records this only after RefreshTitle succeeds.
     CHECK(installer.RefreshTitle(r).state==PackageActionState::kComplete);
     CHECK(Read(project)=="owner-scene"&&Read(preference)=="owner-preference");
     CHECK(installer.ValidateArtifacts(r).state==PackageActionState::kComplete);
@@ -64,7 +71,7 @@ int main(int argc,char**argv) {
   }
   if(argc==2) {
     Fixture f;auto installer=f.Installer();auto r=Record();r.runtime_number=365670;r.game=playden::GameId::Steam(365670);
-    installer.SetGameRuntimeOverride({365670,std::filesystem::path(argv[1]),"blender-019.1",
+    installer.SetGameRuntimeOverride({365670,std::filesystem::path(argv[1]),"blender-019.3",
       ww::steam_integration::kBlenderRuntimeManifestSha256,ww::steam_integration::BlenderRuntimeFiles(),ww::steam_integration::BlenderTitleFiles()});
     r.artifacts=installer.ExpectedArtifacts(r);
     for(int repeat=0;repeat<2;repeat++) {

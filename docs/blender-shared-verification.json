@@ -1,0 +1,45 @@
+{
+  "schema": "winbrew-release-qualification/1",
+  "release": "blender-shared-files-v1",
+  "status": "release-prepared-owner-PS5-qualified",
+  "application_title": "PPSA77382",
+  "version": "01.017.000",
+  "application_sha256": "e4c2092b3194f43c8338f08bbcce03495029133be9a491f64eafc301e0ec2811",
+  "blender_runtime_manifest_sha256": "4021aa951c421d520e3c2ddfc719315428f6369b4ee588a11af1c0d9491be9e2",
+  "notepad_limit_bytes": 5242880,
+  "checks_passed": [
+    "public runtime1770-file verification",
+    "full actual-runtime installer: first install/reinstall, legacy upgrade, settings preservation, refusal paths",
+    "strict known-version migration predicate",
+    "dedicated title enrollment, revocation and unlisted-title refusal",
+    "PS5 disposable profile migration, missing-profile behavior, metadata rollback, repeat setup, mixed ownership, hidden-file preservation",
+    "actual profile marker/ancestry read-only validation",
+    "canonical source preparation byte-equal to candidate installer/runtime host",
+    "eleven PS5 staged files hash verification",
+    "five installed final Blender title hashes match release runtime",
+    "normal Vapor session confirms shared-group access and embedded compatibility policy installed",
+    "recoverable delete path: host refusal/content tests and actual WinBrew restore interoperability",
+    "PS5 shared recycle metadata access fixture"
+  ],
+  "earlier_owner_confirmed": [
+    "Blender visible after Steam software-library repair",
+    "Vapor launch and visible Save As",
+    "Documents/Desktop save and reopen",
+    "shared-file permanent recycle deletion",
+    "Notepad edit beyond former1MiB limit",
+    "automatic shared-folder candidate saves/reopens in Documents/Desktop and files appear in WinBrew"
+  ],
+  "pending": [],
+  "limits": [
+    "one owner PS5; no other firmware certified",
+    "no large scene/render/export or extended-session certification",
+    "existing game regression reports remain unresolved",
+    "final corrective build changes recycle/load-layout policy; prior save/reopen and Notepad acceptance retained, not rerun after this correction",
+    "full package has same tested executable/helper/runtime bytes; manifest console_tested flag records pre-test assembly, this receipt records later acceptance"
+  ],
+  "owner_confirmed_final": [
+    "Blender file-browser Move to Recycle Bin succeeds without black windows",
+    "Original Untitled.blend opens normally without overwriting it"
+  ],
+  "release_url": "https://github.com/KPKev/WinBrew-11/releases/tag/blender-shared-files-v1"
+}

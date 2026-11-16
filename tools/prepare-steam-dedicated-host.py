@@ -15,6 +15,11 @@ if not (source/'CMakeLists.txt').is_file():
 shutil.copytree(source, target)
 shutil.copy2(root/'src/steam_integration/cs2_runtime_files.hpp', target/'src/cs2_runtime_files.hpp')
 shutil.copy2(root/'src/steam_integration/blender_runtime_files.hpp', target/'src/blender_runtime_files.hpp')
+shutil.copy2(root/'src/steam_integration/blender_artifact_migration.hpp', target/'src/blender_artifact_migration.hpp')
+shutil.copy2(root/'src/steam_integration/blender_shared_release_policy.hpp', target/'src/blender_shared_release_policy.hpp')
+shutil.copy2(root/'src/steam_integration/blender_shared_upgrade.hpp', target/'src/blender_shared_upgrade.hpp')
+shutil.copy2(root/'src/steam_integration/blender_shared_enrollment.hpp', target/'src/blender_shared_enrollment.hpp')
+
 changes = {
     'src/runtime/package_installer.h': ('/data/playden/title-rule/allow-list', '/data/wine11/title-rule/allow-list'),
     'src/runtime/kit_trust.h': ('/data/playden/kits/playden-kit', '/data/wine11/kits/playden-kit'),

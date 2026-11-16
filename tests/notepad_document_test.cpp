@@ -84,6 +84,7 @@ ww::DocumentIo faulty(Fault &fault) {
 } // namespace
 int main() {
   std::filesystem::create_directories("build/notepad-fixture");
+  static_assert(sizeof(ww::TextDocument) < 64 * 1024, "Text buffers must not live on the stack");
   ww::TextDocument d;
   const std::string bom = "\xef\xbb\xbf";
   put(path, bom + "First\r\nSecond\r\n");
@@ -139,6 +140,17 @@ int main() {
   assert(!d.save() && d.result == ww::DocumentResult::conflict);
   assert(get(path) == "Changed by another program");
   d.close(true);
+  // Large documents keep a bounded history without losing recent undo/redo.
+  d.active=true;d.length=ww::TextDocument::Capacity-1;
+  std::memset(d.text,'a',d.length);d.text[d.length]=0;d.caret=0;
+  for(int i=0;i<40;++i){d.checkpoint();d.text[0]=char('a'+i%20);}
+  size_t history_bytes=0;for(const auto& state:d.undo_history)history_bytes+=state.text.size();
+  assert(history_bytes<=ww::TextDocument::HistoryBytes && d.undo_history.size()<=32);
+  auto independent=d;independent.text[0]='Z';
+  assert(d.text[0]!=independent.text[0]);
+  const char latest=d.text[0];assert(d.undo());assert(d.redo());assert(d.text[0]==latest);
+  d.undo_history.clear();d.redo_history.clear();d.original_length=d.length;
+  std::memcpy(d.original,d.text,d.length);
   put(path, std::string(ww::TextDocument::Capacity, 'a'));
   assert(d.load(path));
   assert(!d.insert('x') && d.result == ww::DocumentResult::capacity &&

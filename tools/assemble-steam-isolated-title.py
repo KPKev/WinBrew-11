@@ -12,10 +12,10 @@ import tempfile
 ROOT = Path(__file__).resolve().parents[1]
 SOURCE = ROOT / "build/steam-review-candidate-4/PPSA77381"
 PIE = ROOT / "build/steam-native-experiment/experimental-pie.elf"
-HELPER = ROOT / "build/wine11-lapy-source/build/owned_root_helper-PPSA77382"
+HELPER = ROOT / "runtime-patches/blender/winbrew-bridge-helper/build/owned_root_helper-PPSA77382"
 SDK = ROOT / "vendor/playden-source/deps/ps5-payload-sdk"
 TOOL = ROOT / "vendor/ps5-native-app-boilerplate/build/host/ps5-native-tool"
-HELPER_HASH = "2d14818a36906f988da7a9e2f629c08a666660019e343d24650c458d6514a152"
+HELPER_HASH = "774f205a0a7e2ab9255a1a98621dce710e90f4dcfe0ad8a4d32bfa82b34deddb"
 
 def copy_tree_contents(source, destination):
     destination.mkdir(parents=True, exist_ok=False)
@@ -102,6 +102,7 @@ def main():
     shutil.copyfile(HELPER / "lapy-manifest.json", app / "lapy-manifest.json")
     param_path = app / "sce_sys/param.json"; param = json.loads(param_path.read_text())
     if param["titleId"] != "PPSA77381" or "PPSA77381" not in param["contentId"]: raise ValueError("Unexpected source identity")
+    param["contentVersion"] = "01.017.000"
     param["titleId"] = "PPSA77382"; param["conceptId"] = "77382"
     param["contentId"] = param["contentId"].replace("PPSA77381", "PPSA77382")
     param["localizedParameters"]["en-US"]["titleName"] = "WinBrew 11"

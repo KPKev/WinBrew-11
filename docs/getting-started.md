@@ -1,6 +1,6 @@
 # Install WinBrew 11 and Vapor
 
-Current release line: **recycle-bin-fix-v1**, November 14, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
+Release: **blender-shared-files-v1**, November 16, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
 
 Start with a **PS5 that already has its jailbreak running**. This guide explains how to install the ready-made app. You do not need to compile code or install Windows. WinBrew 11 is the desktop; Vapor is the Steam library inside it.
 
@@ -32,11 +32,11 @@ Web File Manager starts looking for a free port at **8888** and can choose **888
 
 ## 1. Download the right files
 
-On your computer, open the [recycle-bin-fix-v1 development release](https://github.com/KPKev/WinBrew-11/releases/tag/recycle-bin-fix-v1). Save the new app, checksum list and matching permission helper from **Assets**. For a first installation, also download the unchanged [base kit](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip). Keep these four files together:
+Download the **[blender-shared-files-v1 release assets](https://github.com/KPKev/WinBrew-11/releases/tag/blender-shared-files-v1)**. Keep the new app, checksum list and matching permission helper together. For a first installation, also download the unchanged [base kit](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip). Keep these four files together:
 
 | File | What it is for |
 | --- | --- |
-| `WinBrew-11-Recycle-Bin-Fix-v1.zip` | The complete app, including the fixed CS2 and Blender runtimes. |
+| `WinBrew-11-Blender-Shared-Files-v1.zip` | The complete app, including the fixed CS2 and Blender runtimes. |
 | `Vapor-base-kit-0.13.zip` | The shared game runtime needed for a first installation. |
 | `SHA256SUMS.txt` | Expected download fingerprints, used to check the files. |
 | `fix-vapor-install-modes.py` | Checks/restores file permissions after copying. |
@@ -50,7 +50,7 @@ A SHA-256 checksum is a file's fingerprint. Checking it catches incomplete or ch
 On Windows, open the download folder, right-click empty space, and choose **Open in Terminal**. In PowerShell run:
 
 ```powershell
-Get-FileHash .\WinBrew-11-Recycle-Bin-Fix-v1.zip -Algorithm SHA256
+Get-FileHash .\WinBrew-11-Blender-Shared-Files-v1.zip -Algorithm SHA256
 Get-FileHash .\Vapor-base-kit-0.13.zip -Algorithm SHA256
 Get-FileHash .\fix-vapor-install-modes.py -Algorithm SHA256
 ```
@@ -61,7 +61,7 @@ On Linux, use `sha256sum FILENAME`; on macOS, use `shasum -a 256 FILENAME`. Repl
 
 ## 2. Extract both ZIPs on your computer
 
-1. Right-click `WinBrew-11-Recycle-Bin-Fix-v1.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
+1. Right-click `WinBrew-11-Blender-Shared-Files-v1.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
 2. Extract `Vapor-base-kit-0.13.zip` separately. Find the **playden-kit** folder.
 3. Check that `PPSA77382` contains `eboot.bin`, `manifest.json`, `sce_sys`, and `runtime`. Check that `playden-kit` contains `manifest.json` and its runtime files.
 
@@ -200,3 +200,15 @@ git pull --ff-only origin main
 ```
 
 Review any local changes before pulling; do not discard them to follow this example. Prebuilt applications are release assets. `build/`, `dist/`, downloaded dependencies, and runtime caches are intentionally excluded from Git. Use the [source-build guide](source-build.md) to compile instead of using the release package.
+
+## Blender shared folders and upgrades
+
+The complete release includes all Blender fixes. After installing or updating WinBrew, open Vapor, refresh the current Steam account's library, and prepare or press Play on Blender. Normal preparation upgrades the matched runtime and sets up Documents/Desktop access automatically. Steam categorizes Blender as Software; enable Software when checking its presence in Steam on a PC.
+
+Blender's Documents and Desktop shortcuts point to `/data/WinBrew/Users/Default/Documents` and `/data/WinBrew/Users/Default/Desktop`. These are the same files shown in WinBrew Explorer. Wine may display the virtual user name `prospero`; that does not mean a second copy is being saved. Earlier private Wine folders are preserved with a `.before-WinBrew` suffix. Both Vapor and the PS5 Home tile use the same managed launcher; use Vapor Play once after an update to complete migration before using the Home tile. Save As and Preferences stay in the main Blender window automatically.
+
+Do not manually rename the Blender title folder or change shared-folder permissions. If setup reports an unsupported file or profile, retain the files and report the error instead of bypassing validation. Standard jailbreak/helper prerequisites above still apply.
+
+Notepad now opens text files up to 5 MiB (5,242,880 bytes). Shared Blender files use the normal Recycle Bin workflow.
+
+The Blender compatibility policy replaces the file-browser Delete action with **Move to Recycle Bin** for Documents/Desktop. Confirm only items you intend to recycle; WinBrew can restore them afterward. It also keeps the current workspace when opening older projects, rather than restoring saved secondary windows. The owner confirmed both corrective UI checks on the final PS5 candidate. See the release verification receipt for the exact tested scope.

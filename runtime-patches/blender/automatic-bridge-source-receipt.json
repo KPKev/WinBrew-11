@@ -1,0 +1,114 @@
+{
+  "contains_games_accounts_projects": false,
+  "files": {
+    "launcher-source.tar.gz": {
+      "sha256": "5b99e933988a6d2469ef33f9b0d75fa6a6d9bfb4ee557908c3a6f13f4501715b",
+      "size": 707353
+    },
+    "launcher/pw_blender_startup.h": {
+      "sha256": "aa35c0772b983c3853e6eb3992795f417e2523844de2245db9e90fa2b9090e29",
+      "size": 9075
+    },
+    "launcher/winbrew_blender_startup.py": {
+      "sha256": "e1c1cc92bd3d38516fa73c5e90af46806d3849972e6b0ea1eba0214b1ab218b4",
+      "size": 8183
+    },
+    "source-receipt.json": {
+      "sha256": "9fe792c716ffaf646eba3c3f18b546784a530ef68636681db43f3ae76ca31016",
+      "size": 2435
+    },
+    "winbrew-bridge-helper/LICENSE": {
+      "sha256": "5ef18e95f617c9d3a2674cc3256f5c0d6ec2f794a57e9e40f2185dd454c9f8da",
+      "size": 1741
+    },
+    "winbrew-bridge-helper/source/donor_transaction.c": {
+      "sha256": "6844275eca240aab25d5d61ae030f94b50b9538116452ccb6078f6518ba876d9",
+      "size": 6124
+    },
+    "winbrew-bridge-helper/source/donor_transaction.h": {
+      "sha256": "c976e43a298a3621b2ff0f83f92f1304dc5c177a00d5af14c5a78a9620d2ce5b",
+      "size": 2319
+    },
+    "winbrew-bridge-helper/source/lapy_elevation_protocol.h": {
+      "sha256": "bb02c4aa814eaba7a7a423a31b29ff41f786212c2953678cf29434e85fa0f869",
+      "size": 1318
+    },
+    "winbrew-bridge-helper/source/owned_root_daemon.c": {
+      "sha256": "6ec0b14849a9dc81c14be780862245e8fb3710b69f283edec7cbf95bdf2d4013",
+      "size": 46536
+    },
+    "winbrew-bridge-helper/source/title_rule.c": {
+      "sha256": "0f1868bfe3d4d77d34e1dc571d273b1df8ff0dd584432846cb7cab1f343a451b",
+      "size": 3695
+    },
+    "winbrew-bridge-helper/source/title_rule.h": {
+      "sha256": "29c9ac09b698385a1f8b164778bcc1eb6f54151ef5399ec9342146bb4fdb6b36",
+      "size": 1494
+    },
+    "winbrew-bridge-helper/source/vnode_ref_probe.c": {
+      "sha256": "ef49b83a80cdc980ea6b5cdb0477110b08b10feba7e7229cbb0c7db1bf0a87f0",
+      "size": 701
+    },
+    "winbrew-bridge-helper/source/vnode_ref_probe.h": {
+      "sha256": "13e7f3b9ba77c696209f647e5a0fb60f50a6e8112991bb4bfc63da632a6a0153",
+      "size": 665
+    },
+    "winbrew-bridge-helper/source/winbrew_shared_folders.h": {
+      "sha256": "f4f882916e09a9458399bbfcffdd9f515b743e85fbf7ca286da2f88bbe649ba3",
+      "size": 7052
+    },
+    "winbrew-bridge-helper/tools/build_owned_daemon.py": {
+      "sha256": "6abe4f904a5931f471af05a6a2ecebd9ab1c9805b03624d376a09676ac999665",
+      "size": 8789
+    }
+  },
+  "helpers": {
+    "owned_root_helper-FAKE78-rule": {
+      "build_id": "ebcc30d838d87118ee73019efdc24f55a45dc2306662955b1ba65f88e2eaea0a",
+      "console_validated": false,
+      "elf_sha256": "decdc69a718522f64f504af9f759791e60be05f52b80fb9dcca7e2925f94ab33",
+      "features": [
+        "root_layout_probe_retry",
+        "title_rule"
+      ],
+      "firmware": "SDK-supported, runtime layout check required",
+      "max_requests": 1,
+      "mode": "elf-helper",
+      "protocol_sha256": "bb02c4aa814eaba7a7a423a31b29ff41f786212c2953678cf29434e85fa0f869",
+      "require_client_result": false,
+      "schema": "lapy-owned-build/1",
+      "service": false,
+      "target_title": "FAKE78*",
+      "title_rule": {
+        "allow_list": "/data/wine11/title-rule/blender-shared/allow-list",
+        "prefix": "FAKE78"
+      },
+      "validated_firmware": [
+        "12.02"
+      ]
+    },
+    "owned_root_helper-PPSA77382": {
+      "build_id": "0bc320f047c01329e96102700882f86146bd20aa3e1ff258e87fc3aea6367f32",
+      "console_validated": false,
+      "elf_sha256": "774f205a0a7e2ab9255a1a98621dce710e90f4dcfe0ad8a4d32bfa82b34deddb",
+      "features": [
+        "root_layout_probe_retry"
+      ],
+      "firmware": "SDK-supported, runtime layout check required",
+      "max_requests": 1,
+      "mode": "elf-helper",
+      "protocol_sha256": "bb02c4aa814eaba7a7a423a31b29ff41f786212c2953678cf29434e85fa0f869",
+      "require_client_result": false,
+      "schema": "lapy-owned-build/1",
+      "service": false,
+      "target_title": "PPSA77382",
+      "validated_firmware": [
+        "12.02"
+      ]
+    }
+  },
+  "launcher_sha256": "6d18870bc8b3ceae54be945426e7dd2ce509627b519e5afe83a758695748d40e",
+  "runtime_manifest_sha256": "4021aa951c421d520e3c2ddfc719315428f6369b4ee588a11af1c0d9491be9e2",
+  "schema": "winbrew-automatic-bridge-source/1",
+  "source_receipt": "source-receipt.json"
+}

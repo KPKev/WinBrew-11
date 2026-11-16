@@ -43,8 +43,16 @@ struct DocumentIo {
 const DocumentIo &document_io();
 const char *document_result_message(DocumentResult);
 struct TextDocument {
-  static constexpr size_t Capacity = 64 * 1024;
-  char text[Capacity + 1]{}, original[Capacity + 1]{}, path[1024]{};
+  static constexpr size_t Capacity = 5 * 1024 * 1024;
+  static constexpr size_t HistoryBytes = 10 * 1024 * 1024;
+  // Large editor buffers live on the heap; copies retain independent contents.
+  struct Buffer {
+    std::vector<char> bytes = std::vector<char>(Capacity + 1, 0);
+    operator char*() { return bytes.data(); }
+    operator const char*() const { return bytes.data(); }
+  };
+  Buffer text, original;
+  char path[1024]{};
   size_t length = 0, original_length = 0, caret = 0;
   unsigned mode = 0600;
   bool active = false, read_only = false, bom = false, original_bom = false;

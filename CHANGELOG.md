@@ -1,5 +1,14 @@
 # Changelog
 
+## November 16, 2026 — automatic Blender integration
+
+- Vapor includes Steam software applications and refreshes the active account's library correctly.
+- Normal Blender preparation installs/upgrades the pinned runtime and connects WinBrew Documents/Desktop automatically, without manual title renaming or console commands.
+- Save As/Preferences use the main window; older projects retain the working interface instead of restoring unsupported secondary windows.
+- Blender file-browser deletion moves items into the recoverable WinBrew Recycle Bin; shared-file permanent deletion also works in WinBrew.
+- Notepad supports5MiB text files with heap-backed buffers and bounded history.
+- Owner PS5 acceptance, guarded installation, native migration/refusal fixtures and host interoperability checks are documented in the [engineering report](docs/reports/blender-automatic-integration-20261116.md) and [verification receipt](docs/blender-shared-verification.json). Large scenes/render/export and other consoles remain outside the tested scope.
+
 ## November 14, 2026 — Recycle Bin fix
 
 - Fixed a long-running PS5 Recycle Bin issue that prevented older deleted items from being collected and produced access errors.

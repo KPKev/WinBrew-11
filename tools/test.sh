@@ -2,6 +2,8 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p build
+bash tools/test-vapor-library-refresh.sh
+bash tools/test-blender-shared-release.sh
 python3 tests/test_vapor_native_module_modes.py
 python3 tests/test_prepare_steam_registration_reconcile.py
 python3 tests/test_prepare_vapor_title_remover.py

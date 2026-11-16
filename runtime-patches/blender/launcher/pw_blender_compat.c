@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: LGPL-2.1-or-later */
 #include "pw_blender_compat.h"
+#include "pw_blender_startup.h"
 #include <string.h>
 static unsigned lower(unsigned c) { return c >= 'A' && c <= 'Z' ? c + ('a'-'A') : c; }
 int pw_blender_target(uint32_t app_id, const char *executable)
@@ -23,5 +24,21 @@ int pw_blender_default_backend(const char **argv, int argc, size_t capacity)
     if ((size_t)argc+3 > capacity) return -1;
     memmove(argv+end+2,argv+end,(size_t)(argc-end)*sizeof(*argv));
     argv[end]="--gpu-backend"; argv[end+1]="vulkan"; argv[argc+2]=NULL;
+    return argc+2;
+}
+
+int pw_blender_inline_editors(const char **argv, int argc, size_t capacity)
+{
+    if (!argv || argc < 2 || (size_t)argc >= capacity) return -1;
+    int end=argc;
+    for (int i=2; i<argc; ++i) {
+        if (!argv[i]) return -1;
+        if (!strcmp(argv[i], "--")) { end=i; break; }
+    }
+    if ((size_t)argc+3 > capacity) return -1;
+    memmove(argv+end+2, argv+end, (size_t)(argc-end)*sizeof(*argv));
+    argv[end]="--python-expr";
+    argv[end+1]=pw_blender_startup;
+    argv[argc+2]=NULL;
     return argc+2;
 }

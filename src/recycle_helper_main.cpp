@@ -20,6 +20,9 @@ int main(){
  std::string encoded;for(std::size_t i=0;i<SlotSize&&winbrew_recycle_request_slot[i];++i)encoded.push_back(winbrew_recycle_request_slot[i]);
  Request request;if(!decode(encoded,request))return 1;
  if(seteuid(0)!=0)return 1;
+ // Shared Wine files retain UID1 ownership; join only the approved file group.
+ const gid_t shared_groups[]={0,365670};
+ if(setgroups(2,shared_groups)!=0)return 1;
  int fd=socket(AF_INET,SOCK_STREAM,0);if(fd<0)return 1;timeval limit{300,0};setsockopt(fd,SOL_SOCKET,SO_RCVTIMEO,&limit,sizeof(limit));setsockopt(fd,SOL_SOCKET,SO_SNDTIMEO,&limit,sizeof(limit));
  sockaddr_in addr{};addr.sin_family=AF_INET;addr.sin_port=htons(request.port);addr.sin_addr.s_addr=htonl(INADDR_LOOPBACK);
  if(connect(fd,reinterpret_cast<sockaddr*>(&addr),sizeof(addr))!=0){close(fd);return 1;}
