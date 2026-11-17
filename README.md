@@ -5,7 +5,7 @@ A Windows 11-inspired desktop and Steam game library for PS5 homebrew, created b
 > [!WARNING]
 > **Active development: game compatibility can change between builds.** Some previously working games may temporarily fail to launch or behave unexpectedly after code changes. **Skyrim Special Edition is currently reported not working.** Earlier compatibility reports are historical results, not guarantees for this build. Please check back often for updates and fixes.
 
-**November 16, 2026 — [automatic Blender integration release](https://github.com/KPKev/WinBrew-11/releases/tag/blender-shared-files-v1):** Vapor now applies Blender's matched runtime, shared Documents/Desktop access, inline Save As/Preferences, recoverable file-browser deletion and old-project layout compatibility during normal preparation. Notepad now supports text files up to **5 MiB**. The owner confirmed the repaired workflows on PS5. Read the [release notes](docs/release-notes-next.md), [verification scope](docs/blender-shared-verification.json), and [detailed engineering report](docs/reports/blender-automatic-integration-20261116.md).
+**November 16, 2026 — [v1.18.0: Vapor backend updates](https://github.com/KPKev/WinBrew-11/releases/tag/v1.18.0):** Playden 0.11.0 and runtime kit 0.28, startup/manual update checks, compatible app/runtime updates with restart and rollback, and gold preparation progress. Includes saved-session/library restoration, Blender/application visibility and generic launch fixes. [Release notes](docs/release-notes-next.md) · [Backend update guide](docs/vapor-backend-updates.md) · [Verification](docs/vapor-backend-verification.json).
 
 ## Blender: download, install, Play
 
@@ -46,13 +46,13 @@ Vapor uses Playden's underlying runtime, so the console still needs its supporti
 
 ### Download and install
 
-1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/blender-shared-files-v1). Under **Assets**, download **WinBrew-11-Blender-Shared-Files-v1.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. For a first installation, also download the unchanged [Vapor-base-kit-0.13.zip](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip).
+1. Open the [current release](https://github.com/KPKev/WinBrew-11/releases/tag/v1.18.0). Under **Assets**, download **WinBrew-11-v1.18.0.zip**, **SHA256SUMS.txt**, and **fix-vapor-install-modes.py**. For this upgrade and for new installations, also download the matched **Vapor-backend-kit-0.28.zip** from the same release.
 2. Extract the ZIPs on your computer. Copy the complete **PPSA77382** folder to **`/data/homebrew/PPSA77382`** on the PS5. Copy **playden-kit** to **`/data/wine11/kits/playden-kit`**. Keep every file and subfolder; copying only `eboot.bin` is incomplete.
 3. Check the copied files' permissions using the supplied helper, let your homebrew loader scan the app folder, then launch **WinBrew 11** from Home. Open **Vapor** inside it and sign into your own Steam account.
 
 **Follow the [step-by-step installation guide](docs/getting-started.md) for the full walkthrough**, including download checks, exact folder layouts, permission commands, and first-launch checks. Already installed? Use its [update steps](docs/getting-started.md#updating-an-existing-installation). Stuck? See [troubleshooting](docs/troubleshooting.md).
 
-The app download above is the `blender-shared-files-v1` development release. The base kit is unchanged; use the matching Blender runtime and corresponding-source assets from this release. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
+The app download above is the **v1.18.0** development release. Use its matched **0.28** base kit; the earlier 0.13 kit is for earlier app versions. Older Vapor versions require this update to be installed manually once; future compatible releases can use **Backend Updates**. Check the [latest release](https://github.com/KPKev/WinBrew-11/releases/latest) for newer versions and follow that version's instructions if its files differ. GitHub's **Code → Download ZIP** and automatic **Source code** archives contain source, not the ready-to-run PS5 application.
 
 Clone or pull **main** for current code and documentation. SDKs, downloaded runtimes, and generated outputs are separate from Git. The [source-build guide](docs/source-build.md) explains the prerequisites and full target, `tools/build-vapor-cs2.sh`. The historical desktop-only `build-ps5.sh` is not the complete current Steam/Vapor application.
 

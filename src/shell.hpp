@@ -232,6 +232,8 @@ struct Shell {
   std::uint32_t rendered_shortcut_apps[VaporShortcuts::Capacity]{};
   int steam_selection = -1, steam_scroll = 0, steam_download_offset = 0;
   bool steam_finish_setup_requested = false;
+  bool backend_updates_modal = false, backend_update_seen_stage = false;
+  std::function<bool()> backend_update_action;
   std::uint32_t steam_setup_confirmation_app = 0;
   std::uint32_t steam_manage_confirmation_app = 0;
   bool steam_manage_reinstall = false;

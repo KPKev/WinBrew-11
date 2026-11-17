@@ -2,6 +2,7 @@
 #pragma once
 #include "installs/install_service.h"
 #include "network_traffic.hpp"
+#include "backend_api.hpp"
 #include "platform/managed_directory.h"
 #include "platform/managed_file_lock.h"
 #include "platform/ps5/title_allow_list.h"
@@ -16,11 +17,20 @@ class GuardedInstallRunner final : public playden::installs::InstallRunner {
  public:
   GuardedInstallRunner(playden::platform::ManagedDirectory& directory,
                        playden::platform::ManagedFileLock& lease,
-                       playden::installs::InstallRunner& delegate, traffic::Registry* traffic = nullptr)
-      : directory_(directory), lease_(lease), delegate_(delegate), traffic_(traffic) {}
-  Result Install(const playden::GameId& id, const std::string& root, const std::atomic<bool>& cancel,
+                       playden::installs::InstallRunner& delegate, traffic::Registry* traffic = nullptr,
+                       std::function<bool()> startup_ready = {})
+      : directory_(directory), lease_(lease), delegate_(delegate), traffic_(traffic), startup_ready_(std::move(startup_ready)) {}
+  Result Install(const playden::GameId& id, const std::string& root,
+#if WW_PLAYDEN_BACKEND_011
+      const playden::installs::InstallOptions& options,
+#endif
+      const std::atomic<bool>& cancel,
       const std::function<void(std::uint64_t,std::uint64_t,std::uint64_t)>& progress,
       const std::function<void(playden::installs::InstallStep)>& step) override {
+    // Restored queues must not take the UID lock before account/library restore.
+    // Return a normal waiting job so Pause/Cancel remain responsive.
+    if (startup_ready_ && !startup_ready_())
+      return {false, cancel.load(), "", 0, !cancel.load(), "Waiting for Steam sign-in and library."};
     // The effective UID is process-wide. Keep it stable for the entire
     // transfer, including files created by the delegate.
     const auto uid = playden::ps5::HoldEffectiveUid();
@@ -31,12 +41,39 @@ class GuardedInstallRunner final : public playden::installs::InstallRunner {
     if (!generation || !install_generation::Valid(*generation)) return {false, false, "Could not identify this download attempt.", 0, false, {}};
     install_generation::Scope generation_scope(*generation);
 #endif
-    if (!traffic_) return delegate_.Install(id, root, cancel, progress, step);
+    if (!traffic_) return delegate_.Install(id, root,
+#if WW_PLAYDEN_BACKEND_011
+        options,
+#endif
+        cancel, progress, step);
     auto counter = traffic_->begin(id.steam_app().value_or(0));
     struct End { traffic::Registry& registry; std::shared_ptr<traffic::Counter> counter; ~End() { registry.end(counter); } } end{*traffic_, counter};
     traffic::Scope scope(counter);
-    return delegate_.Install(id, root, cancel, progress, step);
+    return delegate_.Install(id, root,
+#if WW_PLAYDEN_BACKEND_011
+        options,
+#endif
+        cancel, progress, step);
   }
+#if WW_PLAYDEN_BACKEND_011
+  std::string DiscardUpdate(const std::string& root) override {
+    const auto uid = playden::ps5::HoldEffectiveUid();
+    if (!admitted(root)) return "WinBrew game storage is unavailable.";
+    return delegate_.DiscardUpdate(root);
+  }
+  Result Update(const playden::GameId& id, const std::string& root,
+      const playden::installs::InstallOptions& options, const std::atomic<bool>& cancel,
+      const std::function<void(std::uint64_t,std::uint64_t,std::uint64_t)>& progress,
+      const std::function<void(playden::installs::InstallStep)>& step,
+      const std::function<bool()>& may_apply) override {
+    if (startup_ready_ && !startup_ready_())
+      return {false, cancel.load(), "", 0, !cancel.load(), "Waiting for Steam sign-in and library."};
+    const auto uid = playden::ps5::HoldEffectiveUid();
+    const auto parsed = admitted(root);
+    if (!parsed || *parsed != id) return {false, false, "WinBrew game storage is unavailable.", 0, false, {}};
+    return delegate_.Update(id, root, options, cancel, progress, step, may_apply);
+  }
+#endif
   std::string Remove(const std::string& root) override {
 #if defined(WINE11_DISABLE_UNSAFE_CANCEL)
     (void)root;
@@ -67,5 +104,6 @@ class GuardedInstallRunner final : public playden::installs::InstallRunner {
   playden::platform::ManagedFileLock& lease_;
   playden::installs::InstallRunner& delegate_;
   traffic::Registry* traffic_;
+  std::function<bool()> startup_ready_;
 };
 }

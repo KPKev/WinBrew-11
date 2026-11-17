@@ -1107,7 +1107,7 @@ void Shell::desktop_ui() {
     int y = hint_target.y - 50;
     if (y < 8)
       y = hint_target.y + hint_target.h + 8;
-    round({x + 1, y + 3, w, 40}, 7, 0x24000000);
+    round({x + 1, y + 3, w, 40}, 7, 0x40000000);
     round({x, y, w, 40}, 7, dark ? color(77, 82, 94) : color(205, 211, 220));
     round({x + 1, y + 1, w - 2, 38}, 6,
           dark ? color(43, 46, 54) : color(249, 250, 252));
@@ -1115,13 +1115,50 @@ void Shell::desktop_ui() {
   }
   if (dialog) {
     rect({0, 0, W, H}, 0x38000000);
-    const bool notice = !steam_manage_confirmation_app && !steam_setup_confirmation_app;
+    const bool notice = !steam_manage_confirmation_app && !steam_setup_confirmation_app && !backend_updates_modal;
     const auto lines = notice ? dialog_lines(*this, message, 728)
                               : std::vector<std::string>{};
-    const int height = notice ? std::max(264, 181 + int(lines.size()) * 28) : 264;
+    const int height = backend_updates_modal ? 420 : notice ? std::max(264, 181 + int(lines.size()) * 28) : 264;
     const Rect bounds{560, 530 - height / 2, 800, height};
     panel(bounds);
-    if (steam_manage_confirmation_app) {
+    if (backend_updates_modal && steam) {
+      const auto update = steam->backend_update_status();
+      const int left = bounds.x + 36, top = bounds.y;
+      text(left, top + 27, "Vapor backend updates", 2, ink());
+      const std::string installed = "Installed Playden backend: " + (update.installed_backend.empty() ? std::string("Unknown") : update.installed_backend);
+      text(left, top + 85, installed.c_str(), 0, muted());
+      if (!update.latest_upstream.empty()) {
+        const std::string latest = "Latest Playden release: " + update.latest_upstream;
+        text(left, top + 114, latest.c_str(), 0, muted());
+      }
+      if (!update.available_package.empty()) {
+        const std::string package = "Compatible Vapor package: " + update.available_package;
+        text(left, top + 143, package.c_str(), 0, muted());
+      }
+      const int status_y = update.available_package.empty() ? 157 : 181;
+      const auto status_lines = dialog_lines(*this, update.message.c_str(), 728);
+      for (std::size_t n = 0; n < std::min<std::size_t>(3, status_lines.size()); ++n)
+        text(left, top + status_y + int(n) * 28, status_lines[n].c_str(), 0, ink());
+      if (update.phase == BackendUpdatePhase::downloading) {
+        round({left, top + 251, 728, 6}, 3, 0xff504238);
+        if (update.total) {
+          const int filled = int(std::min(1.0, double(update.done) / double(update.total)) * 728);
+          round({left, top + 251, filled, 6}, 3, 0xfff0a020);
+        }
+      }
+      if (message[0]) text_fit(left, top + 279, 728, message, 0, muted());
+      else if (update.phase == BackendUpdatePhase::staged)
+        text(left, top + 279, "Save your open work before restarting.", 0, muted());
+      if (update.rollback_available && update.phase != BackendUpdatePhase::downloading)
+        button({left, top + 309, 250, 36}, 4004, "Restore previous version", 0);
+      if (update.phase != BackendUpdatePhase::checking && update.phase != BackendUpdatePhase::downloading)
+        button({left, top + 359, 180, 42}, 4001, "Check now", 0);
+      if (update.phase == BackendUpdatePhase::available)
+        button({left + 200, top + 359, 220, 42}, 4002, "Update backend", 1);
+      if (update.phase == BackendUpdatePhase::staged)
+        button({left + 200, top + 359, 250, 42}, 4003, "Restart WinBrew", 1);
+      button({bounds.x + bounds.w - 166, top + 359, 130, 42}, 60, "Close", 0);
+    } else if (steam_manage_confirmation_app) {
       text(596, 425, steam_manage_reinstall ? "Reinstall game" : "Remove game", 2, ink());
       text(596, 480, "The game and its PS5 Home entry will be removed.", 0, ink());
       text(596, 512, steam_manage_reinstall ? "Saves are kept; the download will start again." : "Your saves and settings will be kept.", 0, ink());

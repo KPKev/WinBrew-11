@@ -1,6 +1,6 @@
 # Current source and build entry points
 
-The default **main** branch is the current source tree. The `blender-shared-files-v1` release pins the complete runnable application/runtime artifacts. Later documentation commits do not change a published binary unless a new artifact is explicitly published.
+The default **main** branch contains the current source. Release **v1.18.0** pins Playden 0.11.0, its reviewed Vapor patch and the matched 0.28 kit. Use the [backend build/packaging workflow](vapor-backend-updates.md#building-and-maintaining-the-integration) to reproduce this release; the older desktop-only and0.8 experimental build commands below are historical development targets.
 
 **Only want to install it on your jailbroken PS5? Follow [the installation walkthrough](getting-started.md).** You do not need this page, Git, a compiler, or a PS5 SDK to use the ready-made release. This page is for developers rebuilding the app.
 

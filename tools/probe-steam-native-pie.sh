@@ -45,7 +45,7 @@ host_build="$root/build/steam-host-cmake"
 if [[ "${WINE11_PROBE_DEDICATED_HOST:-0}" == 1 ]]; then
   [[ "${WINE11_PROBE_GAME_HOST:-0}" == 1 ]] || { echo 'Dedicated host requires the game host probe.' >&2; exit 1; }
   host_source="$root/build/steam-host-dedicated-source"
-  host_build="$root/build/steam-host-dedicated-cmake"
+  host_build="${WINE11_DEDICATED_HOST_BUILD:-$root/build/steam-host-dedicated-cmake}"
   grep -Fq '/data/wine11/kits/playden-kit' "$host_source/src/runtime/kit_trust.h" || { echo 'Dedicated kit path is missing.' >&2; exit 1; }
   grep -Fq '/data/wine11/title-rule/allow-list' "$host_source/src/runtime/package_installer.h" || { echo 'Dedicated title-list path is missing.' >&2; exit 1; }
 fi

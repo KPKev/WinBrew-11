@@ -10,6 +10,11 @@
 #include <filesystem>
 #include <utility>
 struct FakeSteam final : ww::SteamUi {
+  ww::BackendUpdateStatus backend{}; int checks = 0, installs = 0, restarts = 0;
+  ww::BackendUpdateStatus backend_update_status() const override { return backend; }
+  bool check_backend_updates() override { ++checks; return true; }
+  bool install_backend_update() override { ++installs; return true; }
+  std::function<bool()> backend_restart_action(bool) override { return [this] { ++restarts; return true; }; }
   mutable int full_game_reads = 0, summary_reads = 0;
   std::uint32_t poll_interval = 0;
   std::uint32_t library_poll_interval_ms() const override { return poll_interval; }
@@ -23,6 +28,7 @@ struct FakeSteam final : ww::SteamUi {
   bool setup_allowed = false; int setup_attempts = 0;
   bool manage_allowed = false, last_reinstall = false; int manage_attempts = 0; std::uint32_t managed_app = 0;
   bool sort_fixture = false, swap_library = false; unsigned removed_app = 0; bool details_fixture = false; bool progress_fixture = false; ww::SteamInstallState progress_state = ww::SteamInstallState::running; bool installed_fixture = false; bool activity_fixture = false; bool recent_fixture = false; bool news_registration_fixture = false;
+  bool preparation_fixture = false;
   bool queue_fixture = false, allow_cancel = true; unsigned last_resumed = 0, last_canceled_download = 0; int queue_shift = 0;
   ww::SteamDownload fake_download{}; int paused = 0; unsigned last_paused = 0;
   std::uint32_t artwork_requested = 0; std::vector<std::uint8_t> artwork_bytes, logo_bytes;
@@ -50,6 +56,12 @@ struct FakeSteam final : ww::SteamUi {
       game.has_last_played = true; game.last_played_unix_seconds = 1700000000;
     }
     if (i == 0) game.activity = activity;
+    if (i == 0 && preparation_fixture) {
+      game.activity = ww::SteamGameActivity::preparing;
+      game.preparation_progress_known = true; game.preparation_progress = 0.43f;
+      game.preparation_elapsed_seconds = 85;
+      std::snprintf(game.preparation_step, sizeof(game.preparation_step), "Installing dependencies");
+    }
     if (i == 1 && news_registration_fixture) game.activity = ww::SteamGameActivity::registration_required;
     if (details_fixture) { game.has_install_bytes = true; game.install_bytes = 2ull * 1024 * 1024 * 1024; game.has_download_bytes = true; game.download_bytes = 512ull * 1024 * 1024; }
     game.install = game.can_play ? ww::SteamInstallState::installed : ww::SteamInstallState::not_installed;
@@ -114,7 +126,7 @@ struct FakeSteam final : ww::SteamUi {
 static ww::Rect find(ww::Shell& shell, int id) {
   shell.draw();
   for (int i = 0; i < shell.count; ++i) if (shell.hits[i].id == id) return shell.hits[i].r;
-  assert(false); return {};
+  std::fprintf(stderr,"Missing UI control %d; dialog=%d backend=%d\n",id,shell.dialog,shell.backend_updates_modal); assert(false); return {};
 }
 static void click(ww::Shell& shell, int id) {
   auto r = find(shell, id); shell.pointer(r.x + 5, r.y + 5, true);
@@ -703,7 +715,8 @@ int main(int argc, char**) {
   steam.special_playable = false; steam.state.downloads_available = true; shell.game_inventory.count = 0;
   (void)find(shell, 978);
   shell.game_inventory.count = 1; shell.game_inventory.entries[0].steam_app = 1089130;
-  (void)find(shell, 30);
+  shell.draw();
+  for (int n = 0; n < shell.count; ++n) assert(shell.hits[n].id != 978 && shell.hits[n].id != 979); // Inventory alone cannot authorize launch.
   shell.game_inventory.count = 0;
   steam.state.download_count = 1; steam.fake_download.app_id = 1089130;
   steam.artwork_bytes = sample_art;
@@ -832,7 +845,7 @@ int main(int argc, char**) {
   shell.touchpad_input(true, 1, 250, 230, 4, false, 2630000);
   assert(shell.drag && shell.wx == old_wx + 50 && shell.wy == old_wy + 30);
   shell.touchpad_input(true, 1, 250, 230, 4, true, 2640000);
-  shell.touchpad_input(true, 1, 250, 230, 4, true, 3240000);
+  shell.touchpad_input(true, 1, 250, 230, 4, true, 3400000);
   assert(!shell.drag && !shell.pad_touch_drag_locked);
   shell.touchpad_input(true, 1, 250, 230, 4, false, 3250000);
   shell.touchpad_input(true, 0, 0, 0, 0, false, 3260000);
@@ -855,7 +868,7 @@ int main(int argc, char**) {
   shell.touchpad_input(true, 1, 100, 100, 5, false, 4620000);
   shell.touchpad_input(true, 1, 220, 170, 5, false, 4630000);
   shell.touchpad_input(true, 1, 220, 170, 5, true, 4640000);
-  shell.touchpad_input(true, 1, 220, 170, 5, true, 5240000);
+  shell.touchpad_input(true, 1, 220, 170, 5, true, 5400000);
   assert(!shell.pad_touch_drag_locked && !shell.dialog);
   ww::Shell loaded;
   std::snprintf(loaded.preferences, sizeof(loaded.preferences), "%s", settings_path.c_str());
@@ -924,5 +937,37 @@ int main(int argc, char**) {
   assert(steam.summary_reads - summaries_before < 100); // No full-library scan while moving pointer.
   steam.state.game_count = 1001; shell.draw();
   assert(shell.steam_rows.size() == 1001); // Newly detected games bypass the scan timer.
+  shell.dialog = false; shell.start = false; shell.context = false;
+  shell.steam_panel = false; shell.library_downloads = false;
+  steam.preparation_fixture = true; steam.special_playable = true; steam.state.game_count = 2;
+  shell.steam_selection = 0; shell.steam_selected_app = steam.special_app ? steam.special_app : 1;
+  shell.draw();
+  FILE* preparation_frame = std::fopen("build/vapor-preparation.ppm", "wb"); assert(preparation_frame);
+  std::fprintf(preparation_frame, "P6\n%d %d\n255\n", ww::W, ww::H);
+  for (int i = 0; i < ww::W * ww::H; ++i) {
+    const auto pixel = shell.pixels[i]; const unsigned char rgb[] = {static_cast<unsigned char>(pixel), static_cast<unsigned char>(pixel >> 8), static_cast<unsigned char>(pixel >> 16)};
+    std::fwrite(rgb, 1, 3, preparation_frame);
+  }
+  std::fclose(preparation_frame);
+  // Backend controls must not collide with the selected game's shortcut IDs.
+  steam.backend.phase = ww::BackendUpdatePhase::available;
+  steam.backend.installed_backend = "0.11.0"; steam.backend.latest_upstream = "0.12.0";
+  steam.backend.message = "A compatible backend package is available.";
+  click(shell, 4000); assert(shell.dialog && shell.backend_updates_modal);
+  click(shell, 4001); assert(steam.checks == 1);
+  click(shell, 4002); assert(steam.installs == 1);
+  click(shell, 60); assert(!shell.dialog && !shell.backend_updates_modal);
+  steam.backend.phase = ww::BackendUpdatePhase::staged;
+  shell.tick(); assert(shell.dialog && shell.backend_updates_modal);
+  shell.draw(); assert(find(shell, 4003).w > 0);
+  FILE* update_frame = std::fopen("build/vapor-backend-modal.ppm", "wb"); assert(update_frame);
+  std::fprintf(update_frame, "P6\n%d %d\n255\n", ww::W, ww::H);
+  for (int i = 0; i < ww::W * ww::H; ++i) {
+    const auto pixel = shell.pixels[i]; const unsigned char rgb[] = {static_cast<unsigned char>(pixel), static_cast<unsigned char>(pixel >> 8), static_cast<unsigned char>(pixel >> 16)};
+    std::fwrite(rgb, 1, 3, update_frame);
+  }
+  std::fclose(update_frame);
+  click(shell, 4003); assert(shell.backend_update_action);
+  assert(shell.backend_update_action()); assert(steam.restarts == 1);
   std::puts("PASS: Steam account, library scrolling, selection, refresh and sign-out UI");
 }

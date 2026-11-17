@@ -1,0 +1,3095 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,51 +1,39 @@
+ cmake_minimum_required(VERSION 3.24)
+-project(PlaydenLauncher VERSION 0.11.0 LANGUAGES C CXX)
+-
+-set(PLAYDEN_PRERELEASE "" CACHE STRING "Pre-release suffix: empty, beta.N (1-999999) or nightly.YYYYMMDD.N (1-999)")
+-set(PLAYDEN_FULL_VERSION "${PROJECT_VERSION}")
+-if(NOT PLAYDEN_PRERELEASE STREQUAL "")
+-    if(NOT PLAYDEN_PRERELEASE MATCHES "^beta\\.[1-9][0-9]?[0-9]?[0-9]?[0-9]?[0-9]?$" AND
+-       NOT PLAYDEN_PRERELEASE MATCHES "^nightly\\.20[0-9][0-9](0[1-9]|1[0-2])(0[1-9]|[12][0-9]|3[01])\\.[1-9][0-9]?[0-9]?$")
+-        message(FATAL_ERROR "PLAYDEN_PRERELEASE must be empty, beta.N (1-999999) or nightly.YYYYMMDD.N (1-999)")
+-    endif()
+-    string(APPEND PLAYDEN_FULL_VERSION "-${PLAYDEN_PRERELEASE}")
+-endif()
+-# The release a nightly is built on: it isn't offered that release or an older one. Other builds ignore it.
+-set(PLAYDEN_NIGHTLY_BASE "" CACHE STRING "A nightly's base release: empty, X.Y.Z or X.Y.Z-beta.N")
+-if(NOT PLAYDEN_NIGHTLY_BASE STREQUAL "" AND
+-   NOT PLAYDEN_NIGHTLY_BASE MATCHES "^[0-9]+\\.[0-9]+\\.[0-9]+(-beta\\.[1-9][0-9]*)?$")
+-    message(FATAL_ERROR "PLAYDEN_NIGHTLY_BASE must be empty, X.Y.Z or X.Y.Z-beta.N")
+-endif()
+-set(PLAYDEN_BUILD_NIGHTLY_BASE "")
+-if(PLAYDEN_PRERELEASE MATCHES "^nightly\\.")
+-    set(PLAYDEN_BUILD_NIGHTLY_BASE "${PLAYDEN_NIGHTLY_BASE}")
+-endif()
+-
+-# The commit the build is made from and whether it had local changes, for Settings › About and what Playden shares
+-# (BuildVersionText). Checked again on every build, not only at configure: files can change without a new commit.
+-find_package(Git QUIET)
++project(VaporBackend VERSION 0.11.0 LANGUAGES C CXX)
++set(CMAKE_CXX_STANDARD 20)
++set(CMAKE_CXX_STANDARD_REQUIRED ON)
++set(PLAYDEN_FULL_VERSION 0.11.0)
++set(PLAYDEN_BUILD_COMMIT 7d30aaa7dc)
+ set(PLAYDEN_GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
+-set(playden_build_commit_command "${CMAKE_COMMAND}" "-DSOURCE_DIR=${CMAKE_SOURCE_DIR}" "-DGIT_EXECUTABLE=${GIT_EXECUTABLE}"
+-    "-DOUTPUT=${PLAYDEN_GENERATED_DIR}/playden_build_commit.h" -P "${CMAKE_SOURCE_DIR}/cmake/WriteBuildCommit.cmake")
+-execute_process(COMMAND ${playden_build_commit_command})
+-add_custom_target(playden_build_commit COMMAND ${playden_build_commit_command}
+-    BYPRODUCTS "${PLAYDEN_GENERATED_DIR}/playden_build_commit.h" VERBATIM)
+-
+-option(PLAYDEN_UI_SIMULATION "Package selected PS5 UI with developer simulation fixtures" OFF)
+-option(PLAYDEN_PLATFORM_PS5 "Build a PS5 native title" OFF)
+-# Local testing only: read other community recipe endpoints from dev-endpoints.json in the user
+-# data folder (plain http and an auth header allowed for them). Never on in a release package.
+-option(PLAYDEN_DEV_ENDPOINTS "Compile in the dev-endpoints.json override for community recipes" OFF)
+-option(PLAYDEN_DEV_BUILD "A local build for testing: every experimental feature on by default; never a release" OFF)
+-set(PLAYDEN_PS5_TITLE_ID "" CACHE STRING "Explicit PS5 title id (required for PS5 packaging)")
+-
++file(MAKE_DIRECTORY "${PLAYDEN_GENERATED_DIR}")
++file(WRITE "${PLAYDEN_GENERATED_DIR}/playden_build_commit.h" "#pragma once\n#define PLAYDEN_BUILD_COMMIT \"7d30aaa7dc\"\n#define PLAYDEN_BUILD_LOCAL_CHANGES 1\n")
++add_custom_target(playden_build_commit DEPENDS "${PLAYDEN_GENERATED_DIR}/playden_build_commit.h")
++include(CTest)
++set(PLAYDEN_STB_IMAGE_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/third_party/stb")
+ file(READ "${CMAKE_SOURCE_DIR}/dependencies.lock.json" playden_dependency_lock)
+-include(CTest)
+ include(cmake/PlaydenCore.cmake)
+ include(cmake/SteamBackend.cmake)
+-playden_register_steam_backend_tests()
+-include(cmake/Web.cmake)
+ include(cmake/ProsperoRuntime.cmake)
++if(BUILD_TESTING AND NOT PLAYDEN_PLATFORM_PS5)
++ set_tests_properties(prospero_source_pin PROPERTIES ENVIRONMENT "PLAYDEN_PROSPERO_SOURCE_DIR=${PLAYDEN_PROSPERO_SOURCE_DIR}")
++endif()
+ include(cmake/SelfUpdate.cmake)
+-include(cmake/HomebrewUI.cmake)
++include(cmake/VaporCore.cmake)
+ include(cmake/CommunityRecipes.cmake)
++
++if(BUILD_TESTING AND NOT PLAYDEN_PLATFORM_PS5)
++foreach(name steam_app_info game_settings game_probe prospero_profile homebrew_runtime_host)
++ add_executable(${name}_test "${CMAKE_SOURCE_DIR}/tests/${name}_test.cpp")
++ target_link_libraries(${name}_test PRIVATE playden_homebrew_runtime_host playden_community)
++ if(name STREQUAL "steam_app_info")
++  set(test_root "${CMAKE_SOURCE_DIR}/fixtures/steam/appinfo")
++ elseif(name STREQUAL "prospero_profile")
++  set(test_root "${CMAKE_SOURCE_DIR}/fixtures/prospero-win-profiles")
++ elseif(name STREQUAL "homebrew_runtime_host")
++  set(test_root "${CMAKE_SOURCE_DIR}/runtime")
++ else()
++  set(test_root "${CMAKE_SOURCE_DIR}")
++ endif()
++ add_test(NAME ${name} COMMAND ${name}_test "${test_root}")
++endforeach()
++endif()
+--- a/dependencies.lock.json
++++ b/dependencies.lock.json
+@@ -115,12 +115,12 @@
+       "curl/websockets.h": "05b70dbce5274aa6e360703bb17d67a0390fea18bf4437745a25b08b55d6962b"
+     },
+     "ps5_archives": {
+-      "libcurl.a": "48073d585213b7698514c3d15ee9f85f6fa74ba8d7f3728116b96271601eb951",
+-      "libeverest.a": "beb61a9fb21e7a9cc016f0ad7fc9027cc09da674a3f2c743bfa8d1bfe06de00c",
+-      "libmbedcrypto.a": "10702b58c100c6c6dfde592949a8282c708518c030f6672b6bed955113bcecde",
+-      "libmbedtls.a": "d7e12979e590a796a8f6383fec0b5e285b3badc19afc44f4cb89da7e7544c8b2",
+-      "libmbedx509.a": "547c3ea5244efe1836edbec54a43c5fda31244926892084076fdcbeccc217aa6",
+-      "libp256m.a": "412e12a472d4b2a3377760ccea57c87609831197c9183736ccd848d23b27da02"
++      "libcurl.a": "6e23d1e67a533d5fe88b984b6b69374418e4ba162882b1b34de8fedde7715034",
++      "libeverest.a": "225e920110b8bfe37fb3c3db495b933132861be91360ed2bc629a968d7a7d783",
++      "libmbedcrypto.a": "c88a32784e3cf03f954d6424414603e0b22444abaedbaec10a671f413feb6c73",
++      "libmbedtls.a": "5a1399cf805250d9330ffc16e82960729a74bfd2df894288438fece38d1e147f",
++      "libmbedx509.a": "e96fd24af3a514d053f79220fc6e14039627db890f18c524fdf89b39f5ba1da0",
++      "libp256m.a": "3db966a0b8361004bb90e5e2fe694975cd5f853762def8a0dbb5fed5537e4331"
+     },
+     "ps5_build_flags": "-ffile-prefix-map=<source root>/= (relative source paths; byte-reproducible with SDK v0.43 and LLVM 18.1.8)"
+   },
+@@ -230,7 +230,7 @@
+     "status": "Kit 0.28, installed as playden-kit. Kit 0.27 with ntdll.prx, wineserver.prx, win32u.prx and nsiproxy.prx of prospero-win bd2da43 (Wine patch 1021 adds its server request last, so every earlier request keeps its number and the PE modules kept from earlier kits, ntoskrnl.exe and conhost.exe, fit again; kit 0.27 crashed every game at start, #894). The template, DXVK and Mono are 0.27's, so bottles need no Recreate.",
+     "manifest_sha256": "38626b6020f5ba6f24d4138fd8f1b17dc3c1bca8393b3dcba8dd641510e20223",
+     "files_sha256": "ef2ae590473f3447bc19dd305bd2e4cdb2486c105de0e9485ace2ec4f69fa700",
+-    "console_root": "/data/playden/kits/playden-kit",
++    "console_root": "/data/wine11/kits/playden-kit",
+     "firmware": [
+       "13.60"
+     ],
+--- a/src/homebrew/runtime_host.cpp
++++ b/src/homebrew/runtime_host.cpp
+@@ -2,6 +2,13 @@
+ // Copyright (c) 2026 Playden contributors
+ // SPDX-License-Identifier: MIT
+ #include "homebrew/runtime_host.hpp"
++#include "cs2_runtime_files.hpp"
++#include "blender_runtime_files.hpp"
++#include "blender_artifact_migration.hpp"
++#include "blender_shared_upgrade.hpp"
++#include "blender_shared_enrollment.hpp"
++#include "platform/ps5/title_allow_list.h"
++#include "runtime_install_id.hpp"
+ 
+ #include "homebrew/gog_icon.hpp"
+ #include "pw_app_profile.h"
+@@ -1575,7 +1582,7 @@
+     scan = rt::MfcScanRecord{fingerprint, found.x86_program, found.x64_program};
+     if (!rt::WriteMfcScan(files.prefix, *scan)) Log("mfc scan app=" + app + " could not be kept in the bottle");
+   }
+-  const auto cache = HostPath(config_.package_paths.console_data_root + "/playden/redist").string();
++  const auto cache = (config_.state_root / "redist").string();
+   for (const auto& [architecture, program] : {std::pair<const char*, std::string>{"x86", scan->x86_program},
+                                               std::pair<const char*, std::string>{"x64", scan->x64_program}}) {
+     if (program.empty()) continue;
+@@ -2232,7 +2239,30 @@
+          });
+ }
+ 
++
++template<class Records>static bool SyncBlenderSharedEnrollment(const Records& records) {
++#if defined(PLAYDEN_PLATFORM_PS5) && PLAYDEN_PLATFORM_PS5
++  std::string selected;
++  bool valid=true;
++  for(const auto& record:records){
++    if(record.runtime_number!=365670 || GameOf(record.game,record.runtime_number).steam_app()!=std::optional<std::uint32_t>(365670) ||
++       (record.state!=rt::PreparationState::kReady && record.state!=rt::PreparationState::kPreparing && record.state!=rt::PreparationState::kRegistering))continue;
++    bool bound=false;
++    for(const auto& a:record.artifacts)bound|=a.artifact_id=="compatibility-title" && a.identity=="blender-019.3-title" && a.sha256==ww::steam_integration::kBlenderSharedReleasePin;
++    if(!bound)continue;
++    if(!ww::steam_integration::BlenderSharedTitleId(record.title_id)||(!selected.empty()&&selected!=record.title_id)){valid=false;break;}
++    selected=record.title_id;
++  }
++  if(!valid)selected.clear();
++  const bool written=playden::ps5::WithRoot([&]{return ww::steam_integration::WriteBlenderSharedEnrollment("/data",selected);});
++  return valid&&written;
++#else
++  (void)records;return true;
++#endif
++}
++
+ void RuntimeHost::PublishInstalls(const Composition& composition, const std::string& only) {
++  const bool shared_ready=SyncBlenderSharedEnrollment(composition.repository.Snapshot());
+   // title_current, runtime_current, setup_other_kit, title_icon_current, title_icon_file
+   std::map<std::string, std::tuple<bool, bool, bool, bool, std::string>> checked;
+   if (!only.empty()) {
+@@ -2268,7 +2298,7 @@
+       const auto icon_file = GameIconFile(record);
+       if (!icon_file.empty()) view.title_icon_file = record.install_path + "/" + icon_file;
+       view.title_icon_current = TitleIconCurrent(composition, record, icon_file);
+-      view.runtime_current = files_current && ArtifactsBound(composition.kit->view.artifacts, record);
++      view.runtime_current = files_current && ArtifactsBound(composition.installer->ExpectedArtifacts(record), record);
+     } else if (composition.kit && SetupRestarts(record) && !view.moving) {
+       view.setup_other_kit = composition.installer->SetupFromOtherKit(record);
+     }
+@@ -2290,6 +2320,7 @@
+       ++view.save_backups;
+       view.latest_save_backup = std::max<std::int64_t>(view.latest_save_backup, stamp);
+     }
++    if(record.runtime_number==365670&&!shared_ready){view.runtime_current=false;view.failure="Blender shared-folder access could not be prepared.";}
+     installs.push_back(std::move(view));
+   }
+   const bool known = composition.repository.Loaded();
+@@ -2302,7 +2333,7 @@
+ }
+ 
+ bool RuntimeHost::TitleRuntimeCurrent(const Composition& c, const rt::RuntimeInstall& record) const {
+-  return c.kit && c.installer->TitleCurrent(record) && ArtifactsBound(c.kit->view.artifacts, record);
++  return c.kit && c.installer->TitleCurrent(record) && ArtifactsBound(c.installer->ExpectedArtifacts(record), record);
+ }
+ 
+ rt::KitCapabilities RuntimeHost::TitleKit(const Composition& c, const rt::RuntimeInstall& record) const {
+@@ -2826,6 +2857,23 @@
+   // once a copy on another drive would make the title refuse.
+   const bool unowned_upgrade = !moved && (NeedsUnownedPublication(c, record) || NeedsDrivePublication(c, record));
+   if (unowned_upgrade) Log("settings update app=" + std::to_string(record.runtime_number) + " publishes the game folder unowned");
++  // Re-publish an existing unspecified graphics launch when Steam explicitly
++  // advertises DX11 for that same program. The normal publication transaction
++  // updates the profile and receipt together, at the current settings revision.
++  bool graphics_upgrade = false;
++  if (c.kit && saved.revision == record.settings_revision && record.launch_arguments.empty()) {
++    for (const auto& candidate : c.recipes) {
++      if (!rt::IsGeneratedRecipeId(candidate.id) || candidate.id != record.recipe_id ||
++          (rt::RecipeGame(candidate) != GameOf(record) || candidate.app_id != record.runtime_number) || std::to_string(candidate.version) != record.recipe_version) continue;
++      const rt::SettingsPreset* preset = nullptr;
++      for (const auto& item : c.presets) if (item.id == saved.preset_id) preset = &item;
++      rt::EffectiveSettings desired;
++      rt::SettingsError ignored;
++      graphics_upgrade = rt::BuildEffectiveSettings(candidate, preset, saved.overrides, TitleKit(c, record),
++                                                    &desired, &ignored) && desired.launch &&
++                         desired.launch->executable == record.launch_path && desired.arguments == "-dx11";
++    }
++  }
+   // The recipe the title plays under (applied), and the one the player wants now. They differ after
+   // the player chose a community recipe, another revision of it, or Playden's own recipe again: the
+   // switch is this publication, built from the new recipe, and the record names it only once the
+@@ -2869,7 +2917,7 @@
+   // "Steam features" only swaps the game's own files, so it follows the saved value at once. So do the
+   // steps a recipe switch that committed did not get to (its registry values): once they are in, and
+   // the wanted recipe is the applied one, the switch is finished.
+-  if (!force && !refresh_player_preset && !switching && setup_program.empty() && !restoring && saved.revision <= record.settings_revision && !moved && !unowned_upgrade) {
++  if (!force && !refresh_player_preset && !switching && setup_program.empty() && !restoring && saved.revision <= record.settings_revision && !moved && !unowned_upgrade && !graphics_upgrade) {
+     const auto steps = ApplyPreparationSteps(c, record, steam_account_known);
+     if (steps.empty() && selection.fallback_reason.empty() && switch_failure.empty())
+       Publish([&](RuntimeSnapshot& s) { s.recipe_switch_failures.erase(record.runtime_number); });
+@@ -2966,7 +3014,7 @@
+   // respin that changes nothing there keeps its publication, registration and bottle as they are.
+   // So is a program's run, or the return from one, that publishes what the title already has. A recipe
+   // switch always publishes: its descriptor names the new recipe.
+-  if ((force || refresh_player_preset || !setup_program.empty() || restoring) && !switching) {
++  if ((force || graphics_upgrade || refresh_player_preset || !setup_program.empty() || restoring) && !switching) {
+     // POSIX reads, as elsewhere here: the PS5 libc++ has no locale support for file streams.
+     const auto read = [](const std::filesystem::path& path) {
+       std::string bytes;
+@@ -4442,7 +4490,7 @@
+   if (c.launch_journal) {
+     const auto pending = c.launch_journal->LoadPending();
+     if (!pending.ok) return "The launch record cannot be read; restart Playden before preparing.";
+-    if (pending.session && pending.session->install_id == ToInstallId(GameOf(request.game, request.runtime_number)))
++    if (pending.session && pending.session->install_id == ww::steam_integration::WineInstallId(GameOf(request.game, request.runtime_number)))
+       return "Close the game before updating or repairing its PS5 title.";
+   }
+   // Before anything is written (or a managed folder opened): folders made over FTP may need a fix.
+@@ -4451,7 +4499,7 @@
+   for (const auto& record : c.repository.Snapshot())
+     if (record.runtime_number == request.runtime_number) existing = record;
+   HealBottle(c, config_.package_paths.console_data_root + "/playden/games/" +
+-                    (existing ? existing->install_id : ToInstallId(GameOf(request.game, request.runtime_number))),
++                    (existing ? existing->install_id : ww::steam_integration::WineInstallId(GameOf(request.game, request.runtime_number))),
+              existing ? existing->title_id : std::string());
+   // A title being removed because its game moved drives is finished here; any other removal by Uninstall.
+   const bool moving = existing && existing->state == rt::PreparationState::kRemoving && existing->journal &&
+@@ -4550,7 +4598,7 @@
+   // earlier kit's artifacts is bound to this kit's.
+   const auto initialize_reserved = [&](rt::RuntimeInstall& record) -> std::string {
+     std::vector<rt::RuntimeArtifactIdentity> current;
+-    for (const auto& artifact : c.kit->view.artifacts)
++    for (const auto& artifact : c.installer->ExpectedArtifacts(record))
+       current.push_back({artifact.artifact_id, artifact.identity, artifact.sha256});
+     const bool bound_current =
+         record.artifacts.size() == current.size() &&
+@@ -4620,18 +4668,19 @@
+         // title first and its new artifact hashes recorded only after that.
+         auto target = *existing;
+         bool runtime_upgrade = false;
+-        if (target.artifacts.size() == c.kit->view.artifacts.size()) {
++        const bool legacy_blender = ww::steam_integration::CanMigrateBlenderSharedRelease(target.runtime_number,target.artifacts,c.installer->ExpectedArtifacts(target)) || ww::steam_integration::CanMigrateLegacyBlenderArtifacts(target.runtime_number, target.artifacts, c.installer->ExpectedArtifacts(target)) || ww::steam_integration::CanMigrateBlenderInlineEditors(target.runtime_number, target.artifacts, c.installer->ExpectedArtifacts(target));
++        if (target.artifacts.size() == c.installer->ExpectedArtifacts(target).size() || legacy_blender) {
+           std::vector<rt::RuntimeArtifactIdentity> upgraded;
+           bool same_set = true;
+-          for (const auto& artifact : c.kit->view.artifacts) {
++          for (const auto& artifact : c.installer->ExpectedArtifacts(target)) {
+             bool found = false;
+             for (const auto& bound : target.artifacts)
+               if (bound.artifact_id == artifact.artifact_id) {
+                 found = true;
+                 // The recipe must be the one this install was prepared from.
+-                if (artifact.artifact_id != "runtime" && bound.sha256 != artifact.sha256) same_set = false;
++                if (artifact.artifact_id != "runtime" && bound.sha256 != artifact.sha256 && !(legacy_blender && artifact.artifact_id == "compatibility-title")) same_set = false;
+               }
+-            same_set = same_set && found;
++            same_set = same_set && (found || (legacy_blender && artifact.artifact_id == "compatibility-title"));
+             upgraded.push_back({artifact.artifact_id, artifact.identity, artifact.sha256});
+           }
+           const auto differs = [&] {
+@@ -4716,6 +4765,7 @@
+         if (!refused.empty()) return refused;
+         changed = changed || republished;
+       }
++      if(request.runtime_number==365670&&!SyncBlenderSharedEnrollment(c.repository.Snapshot()))return "Blender shared-folder access could not be prepared.";
+       return changed ? std::string{} : "This game is already prepared.";
+     }
+     if (existing->install_path != request.install_path)
+@@ -4805,7 +4855,7 @@
+     rt::ReserveRequest reserve;
+     // Steam: "steam-<app>" and "playden-steam-<app>", as before.
+     const auto game = GameOf(request.game, request.runtime_number);
+-    reserve.install_id = ToInstallId(game);
++    reserve.install_id = ww::steam_integration::WineInstallId(game);
+     reserve.runtime_number = request.runtime_number;
+     reserve.game = game;
+     reserve.default_profile_id = ProfileId(game);
+@@ -4874,12 +4924,13 @@
+   Log("prepare start app=" + std::to_string(request.runtime_number) + " root=" + request.install_path +
+       " ok=" + std::to_string(started.ok()) + " ms=" + elapsed_ms() + " message=" + started.message);
+   if (!started.ok()) return started.message;
+-  const auto install_id = existing ? existing->install_id : ToInstallId(GameOf(request.game, request.runtime_number));
++  const auto install_id = existing ? existing->install_id : ww::steam_integration::WineInstallId(GameOf(request.game, request.runtime_number));
+   bool checked_after_submit = false;
+   for (int steps = 0; steps < kMaxPreparationSteps && !Stopping(); ++steps) {
+     const auto current = c.records.Find(install_id);
+     if (!current) return "The preparation record disappeared.";
+     if (current->state == rt::PreparationState::kReady) {
++      if(request.runtime_number==365670&&!SyncBlenderSharedEnrollment(c.repository.Snapshot()))return "Blender shared-folder access could not be prepared.";
+       OpenGameFolders(c, *current);
+       return {};
+     }
+@@ -4935,7 +4986,7 @@
+ constexpr std::size_t kSaveBackupsKept = 3;
+ 
+ // "steam-<app id>", "gog-<id>" or "local-<uuid>": the install IDs a kept bottle may carry.
+-bool KeptInstallId(const std::string& id) { return ParseInstallId(id).has_value(); }
++bool KeptInstallId(const std::string& id) { return ww::steam_integration::ParseWineInstallId(id).has_value(); }
+ 
+ // Deletes a tree with lstat/unlink/rmdir: links are removed as links and never
+ // followed (Wine prefixes link z: to /). std::filesystem::remove_all crashed the
+@@ -5063,12 +5114,12 @@
+     const auto parsed = ParseStoreKey(store->text());
+     if (!parsed) return std::nullopt;
+     view.game = GameId{*parsed, game->text()};
+-    if (!view.game.valid() || ToInstallId(view.game) != install_id || view.runtime_number < rt::kFirstRuntimeNumber ||
++    if (!view.game.valid() || ww::steam_integration::WineInstallId(view.game) != install_id || view.runtime_number < rt::kFirstRuntimeNumber ||
+         view.runtime_number > rt::kLastRuntimeNumber)
+       return std::nullopt;
+   } else {
+     view.game = GameId::Steam(view.runtime_number);
+-    if (!view.game.valid() || ToInstallId(view.game) != install_id) return std::nullopt;
++    if (!view.game.valid() || ww::steam_integration::WineInstallId(view.game) != install_id) return std::nullopt;
+   }
+   return view;
+ }
+@@ -5365,17 +5416,26 @@
+   if (expected && (expected->device != static_cast<std::uint64_t>(info.st_dev) ||
+                    expected->inode != static_cast<std::uint64_t>(info.st_ino)))
+     return RemovalFailure{"source-changed", "The PS5 title's folder changed since it was found; it was left as it is."};
+-  std::string reason;
+-  const auto trash = config_.state_root / "trash";
+-  if (!rt::EnsurePrivateDirectories(config_.boundary, config_.state_root, trash, &reason))
+-    return RemovalFailure{"trash-unavailable", "Playden could not prepare its private trash: " + reason};
++  // The app-private state lives on a different mount from /data/homebrew.
++  // Its game storage is on the homebrew filesystem and is held private by
++  // Vapor's install lease. Do not create or adopt the games root here.
++  auto games = platform::ManagedDirectory::Open(HostPath("/data/wine11/wine11-games"), platform::DirectoryPolicy::kPrivate);
++  std::optional<platform::ManagedDirectory> private_trash;
++  if (games) private_trash = games->OpenChild(".vapor-title-trash", platform::DirectoryPolicy::kPrivate, true);
++  auto destination = private_trash ? platform::ManagedDirectory::Open(private_trash->path(), platform::DirectoryPolicy::kApprovedTree)
++                                   : std::nullopt;
++  struct stat games_info{}, private_info{}, approved_info{};
++  if (!games || !private_trash || !destination || fstat(games->fd(), &games_info) != 0 || games_info.st_dev != info.st_dev ||
++      fstat(private_trash->fd(), &private_info) != 0 || fstat(destination->fd(), &approved_info) != 0 ||
++      private_info.st_dev != approved_info.st_dev || private_info.st_ino != approved_info.st_ino ||
++      !games->Sync() || !private_trash->Sync() || !destination->Validate())
++    return RemovalFailure{"trash-unavailable", "Vapor could not prepare same-drive title storage."};
+   auto homebrew = platform::ManagedDirectory::Open(config_.homebrew_root, platform::DirectoryPolicy::kApprovedTree);
+-  auto destination = platform::ManagedDirectory::Open(trash, platform::DirectoryPolicy::kApprovedTree);
+   struct stat checked{};
+   if (!homebrew || !destination || !homebrew->InspectChild(title_id, &checked) ||
+       checked.st_dev != info.st_dev || checked.st_ino != info.st_ino || checked.st_uid != info.st_uid ||
+       !homebrew->RenameChild(title_id, *destination, title_id + "-" + operation_id, false) ||
+-      !homebrew->Sync() || !destination->Sync())
++      !homebrew->Sync() || !destination->Sync() || !private_trash->Validate())
+     return RemovalFailure{"retire-failed", "The PS5 title's folder could not be moved away (error " +
+                                            std::to_string(errno) + ")."};
+   Log("remove retired title=" + title_id);
+@@ -5412,7 +5472,7 @@
+ }
+ 
+ std::string RuntimeHost::DeleteRetiredTitle(const std::string& title_id, const std::string& operation_id) {
+-  const auto trash = config_.state_root / "trash" / (title_id + "-" + operation_id);
++  const auto trash = HostPath("/data/wine11/wine11-games") / ".vapor-title-trash" / (title_id + "-" + operation_id);
+   struct stat info{};
+   if (lstat(trash.c_str(), &info) != 0 && errno == ENOENT) return {};
+   auto parent = platform::ManagedDirectory::Open(trash.parent_path(), platform::DirectoryPolicy::kPrivate);
+@@ -5517,7 +5577,7 @@
+   } else if (errno != ENOENT) return fail("The PS5 title's folder cannot be checked.");
+   else if (request.operation_id.empty()) return fail("This leftover PS5 title is no longer available.");
+   if (!request.operation_id.empty()) {
+-    const auto trash = config_.state_root / "trash";
++    const auto trash = HostPath("/data/wine11/wine11-games") / ".vapor-title-trash";
+     const auto retired = trash / (id + "-" + request.operation_id);
+     if (lstat(retired.c_str(), &info) == 0) {
+       const auto parent = platform::ManagedDirectory::Open(trash, platform::DirectoryPolicy::kPrivate);
+@@ -5759,7 +5819,7 @@
+   }
+   bool kept_any = false;
+   for (const auto& install_id : found) {
+-    const auto game = ParseInstallId(install_id);
++    const auto game = ww::steam_integration::ParseWineInstallId(install_id);
+     if (!game) continue;
+     std::uint32_t number = 0;
+     if (const auto app = game->steam_app()) {
+@@ -6017,7 +6077,7 @@
+ 
+ std::string RuntimeHost::DeleteKept(Composition& c, std::uint32_t app) {
+   // The kept bottle listed with this number; a Steam game's is named by its app ID.
+-  std::string install_id = ToInstallId(GameId::Steam(app));
++  std::string install_id = ww::steam_integration::WineInstallId(GameId::Steam(app));
+   {
+     std::lock_guard<std::mutex> lock(mutex_);
+     for (const auto& view : snapshot_.kept_bottles)
+@@ -6101,6 +6161,8 @@
+         if (const auto lacks = KitLacksForRecipe(recipe, c.kit->view); lacks.empty()) shipped.push_back(recipe.id);
+         else Log("recipe " + recipe.id + " refused kit=" + c.kit->view.kit_id + " " + lacks);
+       }
++      ww::steam_integration::ConfigureCs2Runtime(*installer, config_.runtime_dir);
++      ww::steam_integration::ConfigureBlenderRuntime(*installer, config_.runtime_dir);
+       installer->AcceptShippedRecipes(std::move(shipped));
+       // Community recipes resolve by their id's form (CommunityRecipeNamesGame); the object itself, and its game, are
+       // required only where a plan is built from it (RecipeOf).
+@@ -6156,6 +6218,21 @@
+       FollowUsbDrives(c);
+       LoadGeneratedRecipes(c);
+       Log("startup generated recipes loaded");
++      // ShadowMount completes registration while Vapor is closed. Reconcile
++      // the persisted registration arm before publishing installs or applying
++      // saved settings, so the next start exposes Play instead of Finish Setup.
++      if (c.kit)
++        for (const auto& record : c.repository.Snapshot()) {
++          if (!AwaitingRegistration(record) ||
++              record.state != rt::PreparationState::kRegistering ||
++              c.coordinator->Activity(record.title_id) != rt::NativeActivity::kStopped)
++            continue;
++          // Step resumes the frozen OWNER transaction; an armed registration
++          // only queries the console. Never regenerate or resubmit it here.
++          const auto result = c.service->Step(record.install_id);
++          Log("startup registration app=" + std::to_string(record.runtime_number) +
++              " ok=" + std::to_string(result.ok()) + " message=" + result.message);
++        }
+       step("records");
+       PublishInstalls(c);
+       Log("startup installs published");
+@@ -6169,11 +6246,16 @@
+       // root already; deleting them is only housekeeping.
+       if (c.leftover_journals_known) {
+         std::error_code error;
+-        for (std::filesystem::directory_iterator it(config_.state_root / "trash", error), end; !error && it != end;
++        const auto pending_records = c.repository.Snapshot();
++        for (std::filesystem::directory_iterator it(HostPath("/data/wine11/wine11-games") / ".vapor-title-trash", error), end; !error && it != end;
+              it.increment(error)) {
+           const auto entry = it->path().filename().string();
+           const bool pending = std::any_of(c.blocked_leftover_titles.begin(), c.blocked_leftover_titles.end(),
+-                                           [&](const auto& title) { return entry.rfind(title + "-", 0) == 0; });
++                                           [&](const auto& title) { return entry.rfind(title + "-", 0) == 0; }) ||
++              std::any_of(pending_records.begin(), pending_records.end(), [&](const auto& record) {
++                return record.state == rt::PreparationState::kRemoving && record.journal &&
++                       entry == record.title_id + "-" + record.journal->operation_id;
++              });
+           if (pending) continue;
+           std::error_code ignored;
+           RemoveTreeNoFollow(it->path(), ignored);  // never follows links
+--- a/src/installs/install_service.cpp
++++ b/src/installs/install_service.cpp
+@@ -1252,6 +1252,14 @@
+   return snapshot;
+ }
+ 
++bool InstallService::WorkerIdleForExit() {
++  std::lock_guard<std::mutex> lock(mutex_);
++  if (stopping_ || active_ || removal_active_ || !removals_.empty()) return false;
++  for (const auto& job : jobs_)
++    if (job.view.state == InstallJobState::kQueued || job.view.state == InstallJobState::kRunning) return false;
++  return true;
++}
++
+ void InstallService::Shutdown() {
+   {
+     std::lock_guard<std::mutex> lock(mutex_);
+@@ -1298,6 +1306,7 @@
+       if (!removals_.empty()) {
+         removal = removals_.front();
+         removals_.pop_front();
++        removal_active_ = true;
+       } else {
+         const auto now = std::chrono::steady_clock::now();
+         for (auto& job : jobs_) {
+@@ -1388,6 +1397,7 @@
+         failure = "Playden can't delete this game's files.";
+       }
+       std::lock_guard<std::mutex> lock(mutex_);
++      removal_active_ = false;
+       if (const auto& game = removal->game) {
+         uninstalling_.erase(std::remove_if(uninstalling_.begin(), uninstalling_.end(),
+                                            [&](const InstalledGame& entry) { return entry.id == game->id; }),
+--- a/src/installs/install_service.h
++++ b/src/installs/install_service.h
+@@ -355,6 +355,7 @@
+   // What the store's jobs waited for may be there now (Steam: a sign-in): the jobs of the store that
+   // wait to try again try at once, and a later wait starts short again.
+   void RetryWaiting(Store store);
++  bool WorkerIdleForExit();
+   void Shutdown();
+ 
+   // The folder a game uses (or would use if installed now); empty if its volume is unknown.
+@@ -438,6 +439,7 @@
+   std::vector<InstalledGame> uninstalling_;  // uninstalls whose folder is not deleted yet
+   std::vector<RemovalFailure> removal_failures_;
+   std::optional<GameId> active_;
++  bool removal_active_ = false;
+   std::atomic<bool> active_cancel_{false};
+   std::uint64_t revision_ = 0;
+   bool stopping_ = false;
+--- a/src/platform/effective_uid.cpp
++++ b/src/platform/effective_uid.cpp
+@@ -1,6 +1,7 @@
+ // The shared credential lock is also used by storage outside the runtime worker.
+ #include "platform/ps5/title_allow_list.h"
+ #include <mutex>
++#include <stdexcept>
+ #include <unistd.h>
+ 
+ namespace playden::ps5 {
+@@ -17,7 +18,15 @@
+   const uid_t user = ::geteuid();
+   if (user == 0) return work();
+   if (::seteuid(0) != 0) return false;
+-  const bool ok = work();
++  bool ok;
++  try {
++    ok = work();
++  } catch (...) {
++    // Do not continue with the original exception as if restoration succeeded.
++    if (::seteuid(user) != 0)
++      throw std::runtime_error("Unable to restore the original effective UID");
++    throw;
++  }
+   return ::seteuid(user) == 0 && ok;
+ }
+ 
+--- a/src/runtime/game_settings.cpp
++++ b/src/runtime/game_settings.cpp
+@@ -1251,6 +1251,19 @@
+   if (required.source != ValueSource::kUser) {
+     required.value = recipe.arguments;
+     required.source = recipe.arguments.empty() ? ValueSource::kPlayden : ValueSource::kRecipe;
++    // Prefer an explicitly advertised DX11 mode over an unspecified default
++    // for the same program. Only an otherwise empty launch is eligible; keep
++    // user choices and launch options with their own arguments intact.
++    if (IsGeneratedRecipeId(recipe.id) && out.graphics == "dxvk" && required.value.empty() &&
++        out.launch && out.launch->arguments.empty() &&
++        own_arguments.source != ValueSource::kUser && program.source != ValueSource::kUser &&
++        std::any_of(recipe.launch_entries.begin(), recipe.launch_entries.end(), [&](const LaunchEntry& entry) {
++          return entry.executable == out.launch->executable &&
++                 (entry.arguments == "-dx11" || entry.arguments == "-d3d11");
++        })) {
++      required.value = "-dx11";
++      required.source = ValueSource::kRecipe;
++    }
+   }
+   // The row shows what the game is started with, so these swaps rewrite the recipe's value itself.
+   // Godot 4 cannot open its OpenGL window under Mesa's WGL/Zink on the PS5 (Slay the Spire 2), but its Vulkan
+--- a/src/runtime/install_service.h
++++ b/src/runtime/install_service.h
+@@ -69,6 +69,8 @@
+ class PackageInstaller {
+ public:
+   virtual ~PackageInstaller() = default;
++  // Immutable identities selected for this game, including scoped compatibility runtimes.
++  virtual std::vector<RuntimeArtifactIdentity> ExpectedArtifacts(const RuntimeInstall&) const { return {}; }
+   virtual PackageStatus Inspect(const RuntimeInstall &record) = 0;
+   // Whose title and bottle these are: their owner markers name this install. No walk
+   // of the title's files and no kit comparison (a kit change shows as TitleCurrent
+--- a/src/runtime/kit_trust.h
++++ b/src/runtime/kit_trust.h
+@@ -11,7 +11,7 @@
+ // dependencies.lock.json (a host test checks they agree) and are only shown next to
+ // the installed kit (Settings > About).
+ inline constexpr const char* kDevelopmentKitId = "playden-kit";
+-inline constexpr const char* kDevelopmentKitRoot = "/data/playden/kits/playden-kit";
++inline constexpr const char* kDevelopmentKitRoot = "/data/wine11/kits/playden-kit";
+ inline constexpr const char* kExpectedKitManifestSha256 =
+     "38626b6020f5ba6f24d4138fd8f1b17dc3c1bca8393b3dcba8dd641510e20223";
+ 
+--- a/src/runtime/package_installer.cpp
++++ b/src/runtime/package_installer.cpp
+@@ -1,4 +1,5 @@
+ #include "runtime/package_installer.h"
++#include "blender_shared_release_policy.hpp"
+ #include "runtime/prospero_profile.h"
+ #include "runtime/kit_trust.h"
+ #include "runtime/private_directories.h"
+@@ -48,6 +49,7 @@
+   // then owned describes it with the kit file's destination mode.
+   fs::path source;
+   std::shared_ptr<const KitFile> owned;
++  fs::path source_root{};  // empty means the admitted base kit
+ };
+ 
+ namespace {
+@@ -325,11 +327,6 @@
+          "\nruntime_path=" + kit.runtime.path + "\nvariant_id=" + variant_id +
+          "\ntemplate_path=" + kit.template_path +
+          "\nrecipe_id=" + record.recipe_id + "\nrecipe_version=" + record.recipe_version + "\n";
+-}
+-
+-std::string StageMarker(const RuntimeInstall& record, const VerifiedKitView& kit,
+-                        const std::string& kind) {
+-  return OwnerMarker(record, kit, kind.c_str());
+ }
+ 
+ bool MarkerEquals(const fs::path& path, const std::string& expected) {
+@@ -497,6 +494,101 @@
+   return unmet;
+ }
+ 
++
++static bool CompatibilityTitlePath(const std::string& path) {
++  return path == "title/eboot.bin" || path == "title/native-title-build.json" ||
++         path == "title/vapor-compatibility.json" || path == "title/win/mesa-zink-manifest.json" ||
++         (path.rfind("title/win/mesa-zink/", 0) == 0 && IsSafeRelative(path));
++}
++
++void FilesystemPackageInstaller::SetGameRuntimeOverride(GameRuntimeOverride runtime) {
++  // Retain an invalid rule too: a missing/corrupt required runtime must never
++  // silently fall back to a version known to fail for the selected game.
++  const auto app = runtime.steam_app_id;
++  runtime_overrides_[app] = std::move(runtime);
++}
++
++const GameRuntimeOverride* FilesystemPackageInstaller::RuntimeOverrideFor(const RuntimeInstall& record) const {
++  std::uint32_t app = 0;
++  if (record.game != GameId{}) {
++    const auto steam = record.game.steam_app();
++    if (!steam || *steam != record.runtime_number) return nullptr;
++    app = *steam;
++  } else {
++    // Legacy Steam records predate GameId; their runtime number is the app id.
++    app = record.runtime_number;
++  }
++  const auto found = runtime_overrides_.find(app);
++  return found == runtime_overrides_.end() ? nullptr : &found->second;
++}
++
++bool FilesystemPackageInstaller::RuntimeOverrideValid(const GameRuntimeOverride& runtime) const {
++  if (!runtime.steam_app_id || runtime.root.empty() || !runtime.root.is_absolute() ||
++      runtime.revision.empty() || runtime.revision.size() > 128 ||
++      !IsHexDigest(runtime.manifest_sha256) || runtime.files.empty() || runtime.files.size() > 8192)
++    return false;
++  if (!IsDirectoryNoSymlink(runtime.root) ||
++      !PathComponentsHaveNoSymlink(runtime.root.root_path(), runtime.root.relative_path(), true)) return false;
++  std::set<std::string> paths;
++  bool inventory = false, native = false;
++  for (const auto& file : runtime.files) {
++    if (!IsSafeRelative(file.path) || !IsHexDigest(file.sha256) ||
++        (file.mode != 0644 && file.mode != 0755) || !paths.insert(file.path).second) return false;
++    inventory |= file.path == "runtime-inventory.json";
++    native |= file.path == "lib/wine/x86_64-unix/ntdll.prx";
++  }
++  bool launcher = false, receipt = false;
++  for (const auto& file : runtime.title_files) {
++    if ((!CompatibilityTitlePath(file.path) && !ww::steam_integration::BlenderSharedHelperFileAllowed(runtime,file)) || !IsSafeRelative(file.path) || !IsHexDigest(file.sha256) ||
++        (file.mode != 0644 && file.mode != 0755) || !paths.insert(file.path).second) return false;
++    launcher |= file.path == "title/eboot.bin";
++    if (file.path == "title/vapor-compatibility.json") {
++      if (file.sha256 != runtime.manifest_sha256) return false;
++      receipt = true;
++    }
++  }
++  return inventory && native && (runtime.title_files.empty() || (launcher && receipt));
++}
++
++std::vector<KitArtifact> FilesystemPackageInstaller::EffectiveArtifacts(const RuntimeInstall& record) const {
++  auto artifacts = kit_.artifacts;
++  if (const auto* runtime = RuntimeOverrideFor(record)) {
++    const auto inventory = std::find_if(runtime->files.begin(), runtime->files.end(),
++        [](const KitFile& file) { return file.path == "runtime-inventory.json"; });
++    if (inventory == runtime->files.end()) return {};
++    const auto artifact = std::find_if(artifacts.begin(), artifacts.end(),
++        [](const KitArtifact& value) { return value.artifact_id == "runtime"; });
++    if (artifact == artifacts.end()) return {};
++    artifact->identity = kit_.runtime.bundle_id + "-" + runtime->revision;
++    artifact->sha256 = inventory->sha256;
++    artifact->location = ImmutableArtifactLocation::kStagedTitle;
++    artifact->path = "win/wine/runtime-inventory.json";
++    if (!runtime->title_files.empty())
++      artifacts.push_back({"compatibility-title", runtime->revision + "-title", runtime->manifest_sha256,
++                           ImmutableArtifactLocation::kStagedTitle, "vapor-compatibility.json"});
++  }
++  return artifacts;
++}
++
++std::vector<RuntimeArtifactIdentity> FilesystemPackageInstaller::ExpectedArtifacts(const RuntimeInstall& record) const {
++  std::vector<RuntimeArtifactIdentity> result;
++  for (const auto& artifact : EffectiveArtifacts(record))
++    result.push_back({artifact.artifact_id, artifact.identity, artifact.sha256});
++  return result;
++}
++
++std::string FilesystemPackageInstaller::OwnerMarkerFor(const RuntimeInstall& record, const char* kind) const {
++  auto marker = OwnerMarker(record, kit_, kind);
++  if (!std::strcmp(kind, "title")) if (const auto* runtime = RuntimeOverrideFor(record)) {
++    const auto start = marker.find("\nruntime_revision=");
++    const auto end = start == std::string::npos ? start : marker.find('\n', start + 1);
++    if (end == std::string::npos) return {};
++    marker.replace(start, end - start, "\nruntime_revision=" + runtime->revision);
++    marker += "runtime_override=" + runtime->manifest_sha256 + "\n";
++  }
++  return marker;
++}
++
+ FilesystemPackageInstaller::FilesystemPackageInstaller(
+     VerifiedKitView kit, PackageInstallPaths paths,
+     PackageInstallerOperations operations)
+@@ -581,7 +673,8 @@
+ 
+ std::optional<FilesystemPackageInstaller::ResolvedPaths>
+ FilesystemPackageInstaller::Resolve(const RuntimeInstall& record) const {
+-  if (!ValidView() || !Variant(record) ||
++  const auto* replacement = RuntimeOverrideFor(record);
++  if ((replacement && !RuntimeOverrideValid(*replacement)) || !ValidView() || !Variant(record) ||
+       record.data_root != "/data/playden/games/" + record.install_id ||
+       record.install_id.empty() || record.install_id.find('/') != std::string::npos ||
+       !IsManagedTitle(record.title_id) || record.default_profile_id.empty() ||
+@@ -636,6 +729,8 @@
+   std::vector<Mapping> mappings;
+   const auto* variant = Variant(record);
+   if (!variant) return mappings;
++  const auto* replacement = RuntimeOverrideFor(record);
++  if (replacement && !RuntimeOverrideValid(*replacement)) return {};
+   ++kit_list_passes_;
+   std::set<std::string> destinations;
+   for (const auto& file : kit_.files) {
+@@ -644,10 +739,13 @@
+     if (HasPrefix(file.path, variant->path, &relative)) {
+       destination = relative;
+     } else if (HasPrefix(file.path, kit_.runtime.path, &relative)) {
++      if (replacement) continue;
+       destination = "win/wine/" + relative;
+     } else {
+       continue;
+     }
++    if (replacement && std::any_of(replacement->title_files.begin(), replacement->title_files.end(),
++        [&](const KitFile& replacement_file) { return replacement_file.path.substr(6) == destination; })) continue;
+     if (!IsSafeRelative(relative) || !IsSafeRelative(destination) ||
+         !destinations.insert(destination).second)
+       return {};
+@@ -669,6 +767,16 @@
+     // gets the parameters Playden wrote for it.
+     if (variant->any_title && destination == kTitleMetadataFiles[0] && !mapping.owned) return {};
+     mappings.push_back(std::move(mapping));
++  }
++  if (replacement) for (const auto& file : replacement->files) {
++    const auto destination = "win/wine/" + file.path;
++    if (!IsSafeRelative(file.path) || !destinations.insert(destination).second) return {};
++    mappings.push_back({&file, file.path, destination, replacement->root / file.path, nullptr, replacement->root});
++  }
++  if (replacement) for (const auto& file : replacement->title_files) {
++    const auto destination = file.path.substr(6);
++    if (!IsSafeRelative(destination) || !destinations.insert(destination).second) return {};
++    mappings.push_back({&file, file.path, destination, replacement->root / file.path, nullptr, replacement->root});
+   }
+   return mappings;
+ }
+@@ -800,7 +908,7 @@
+ bool FilesystemPackageInstaller::TitleMatches(
+     const RuntimeInstall& record, const ResolvedPaths& paths) const {
+   return IsDirectoryNoSymlink(paths.title) &&
+-         MarkerEquals(paths.title / kTitleOwner, OwnerMarker(record, kit_, "title")) &&
++         MarkerEquals(paths.title / kTitleOwner, OwnerMarkerFor(record, "title")) &&
+          TitleFilesMatch(record, paths) && TitleDirectoriesPublished(paths.title);
+ }
+ 
+@@ -835,7 +943,7 @@
+ 
+ bool FilesystemPackageInstaller::ProfileShared(const RuntimeInstall& record, const ResolvedPaths& paths) const {
+   // A title keeps the shell it was made with after a kit swap; an older shell admits only 0700.
+-  return profile_shared_ && MarkerEquals(paths.title / kTitleOwner, OwnerMarker(record, kit_, "title"));
++  return profile_shared_ && MarkerEquals(paths.title / kTitleOwner, OwnerMarkerFor(record, "title"));
+ }
+ 
+ PrivateTraversal FilesystemPackageInstaller::BottleTraversal(const ResolvedPaths& paths, bool shared) const {
+@@ -851,15 +959,16 @@
+ 
+ bool FilesystemPackageInstaller::ArtifactsMatch(
+     const RuntimeInstall& record, const ResolvedPaths& paths) const {
+-  if (record.artifacts.size() != kit_.artifacts.size()) return false;
++  const auto artifacts = EffectiveArtifacts(record);
++  if (record.artifacts.size() != artifacts.size()) return false;
+   std::set<std::string> matched;
+   for (const auto& artifact : record.artifacts) {
+     const auto found = std::find_if(
+-        kit_.artifacts.begin(), kit_.artifacts.end(), [&](const KitArtifact& expected) {
++        artifacts.begin(), artifacts.end(), [&](const KitArtifact& expected) {
+           return expected.artifact_id == artifact.artifact_id &&
+                  expected.identity == artifact.identity && expected.sha256 == artifact.sha256;
+         });
+-    if (found == kit_.artifacts.end() || !matched.insert(found->artifact_id).second)
++    if (found == artifacts.end() || !matched.insert(found->artifact_id).second)
+       return false;
+     const fs::path path = found->location == ImmutableArtifactLocation::kKit
+                               ? kit_.root / found->path
+@@ -873,7 +982,7 @@
+     const auto hash = operations_.hash_file(path);
+     if (!hash || *hash != found->sha256) return false;
+   }
+-  return matched.size() == kit_.artifacts.size();
++  return matched.size() == artifacts.size();
+ }
+ 
+ std::string FilesystemPackageInstaller::AdmissionDiagnostic(const RuntimeInstall& record) {
+@@ -1298,7 +1407,7 @@
+     bool mode_ok = false;
+     std::error_code error;
+     // A game's own metadata file is private (0600); the title copy takes the kit mode.
+-    if ((mapping.owned ? false : !PathComponentsHaveNoSymlink(kit_.root, mapping.source_relative, true)) ||
++    if ((mapping.owned ? false : !PathComponentsHaveNoSymlink(mapping.source_root.empty() ? kit_.root : mapping.source_root, mapping.source_relative, true)) ||
+         !IsRegularNoSymlink(source) || fs::file_size(source, error) != mapping.file->size || error ||
+         (!mapping.owned && (FileMode(source, &mode_ok) != mapping.file->mode || !mode_ok))) {
+       return Failed("kit-source-invalid", "kit source is missing, linked, or has wrong mode");
+@@ -1325,7 +1434,7 @@
+   if (available ? *available < required + overhead : !operations_.free_space_unverifiable)
+     return Failed("space-unavailable", "insufficient verified free space for package copy");
+ 
+-  const auto expected_stage = StageMarker(record, kit_, stage_kind);
++  const auto expected_stage = OwnerMarkerFor(record, stage_kind.c_str());
+   bool staging_known = false;
+   const bool staging_exists = ExistsNoThrow(staging, &staging_known);
+   if (!staging_known)
+@@ -1452,6 +1561,11 @@
+       return Failed("copy-failed", "package file copy or mode publication failed");
+     if (copied_bytes != mapping.file->size)
+       return Failed("copy-verification", "copied package file size does not match");
++    if (!mapping.source_root.empty()) {
++      const auto copied = operations_.hash_file(destination);
++      if (!copied || *copied != mapping.file->sha256)
++        return Failed("copy-verification", "compatibility runtime digest does not match");
++    }
+     times.Add("copy", since);
+     since = PartTimes::Clock::now();
+     if (!SyncPath(destination, false))
+@@ -1513,7 +1627,7 @@
+   }
+   if (stage_kind == "template" && !operations_.validate_bottle(staging))
+     return Failed("template-validation", "staged bottle failed semantic validation");
+-  if (!WriteFile(staging / final_marker, OwnerMarker(record, kit_, stage_kind.c_str()), 0600))
++  if (!WriteFile(staging / final_marker, OwnerMarkerFor(record, stage_kind.c_str()), 0600))
+     return Failed("ownership-write", "package ownership marker could not be written");
+   if (!SyncPath(staging / final_marker, false))
+     return Failed("sync-failed", "package ownership marker was not durably synced");
+@@ -1610,7 +1724,7 @@
+     const auto directory = pending.back(); pending.pop_back();
+     struct stat info{};
+     if (::lstat(directory.c_str(), &info) != 0 || !S_ISDIR(info.st_mode) || info.st_uid != ::geteuid() ||
+-        (info.st_mode & 07777) != 0755)
++        ((info.st_mode & 07777) != 0755 && (info.st_mode & 07777) != 0777))
+       return false;
+     std::error_code error;
+     for (fs::directory_iterator it(directory, error), end; !error && it != end; it.increment(error)) {
+@@ -1630,7 +1744,7 @@
+   while (!pending.empty()) {
+     const auto directory = pending.back(); pending.pop_back();
+     if (::lstat(directory.c_str(), &info) != 0 || !S_ISDIR(info.st_mode) || info.st_uid != ::geteuid()) return false;
+-    if ((info.st_mode & 07777) != 0755 && ::chmod(directory.c_str(), 0755) != 0) return false;
++    if ((info.st_mode & 07777) != 0777 && ::chmod(directory.c_str(), 0777) != 0) return false;
+     std::error_code error;
+     for (fs::directory_iterator it(directory, error), end; !error && it != end; it.increment(error)) {
+       struct stat child{};
+@@ -1650,7 +1764,7 @@
+   // An owned title with the right files is (re)published: a stop between the
+   // move into place and publishing can leave its folders private.
+   if (IsDirectoryNoSymlink(paths->title) &&
+-      MarkerEquals(paths->title / kTitleOwner, OwnerMarker(record, kit_, "title")) &&
++      MarkerEquals(paths->title / kTitleOwner, OwnerMarkerFor(record, "title")) &&
+       TitleFilesMatch(record, *paths)) {
+     const auto started = PartTimes::Clock::now();
+     const bool durable = PublishTitleDirectories(paths->title) && SyncTree(paths->title) &&
+@@ -1690,7 +1804,7 @@
+     if (line.rfind("kit_id=", 0) == 0 && KitIdRenamedTo(line.substr(7), kit_id))
+       kept += "kit_id=" + kit_id + "\n";
+     else if (line.rfind("files_sha256=", 0) != 0 && line.rfind("runtime_revision=", 0) != 0 &&
+-             line.rfind("runtime_path=", 0) != 0 && line.rfind("variant_id=", 0) != 0)
++             line.rfind("runtime_path=", 0) != 0 && line.rfind("variant_id=", 0) != 0 && line.rfind("runtime_override=", 0) != 0)
+       kept += line + "\n";
+     start = end + 1;
+   }
+@@ -1775,8 +1889,8 @@
+ 
+ bool FilesystemPackageInstaller::TitleCurrent(const RuntimeInstall& record) {
+   const auto paths = Resolve(record);
+-  return paths && MarkerEquals(paths->title / kTitleOwner, OwnerMarker(record, kit_, "title")) &&
+-         MarkerEquals(paths->bottle / kTemplateOwner, OwnerMarker(record, kit_, "template"));
++  return paths && MarkerEquals(paths->title / kTitleOwner, OwnerMarkerFor(record, "title")) &&
++         MarkerEquals(paths->bottle / kTemplateOwner, OwnerMarkerFor(record, "template"));
+ }
+ 
+ bool FilesystemPackageInstaller::SetupFromOtherKit(const RuntimeInstall& record) {
+@@ -1785,7 +1899,7 @@
+   // Only folders whose markers name this install count; another owner's folder is a collision, not this.
+   const auto other_kit = [&](const fs::path& folder, const char* marker, const char* kind) {
+     return IsDirectoryNoSymlink(folder) && MarkerIdentifies(folder / marker, record, kind) &&
+-           !MarkerEquals(folder / marker, OwnerMarker(record, kit_, kind));
++           !MarkerEquals(folder / marker, OwnerMarkerFor(record, kind));
+   };
+   return other_kit(paths->title, kTitleOwner, "title") || other_kit(paths->bottle, kTemplateOwner, "template");
+ }
+@@ -1793,9 +1907,10 @@
+ PackageActionResult FilesystemPackageInstaller::RefreshTitle(const RuntimeInstall& record) {
+   const auto paths = Resolve(record);
+   if (!paths) return Failed("kit-invalid", "record or verified kit view is invalid");
+-  if (record.artifacts.size() != kit_.artifacts.size())
++  const auto artifacts = EffectiveArtifacts(record);
++  if (record.artifacts.size() != artifacts.size())
+     return Failed("refresh-artifacts", "runtime or recipe artifacts differ; a full upgrade is required");
+-  for (const auto& artifact : kit_.artifacts) {
++  for (const auto& artifact : artifacts) {
+     bool found = false;
+     for (const auto& bound : record.artifacts)
+       found |= bound.artifact_id == artifact.artifact_id && bound.identity == artifact.identity &&
+@@ -1804,8 +1919,8 @@
+   }
+   const auto title_marker = ReadBounded(paths->title / kTitleOwner, 4096);
+   const auto bottle_marker = ReadBounded(paths->bottle / kTemplateOwner, 4096);
+-  const auto new_title = OwnerMarker(record, kit_, "title");
+-  const auto new_bottle = OwnerMarker(record, kit_, "template");
++  const auto new_title = OwnerMarkerFor(record, "title");
++  const auto new_bottle = OwnerMarkerFor(record, "template");
+   auto old_digest = [](const std::optional<std::string>& marker) -> std::string {
+     if (!marker) return {};
+     const auto at = marker->find("\nfiles_sha256=");
+@@ -1857,6 +1972,14 @@
+     const auto temporary = destination.parent_path() / ("." + destination.filename().string() + ".refresh");
+     ::unlink(temporary.c_str());
+     const auto& source = mapping.source;
++    bool source_mode_ok = false;
++    std::error_code source_size_error;
++    if (!mapping.source_root.empty() && (!IsRegularNoSymlink(source) ||
++        !PathComponentsHaveNoSymlink(mapping.source_root.empty() ? kit_.root : mapping.source_root,
++                                    mapping.source_relative, true) ||
++        fs::file_size(source, source_size_error) != mapping.file->size || source_size_error ||
++        FileMode(source, &source_mode_ok) != mapping.file->mode || !source_mode_ok))
++      return Failed("kit-source-invalid", "runtime source differs from its pinned inventory");
+     const int input = ::open(source.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC);
+     const int output = ::open(temporary.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW | O_CLOEXEC, 0600);
+     bool ok = input >= 0 && output >= 0 && ::fchmod(output, mapping.file->mode) == 0;
+--- a/src/runtime/package_installer.h
++++ b/src/runtime/package_installer.h
+@@ -48,7 +48,7 @@
+ };
+ 
+ // The root-owned allow-list an any-title kit's helper reads, and the range it serves.
+-inline constexpr const char* kTitleRuleAllowList = "/data/playden/title-rule/allow-list";
++inline constexpr const char* kTitleRuleAllowList = "/data/wine11/title-rule/allow-list";
+ inline constexpr const char* kTitleRulePrefix = "FAKE78";
+ 
+ enum class ImmutableArtifactLocation { kKit, kStagedTitle };
+@@ -72,6 +72,18 @@
+   std::vector<KitTitleVariant> variants;
+   std::vector<KitFile> files;
+   std::vector<KitArtifact> artifacts;
++};
++
++// A reviewed, immutable runtime selected for exactly one Steam application.
++// Files are pinned by the caller; every copied byte is checked by the installer.
++struct GameRuntimeOverride {
++  std::uint32_t steam_app_id = 0;
++  std::filesystem::path root;
++  std::string revision;
++  std::string manifest_sha256;
++  std::vector<KitFile> files;
++  // Pinned replacements under root/title; no descriptors, bottle or save files.
++  std::vector<KitFile> title_files{};
+ };
+ 
+ // The variant a title uses: its own fixed variant, else the kit's any-title variant.
+@@ -189,6 +201,8 @@
+   // kits keep 0700 until Update. Reads always admit 0711.
+   void ShareBottleProfiles(bool shared) { profile_shared_ = shared; }
+ 
++  void SetGameRuntimeOverride(GameRuntimeOverride runtime);
++  std::vector<RuntimeArtifactIdentity> ExpectedArtifacts(const RuntimeInstall& record) const override;
+   PackageStatus Inspect(const RuntimeInstall& record) override;
+   // The title's owner marker instead of its files and folder modes; the bottle,
+   // artifacts and publication are checked as Inspect does.
+@@ -223,6 +237,10 @@
+   PackageActionResult RefreshTitle(const RuntimeInstall& record) override;
+ 
+  private:
++  const GameRuntimeOverride* RuntimeOverrideFor(const RuntimeInstall& record) const;
++  bool RuntimeOverrideValid(const GameRuntimeOverride& runtime) const;
++  std::vector<KitArtifact> EffectiveArtifacts(const RuntimeInstall& record) const;
++  std::string OwnerMarkerFor(const RuntimeInstall& record, const char* kind) const;
+   struct Mapping;
+   struct ResolvedPaths;
+ 
+@@ -268,6 +286,7 @@
+                                    const std::string& stage_kind,
+                                    const std::string& final_marker);
+ 
++  std::map<std::uint32_t, GameRuntimeOverride> runtime_overrides_;
+   VerifiedKitView kit_;
+   PackageInstallPaths paths_;
+   PackageInstallerOperations operations_;
+--- a/src/runtime/publication_contract.h
++++ b/src/runtime/publication_contract.h
+@@ -1,4 +1,5 @@
+ #pragma once
++#include <cstdint>
+ 
+ #include "pw_title_publication.h"
+ 
+--- a/src/runtime/settings_publication.cpp
++++ b/src/runtime/settings_publication.cpp
+@@ -582,7 +582,7 @@
+   auto title = ManagedDirectory::Open(paths.descriptor.parent_path(), DirectoryPolicy::kApprovedTree);
+   struct stat title_info{};
+   if (!title || lstat(paths.descriptor.parent_path().c_str(), &title_info) || title_info.st_uid != geteuid() ||
+-      ((title_info.st_mode & 07777) != 0700 && (title_info.st_mode & 07777) != 0755))
++      ((title_info.st_mode & 07777) != 0700 && (title_info.st_mode & 07777) != 0755 && (title_info.st_mode & 07777) != 0777))
+     return Failure("publication-directory", "Owned staged title directory is unavailable.");
+   auto publish = [&](const ManagedDirectory& parent, const std::filesystem::path& path,
+                      const std::string& bytes, const std::string& prior_hash) -> PackageActionResult {
+@@ -645,7 +645,7 @@
+   auto title = ManagedDirectory::Open(paths.descriptor.parent_path(), DirectoryPolicy::kApprovedTree);
+   struct stat title_info{};
+   if (!library || !title || lstat(title->path().c_str(), &title_info) || title_info.st_uid != geteuid() ||
+-      ((title_info.st_mode & 07777) != 0700 && (title_info.st_mode & 07777) != 0755))
++      ((title_info.st_mode & 07777) != 0700 && (title_info.st_mode & 07777) != 0755 && (title_info.st_mode & 07777) != 0777))
+     return Failure("publication-preflight-directory", "Owned library or staged title directory is unavailable.");
+   PwTitlePublicationMetadata previous{}, desired{};
+   if (pw_title_publication_metadata_parse(reinterpret_cast<const uint8_t*>(o.metadata_bytes.data()),
+--- a/src/steam/cloud_service.cpp
++++ b/src/steam/cloud_service.cpp
+@@ -1,4 +1,5 @@
+ #include "steam/cloud_service.h"
++#include "platform/ps5/title_allow_list.h"
+ 
+ #include <dirent.h>
+ #include <sys/stat.h>
+@@ -409,6 +410,7 @@
+       request = std::move(pending_.front());
+       pending_.pop_front();
+     }
++    const auto uid = playden::ps5::HoldEffectiveUid();
+     if (request.kind == Kind::kRestore) {
+       std::vector<std::pair<GameId, CloudReport>> restored;
+       if (DIR* directory = opendir(request.saves_root.c_str())) {
+--- a/src/steam/local_session_repository.cpp
++++ b/src/steam/local_session_repository.cpp
+@@ -1,4 +1,5 @@
+ #include "steam/local_session_repository.h"
++#include "platform/ps5/title_allow_list.h"
+ #include <cerrno>
+ #include <atomic>
+ #include <unistd.h>
+@@ -69,6 +70,7 @@
+   return cleared;
+ }
+ Result<std::optional<StoredSession>> LocalSessionRepository::Load() const {
++  const auto uid = ps5::HoldEffectiveUid();
+   if (!vault_) return LoadSaved();
+   std::lock_guard<std::mutex> lock(vault_->mutex_);
+   // The session in memory wins: it is the newest sign-in, whichever the setting.
+@@ -77,6 +79,7 @@
+   return LoadSaved();
+ }
+ Result<void> LocalSessionRepository::Save(const StoredSession& session) const {
++  const auto uid = ps5::HoldEffectiveUid();
+   if (!vault_) return SaveToDisk(session);
+   std::lock_guard<std::mutex> lock(vault_->mutex_);
+   if (vault_->persist_) {
+@@ -91,12 +94,14 @@
+   return cleared;
+ }
+ Result<void> LocalSessionRepository::Clear() const {
++  const auto uid = ps5::HoldEffectiveUid();
+   if (!vault_) return ClearSaved();
+   std::lock_guard<std::mutex> lock(vault_->mutex_);
+   vault_->Drop();
+   return ClearSaved();
+ }
+ Result<void> LocalSessionRepository::SetPersist(bool persist) const {
++  const auto uid = ps5::HoldEffectiveUid();
+   if (!vault_) return Result<void>::Success();
+   std::lock_guard<std::mutex> lock(vault_->mutex_);
+   if (vault_->persist_ == persist) return Result<void>::Success();
+--- a/src/update/update_service.cpp
++++ b/src/update/update_service.cpp
+@@ -7,6 +7,7 @@
+ #include <algorithm>
+ #include <cerrno>
+ #include <cstdio>
++#include <cstdlib>
+ #include <utility>
+ 
+ #include "steam/backend/json.h"
+@@ -27,6 +28,18 @@
+ };
+ 
+ namespace {
++
++// Some PS5 SDKs report access(W_OK) as unavailable even for writable folders.
++// Prove the operation we need with an exclusive, private temporary file.
++bool WritableFolder(const std::string& path) {
++  if (!IsFolder(path)) return false;
++  std::string probe = path + "/.vapor-update-write-XXXXXX";
++  const int fd = mkstemp(probe.data());
++  if (fd < 0) return false;
++  const bool closed = close(fd) == 0;
++  const bool removed = unlink(probe.c_str()) == 0;
++  return closed && removed;
++}
+ 
+ void* RunJob(void* opaque) {
+   std::unique_ptr<std::function<void()>> work(static_cast<std::function<void()>*>(opaque));
+@@ -197,9 +210,9 @@
+ }
+ 
+ bool UpdateService::PrepareWorkRoot() {
+-  if (IsFolder(config_.work_root) && access(config_.work_root.c_str(), W_OK) == 0) return true;
++  if (WritableFolder(config_.work_root)) return true;
+   config_.as_root([&] { return MakeFolders(config_.work_root) && chmod(config_.work_root.c_str(), 0777) == 0; });
+-  const bool ok = IsFolder(config_.work_root) && access(config_.work_root.c_str(), W_OK) == 0;
++  const bool ok = WritableFolder(config_.work_root);
+   if (!ok) Log("cannot create " + config_.work_root);
+   return ok;
+ }
+@@ -621,6 +634,8 @@
+   const auto manifest_text = local ? read_local(kUpdateManifestAsset)
+                                    : FetchSmall(asset->url, 256 << 10, options, "application/octet-stream", &error);
+   if (!manifest_text) return Fail("Playden could not read the update information.", error);
++  if (config_.admit_manifest && !config_.admit_manifest(*manifest_text, &error))
++    return Fail("This release is not compatible with this app integration.", error);
+   const auto manifest = ParseUpdateManifest(*manifest_text, &error);
+   if (!manifest) return Fail("The update information of " + release->tag + " is not valid.", error);
+   if (manifest->app_version != release->version || manifest->title_id != config_.title_id)
+@@ -754,7 +769,7 @@
+       return false;
+     return MakeFolders(staging) && chmod(staging.c_str(), 0777) == 0;
+   });
+-  if (!IsFolder(staging) || access(staging.c_str(), W_OK) != 0) {
++  if (!WritableFolder(staging)) {
+     fail("Playden could not create the runtime kit folder.", staging);
+     return false;
+   }
+--- a/src/update/update_service.h
++++ b/src/update/update_service.h
+@@ -43,6 +43,9 @@
+   std::optional<Version> nightly_base;
+   bool include_betas = false;
+   Fetch fetch;
++  // Embedders can require their own integration contract in addition to the
++  // generic app/title/runtime manifest. Runs after redirects and before parsing.
++  std::function<bool(std::string_view, std::string*)> admit_manifest;
+   std::function<std::optional<std::string>(const std::string& path)> hash_file;
+   // The verified kit's manifest SHA-256, or nullopt when the folder is not a complete kit.
+   std::function<std::optional<std::string>(const std::string& kit_root)> verify_kit;
+--- a/src/platform/ps5/native_coordinator.cpp
++++ b/src/platform/ps5/native_coordinator.cpp
+@@ -11,11 +11,10 @@
+ bool RootValid(const std::filesystem::path& root) {
+   return root.is_absolute() && root == root.lexically_normal() && root.filename() == "homebrew" && root.parent_path().filename() == "data";
+ }
+-// Playden owns a title directory it created: owned by this user and not
+-// writable by others. ShadowMount must read it, so 0755 as well as 0700.
++// Vapor also admits the owner-requested editable 0777 title directories.
+ bool OwnedDirectoryMode(const struct stat& info) {
+   return S_ISDIR(info.st_mode) && info.st_uid == geteuid() &&
+-      ((info.st_mode & 07777) == 0700 || (info.st_mode & 07777) == 0755);
++      ((info.st_mode & 07777) == 0700 || (info.st_mode & 07777) == 0755 || (info.st_mode & 07777) == 0777);
+ }
+ std::optional<std::string> ContentId(const std::filesystem::path& root, const std::string& title) {
+   auto directory = platform::ManagedDirectory::Open(root / title / "sce_sys", platform::DirectoryPolicy::kApprovedTree);
+--- a/src/steam/backend/app_info.cpp
++++ b/src/steam/backend/app_info.cpp
+@@ -106,6 +106,14 @@
+   AppLaunch launch;
+   launch.id = id;
+   launch.executable = ChildString(&value, "executable");
++  // Some Steam launch entries use a single leading slash for a path inside
++  // the install directory. Keep all other path validation strict; in
++  // particular, do not turn network paths or traversal into valid paths.
++  if (launch.executable.size() > 1 && launch.executable[0] == '/' &&
++      launch.executable[1] != '/' && launch.executable[1] != '\\') {
++    if (const auto relative = RelativeGamePath(std::string_view(launch.executable).substr(1)))
++      launch.executable = *relative;
++  }
+   launch.arguments = ChildString(&value, "arguments");
+   launch.working_directory = ChildString(&value, "workingdir");
+   launch.type = ChildString(&value, "type");
+--- a/src/steam/backend/auth_client.cpp
++++ b/src/steam/backend/auth_client.cpp
+@@ -38,7 +38,7 @@
+       const auto remaining = until - std::chrono::steady_clock::now();
+       if (remaining <= decltype(remaining)::zero()) return true;
+       std::this_thread::sleep_for(std::min(remaining,
+-          std::chrono::duration_cast<decltype(remaining)>(std::chrono::milliseconds(25))));
++          std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::milliseconds(25))));
+     }
+     return false;
+   };
+--- a/src/steam/backend/cm_app_details.cpp
++++ b/src/steam/backend/cm_app_details.cpp
+@@ -5,6 +5,8 @@
+ 
+ #include <algorithm>
+ #include <chrono>
++
++extern "C" int wine11_verified_depot_estimates() { return 1; }
+ 
+ namespace playden::steam {
+ 
+@@ -119,9 +121,18 @@
+   const auto& depots = selected.depots;
+   std::uint64_t install = 0;
+   std::uint64_t download = 0;
+-  DepotBytes(depots, &install, &download);
+-  if (install) details.install_bytes = install;
+-  if (download) details.download_bytes = download;
++  bool install_known = true, download_known = true;
++  for (const auto& depot : depots) {
++    // Zero denotes missing metadata, so a partial sum is not a game total.
++    if (!depot.size || depot.size > UINT64_MAX - install) install_known = false;
++    else install += depot.size;
++    // Keep upstream's cap for implausible compressed sizes when both exist.
++    const auto compressed = depot.size && depot.download_size > depot.size ? depot.size : depot.download_size;
++    if (!depot.download_size || compressed > UINT64_MAX - download) download_known = false;
++    else download += compressed;
++  }
++  if (install_known && install) details.install_bytes = install;
++  if (download_known && download) details.download_bytes = download;
+   // Versions, selected the same way as the public branch above.
+   for (auto& offer : OfferedBranches(*app, dlc_apps, apps, depots_owned, selection.language)) {
+     AppVersion version{std::move(offer.name), std::move(offer.description), offer.time_updated, offer.build_id,
+--- a/src/steam/backend/depot_installer.cpp
++++ b/src/steam/backend/depot_installer.cpp
+@@ -1,4 +1,7 @@
+ #include "steam/backend/depot_installer.h"
++#include "steam_integration/download_tuner.hpp"
++#include "steam_integration/network_traffic.hpp"
++#include "steam_integration/download_space_status.hpp"
+ 
+ #include "steam/backend/depot_chunk.h"
+ #include "steam/backend/gzip.h"
+@@ -159,10 +162,12 @@
+   return close(fd) == 0 && ok;
+ }
+ 
++thread_local bool default_space_query_failed = false;
+ std::uint64_t DefaultFreeBytes(const std::string& path) {
+   const auto space = QueryVolumeSpace(path);
+   if (space) return space->free_bytes;
+-  return VolumeSpaceSupported() ? 0 : std::numeric_limits<std::uint64_t>::max();
++  if (VolumeSpaceSupported()) { default_space_query_failed = true; return 0; }
++  return std::numeric_limits<std::uint64_t>::max();
+ }
+ 
+ // Deletes a tree without following links. `error` keeps the first failure's errno.
+@@ -809,9 +814,10 @@
+ InstallOutcome DepotInstaller::Run(const StoredSession& session, const InstallTarget& target,
+                                    const std::atomic<bool>& cancel,
+                                    const std::function<void(const InstallProgress&)>& on_progress) {
++  auto traffic_counter = ww::steam_integration::traffic::capture();
+   InstallOutcome outcome;
+   InstallStats stats;
+-  const int slots = std::clamp(tuning_.slots, 1, 8);
++  const int slots = std::clamp(tuning_.slots, 1, 20);
+   const int ahead_files = std::clamp(tuning_.ahead_files, 1, 65536);
+   stats.slots = slots; stats.ahead_files = ahead_files;
+   CdnStats worker_cdn;
+@@ -966,6 +972,33 @@
+   const auto log_merge = [&](const char* result, const std::string& detail) {
+     if (hooks_.merge && ++merge_lines <= kMergeLogLimit) hooks_.merge(result, detail);
+   };
++  // Refuse an ambiguous overwrite between explicitly different Windows CPU
++  // architectures. Unique files from both remain allowed; untagged depots
++  // retain the normal Steam merge behavior.
++  const auto architecture = [&target, &manifests](std::size_t index) {
++    for (const auto& depot : target.depots) {
++      if (depot.id != manifests[index].depot_id) continue;
++      const auto arch = Lower(depot.os_arch);
++      if (arch == "32" || arch == "x86") return 32;
++      if (arch == "64" || arch == "x64" || arch == "amd64") return 64;
++      break;
++    }
++    return 0;
++  };
++  std::map<std::string, Placement> architecture_files;
++  for (std::size_t depot = 0; depot < manifests.size(); ++depot) {
++    for (const auto& file : manifests[depot].files) {
++      if (file.is_directory() || file.is_symlink()) continue;
++      const auto key = Lower(file.path);
++      const auto found = architecture_files.find(key);
++      if (found != architecture_files.end() && !SameFile(*found->second.file, file)) {
++        const int earlier = architecture(found->second.depot), later = architecture(depot);
++        if (earlier && later && earlier != later)
++          return fail(InstallError::kProtocol, ("Conflicting 32-bit and 64-bit game files: " + file.path).c_str());
++      }
++      architecture_files[key] = {depot, &file};
++    }
++  }
+   UnifyFolderCase(&manifests);
+   auto merged = MergeDepotManifests(manifests, log_merge);
+   if (!merged.conflict.empty()) return fail(InstallError::kCorrupt, ("conflicting depots " + merged.conflict).c_str());
+@@ -1274,7 +1307,9 @@
+     if (pending) ++stats.files_pending;
+   }
+   trace("space");
++  default_space_query_failed = false;
+   const auto available_bytes = hooks_.free_bytes(target.install_root);
++  if (default_space_query_failed) return fail(InstallError::kStorage, ww::steam_integration::kSpaceQueryUnavailable);
+   if (available_bytes < kInstallSpaceMargin || remaining_bytes > available_bytes - kInstallSpaceMargin)
+     return fail(InstallError::kNoSpace, "not enough free space");
+   if (on_progress) on_progress(progress);
+@@ -1420,6 +1455,10 @@
+   std::condition_variable changed;
+   std::atomic<bool> stop{false};
+   std::size_t next_chunk = 0, occupied = 0, waiting = 0;
++  ww::steam_integration::DownloadTuner auto_tuner;
++  const bool adaptive = tuning_.slots == ww::steam_integration::DownloadTuner::Maximum;
++  int active_limit = adaptive ? auto_tuner.slots() : slots;
++  stats.slots = active_limit;
+   std::uint32_t peak_active = 0, peak_waiting = 0;
+   InstallError first_error = InstallError::kNone;
+   std::string first_detail;
+@@ -1595,7 +1634,7 @@
+           std::uint64_t chunk_generation = 0;
+           {
+             std::unique_lock<std::mutex> lock(mutex);
+-            changed.wait(lock, [&] { return stop.load() || !self->busy; });
++            changed.wait(lock, [&] { return stop.load() || (!self->busy && occupied < static_cast<std::size_t>(active_limit)); });
+             if (stop.load() || next_chunk == chunks.size()) break;
+             self->work = next_chunk++;
+             self->busy = true;
+@@ -1653,6 +1692,7 @@
+             const auto before = self->fetcher.stats ? self->fetcher.stats() : CdnStats{};
+             const auto fetched = Timed(fetch_time, [&] {
+               return Timed(server_fetch[bucket], [&] {
++                ww::steam_integration::traffic::Scope traffic_scope(traffic_counter);
+                 return self->fetcher.fetch(servers[server_index], grant.depot_id, Hex(chunk.sha),
+                                            static_cast<std::size_t>(chunk.compressed_size) + 4096, stop, &encrypted);
+               });
+@@ -1804,6 +1844,20 @@
+     snapshot();
+     tick();
+     report_progress();
++    if (adaptive && !auto_tuner.finished()) {
++      const auto now_ms = static_cast<std::uint64_t>(Milliseconds(Clock::now() - download_start));
++      const bool was_finished = auto_tuner.finished();
++      const bool changed_limit = auto_tuner.observe(now_ms, stats.compressed_bytes);
++      if (changed_limit || (!was_finished && auto_tuner.finished())) {
++        char detail[160];
++        std::snprintf(detail, sizeof(detail), "adaptive tested=%d bytes=%llu ms=%llu next=%d done=%d",
++          auto_tuner.sampled_slots(), static_cast<unsigned long long>(auto_tuner.sampled_bytes()),
++          static_cast<unsigned long long>(auto_tuner.sampled_ms()), auto_tuner.slots(), auto_tuner.finished() ? 1 : 0);
++        trace(detail);
++        std::lock_guard<std::mutex> lock(mutex);
++        active_limit = auto_tuner.slots(); stats.slots = active_limit; changed.notify_all();
++      }
++    }
+     if (ready) {
+       const auto& work = chunks[ready->work];
+       const auto& file = *files[work.file].placement.file;
+--- a/src/steam/backend/http_client.cpp
++++ b/src/steam/backend/http_client.cpp
+@@ -1,4 +1,5 @@
+ #include "steam/backend/http_client.h"
++#include "steam_integration/network_traffic.hpp"
+ 
+ #include <strings.h>
+ 
+@@ -50,6 +51,10 @@
+ 
+ size_t WriteBody(char* bytes, size_t size, size_t count, void* context) {
+   auto& transfer = *static_cast<TransferBuffer*>(context);
++  // Count payload delivered by curl even if this attempt is later refused,
++  // truncated or retried. Scopes restrict it to this install's chunk requests.
++  if (size == 0 || count <= std::numeric_limits<std::uint64_t>::max() / size)
++    ww::steam_integration::traffic::received(static_cast<std::uint64_t>(size) * count);
+   std::size_t length = 0;
+   if (!MultiplyWithin(size, count, transfer.body_limit, length) ||
+       length > transfer.body_limit - transfer.response.body.size()) {
+--- a/src/steam/backend/steam_install_runner.cpp
++++ b/src/steam/backend/steam_install_runner.cpp
+@@ -1,4 +1,5 @@
+ #include "steam/backend/steam_install_runner.h"
++#include "steam_integration/download_space_status.hpp"
+ 
+ #include "runtime/steamworks.h"
+ #include "steam/backend/app_info.h"
+@@ -618,7 +619,9 @@
+   // A running game holds the update back: it waits, its downloads kept, and tries again.
+   result.retry_later = outcome.error == InstallError::kNetwork || outcome.error == InstallError::kGameRunning;
+   if (outcome.error == InstallError::kGameRunning) result.waiting = kWaitingForGame;
+-  result.failure = InstallFailureText(outcome.error);
++  result.failure = ww::steam_integration::IsSpaceQueryUnavailable(outcome.error, outcome.detail)
++      ? ww::steam_integration::kSpaceQueryMessage
++      : InstallFailureText(outcome.error);
+   result.install_bytes = outcome.progress.install_total;
+   return result;
+ }
+--- /dev/null
++++ b/cmake/VaporCore.cmake
+@@ -0,0 +1,123 @@
++add_library(playden_steam_cm_codec STATIC
++    "${CMAKE_SOURCE_DIR}/src/steam/backend/gzip.cpp"
++    "${CMAKE_SOURCE_DIR}/src/steam/backend/binary_kv.cpp"
++    "${CMAKE_SOURCE_DIR}/src/steam/backend/vdf.cpp"
++    "${CMAKE_SOURCE_DIR}/src/steam/backend/app_info.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/prospero_profile.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/game_settings.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/my_presets.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/recipe_ini.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/recipe_files.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/kit_version.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/community_rules.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/recipe_choice.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/install_script.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/steam_input.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/msi_package.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/lzx_decoder.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/burn_bundle.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/redist_install.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/game_probe.cpp")
++target_include_directories(playden_steam_cm_codec PUBLIC "${CMAKE_SOURCE_DIR}/src")
++target_include_directories(playden_steam_cm_codec PRIVATE "${PLAYDEN_STB_IMAGE_INCLUDE_DIR}")
++target_compile_features(playden_steam_cm_codec PUBLIC cxx_std_17)
++target_link_libraries(playden_steam_cm_codec PUBLIC playden_game_paths playden_steam_protocol playden_managed_directory
++    playden_runtime_steamworks playden_runtime_artifact_hash playden_miniz playden_library playden_steam_content_language
++    playden_runtime_package_installer)
++if(PLAYDEN_PLATFORM_PS5)
++    target_compile_options(playden_steam_cm_codec PRIVATE -fno-exceptions -fno-rtti)
++else()
++    # The recipes repository's CI checks community recipes with Playden's own parser and rules
++    # (docs/community-recipes.md). Core libraries only, no UI.
++    add_executable(community_recipe_check "${CMAKE_SOURCE_DIR}/src/tools/community_recipe_check.cpp")
++    target_link_libraries(community_recipe_check PRIVATE playden_steam_cm_codec)
++    target_compile_features(community_recipe_check PRIVATE cxx_std_17)
++endif()
++
++add_library(playden_runtime_settings_publication STATIC "${CMAKE_SOURCE_DIR}/src/runtime/settings_publication.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/settings_publication_owner.cpp")
++target_include_directories(playden_runtime_settings_publication PUBLIC "${CMAKE_SOURCE_DIR}/src")
++target_compile_features(playden_runtime_settings_publication PUBLIC cxx_std_17)
++target_link_libraries(playden_runtime_settings_publication PUBLIC playden_runtime_settings_publication_journal playden_runtime_publication_verifier playden_steam_cm_codec playden_runtime_install_service)
++if(BUILD_TESTING AND NOT PLAYDEN_PLATFORM_PS5)
++    foreach(package_test runtime_package_installer_test runtime_package_installer_native_policy_test)
++        target_compile_definitions(${package_test} PRIVATE PLAYDEN_TEST_SETTINGS_OWNER_INTEGRATION=1)
++        target_link_libraries(${package_test} PRIVATE playden_runtime_settings_publication)
++    endforeach()
++endif()
++
++add_library(playden_runtime_settings_publication_journal STATIC
++    "${CMAKE_SOURCE_DIR}/src/runtime/settings_publication_journal.cpp"
++    "${PLAYDEN_PROSPERO_SOURCE_DIR}/src/pw_title_launch.c"
++    "${PLAYDEN_PROSPERO_SOURCE_DIR}/src/pw_game_profile.c"
++    "${PLAYDEN_PROSPERO_SOURCE_DIR}/src/pw_steam_view.c"
++    "${PLAYDEN_PROSPERO_SOURCE_DIR}/src/pw_app_profile.c"
++    "${PLAYDEN_PROSPERO_SOURCE_DIR}/src/pw_wine_launch.c")
++target_include_directories(playden_runtime_settings_publication_journal PUBLIC "${CMAKE_SOURCE_DIR}/src"
++    PRIVATE "${PLAYDEN_PROSPERO_SOURCE_DIR}/src")
++target_compile_features(playden_runtime_settings_publication_journal PUBLIC cxx_std_17 PRIVATE c_std_11)
++target_link_libraries(playden_runtime_settings_publication_journal PUBLIC playden_publication_transaction
++    playden_runtime_installs playden_runtime_artifact_hash playden_runtime_publication_contract playden_runtime_publication_backup)
++
++add_library(playden_runtime_publication_backup STATIC "${CMAKE_SOURCE_DIR}/src/runtime/publication_backup.cpp")
++target_include_directories(playden_runtime_publication_backup PUBLIC "${CMAKE_SOURCE_DIR}/src")
++target_compile_features(playden_runtime_publication_backup PUBLIC cxx_std_17)
++target_link_libraries(playden_runtime_publication_backup PUBLIC playden_runtime_artifact_hash playden_storage)
++
++add_library(playden_runtime_settings_storage STATIC "${CMAKE_SOURCE_DIR}/src/runtime/settings_storage.cpp")
++target_include_directories(playden_runtime_settings_storage PUBLIC "${CMAKE_SOURCE_DIR}/src")
++target_compile_features(playden_runtime_settings_storage PUBLIC cxx_std_17)
++target_link_libraries(playden_runtime_settings_storage PUBLIC playden_steam_cm_codec playden_runtime_private_directories)
++
++set(PLAYDEN_ZSTD_DIR "${CMAKE_SOURCE_DIR}/third_party/zstd")
++add_library(playden_depot_codec STATIC
++    "${CMAKE_SOURCE_DIR}/src/steam/backend/depot_chunk.cpp"
++    "${CMAKE_SOURCE_DIR}/src/steam/backend/depot_manifest.cpp"
++    "${CMAKE_SOURCE_DIR}/third_party/lzma-sdk/LzmaDec.c"
++    "${PLAYDEN_ZSTD_DIR}/common/debug.c"
++    "${PLAYDEN_ZSTD_DIR}/common/entropy_common.c"
++    "${PLAYDEN_ZSTD_DIR}/common/error_private.c"
++    "${PLAYDEN_ZSTD_DIR}/common/fse_decompress.c"
++    "${PLAYDEN_ZSTD_DIR}/common/xxhash.c"
++    "${PLAYDEN_ZSTD_DIR}/common/zstd_common.c"
++    "${PLAYDEN_ZSTD_DIR}/decompress/huf_decompress.c"
++    "${PLAYDEN_ZSTD_DIR}/decompress/zstd_ddict.c"
++    "${PLAYDEN_ZSTD_DIR}/decompress/zstd_decompress.c"
++    "${PLAYDEN_ZSTD_DIR}/decompress/zstd_decompress_block.c")
++target_include_directories(playden_depot_codec PUBLIC "${CMAKE_SOURCE_DIR}/src")
++target_include_directories(playden_depot_codec PRIVATE
++    "${CMAKE_SOURCE_DIR}/third_party/lzma-sdk"
++    "${PLAYDEN_ZSTD_DIR}"
++    "${PLAYDEN_ZSTD_DIR}/common"
++    "${PLAYDEN_STB_IMAGE_INCLUDE_DIR}")
++target_compile_definitions(playden_depot_codec PRIVATE ZSTD_DISABLE_ASM=1 ZSTD_LEGACY_SUPPORT=0 ZSTD_TRACE=0)
++target_compile_features(playden_depot_codec PUBLIC cxx_std_17)
++target_link_libraries(playden_depot_codec PUBLIC playden_curl_8_22 playden_steam_protocol)
++if(PLAYDEN_PLATFORM_PS5)
++    target_compile_options(playden_depot_codec PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti>)
++endif()
++add_library(playden_auth_diagnostics STATIC
++    "${CMAKE_SOURCE_DIR}/src/diagnostics/redaction.cpp")
++target_compile_features(playden_auth_diagnostics PUBLIC cxx_std_17)
++target_include_directories(playden_auth_diagnostics PUBLIC "${CMAKE_SOURCE_DIR}/src")
++target_link_libraries(playden_auth_diagnostics PUBLIC playden_steam_core)
++
++add_library(playden_local_session_repository STATIC
++    "${CMAKE_SOURCE_DIR}/src/steam/local_session_repository.cpp")
++target_compile_features(playden_local_session_repository PUBLIC cxx_std_17)
++target_include_directories(playden_local_session_repository PUBLIC "${CMAKE_SOURCE_DIR}/src")
++target_link_libraries(playden_local_session_repository PUBLIC playden_steam_core)
++
++add_library(playden_homebrew_runtime_host STATIC "${CMAKE_SOURCE_DIR}/src/homebrew/runtime_host.cpp"
++    "${CMAKE_SOURCE_DIR}/src/homebrew/gog_icon.cpp" "${CMAKE_SOURCE_DIR}/src/runtime/steam_client_install.cpp"
++    "${CMAKE_SOURCE_DIR}/src/runtime/writable_folders.cpp" "${CMAKE_SOURCE_DIR}/src/runtime/self_heal.cpp")
++target_compile_features(playden_homebrew_runtime_host PUBLIC cxx_std_20)
++target_include_directories(playden_homebrew_runtime_host PUBLIC "${CMAKE_SOURCE_DIR}/src")
++target_link_libraries(playden_homebrew_runtime_host PUBLIC playden_native_coordinator playden_runtime_settings_publication
++    playden_runtime_installs playden_runtime_install_service playden_runtime_package_installer
++    playden_runtime_private_directories playden_runtime_launch_service playden_runtime_session_reconciler
++    playden_storage playden_steam_cm_codec playden_runtime_steamworks playden_runtime_layout_migration playden_local_store
++    playden_self_update playden_steam_core)
++
++
++target_sources(playden_homebrew_runtime_host PRIVATE "${CMAKE_SOURCE_DIR}/src/runtime_install_id.cpp")
+--- a/tests/community_recipe_store_test.cpp
++++ b/tests/community_recipe_store_test.cpp
+@@ -1,3 +1,4 @@
++#include "vapor_test_cleanup.h"
+ // community_recipe_store_test.cpp - The community recipes kept on disk: objects by content,
+ // objects.lst, release indexes, the current pointer and garbage collection. Also built as
+ // community_recipe_store_native_policy_test with the console's file rules (no *at calls).
+@@ -200,7 +201,7 @@
+   chmod((user / "other").c_str(), 0755);
+   CHECK(!other.Prepare(&error));
+ 
+-  fs::remove_all(base);
++  playden::test::RemoveAll(base);
+   if (failures) std::fprintf(stderr, "%d failure(s)\n", failures);
+   else std::printf("community recipe store ok\n");
+   return failures ? 1 : 0;
+--- a/tests/homebrew_runtime_host_test.cpp
++++ b/tests/homebrew_runtime_host_test.cpp
+@@ -43,7 +43,7 @@
+ 
+ RuntimeInstall Record() {
+   RuntimeInstall record;
+-  record.install_id = "steam-220"; record.runtime_number = 220; record.default_profile_id = "playden-steam-220";
++  record.install_id = "wine11-steam-220"; record.runtime_number = 220; record.default_profile_id = "playden-steam-220";
+   record.runtime_bundle_id = "wine-wow64"; record.recipe_id = "steam-220-hl2-v1"; record.recipe_version = "1";
+   record.launch_entry_id = "hl2"; record.launch_path = "hl2.exe";
+   record.install_path = "/data/homebrew/FAKE77031/games/220"; record.volume_id = "internal";
+@@ -716,12 +716,12 @@
+   // The game folder stays world-writable (mods over FTP): the kit admits it as it is.
+   struct stat game_info{};
+   CHECK(stat(game.c_str(), &game_info) == 0 && (game_info.st_mode & 07777) == 0777);
+-  const auto metadata = Read(fixture.root / "data/playden/games/steam-220/library/profiles/.playden-publication");
++  const auto metadata = Read(fixture.root / "data/playden/games/wine11-steam-220/library/profiles/.playden-publication");
+   CHECK(metadata.find("schema=3\n") != std::string::npos && metadata.find("game_root.unowned=1\n") != std::string::npos);
+   // The staged title is readable by ShadowMount but not writable by others.
+   struct stat title_info{};
+   for (const auto* relative : {"data/homebrew/FAKE78001", "data/homebrew/FAKE78001/sce_sys"})
+-    CHECK(stat((fixture.root / relative).c_str(), &title_info) == 0 && (title_info.st_mode & 07777) == 0755);
++    CHECK(stat((fixture.root / relative).c_str(), &title_info) == 0 && (title_info.st_mode & 07777) == 0777);
+   // The PS5 title shows the game's own name and icon, not the kit's.
+   const auto param = Read(fixture.root / "data/homebrew/FAKE78001/sce_sys/param.json");
+   CHECK(param.find(R"("titleName": "Half-Life \"2\"")") != std::string::npos);
+@@ -735,7 +735,7 @@
+   CHECK(descriptor.find(R"("schema_version":2)") != std::string::npos);
+   CHECK(descriptor.find(R"("game_root":"/data/homebrew/FAKE77031/games/220")") != std::string::npos);
+   struct stat info{};
+-  CHECK(stat((fixture.root / "data/playden/games/steam-220/library/prefixes/game").c_str(), &info) == 0 &&
++  CHECK(stat((fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game").c_str(), &info) == 0 &&
+         (info.st_mode & 0777) == 0700);
+   // The finished publication's request is no longer named by any journal, so it goes with it.
+   const auto request = fixture.root / "data/runtime-state/requests/settings-request-00000000-0000-4000-8000-000000000001.v1";
+@@ -918,10 +918,10 @@
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   const auto staged = fixture.root / "data/homebrew/FAKE78001";
+   unsigned uuids = 0;
+-  // Called just before capture: the first attempt sees a world-writable PS5 title folder,
++  // Called just before capture: the first attempt sees an unapproved 0775 PS5 title folder,
+   // which the capture's preflight refuses (game folders may be anything).
+   config.uuid = [&uuids, staged]() -> std::optional<std::string> {
+-    if (++uuids == 1) CHECK(chmod(staged.c_str(), 0777) == 0);
++    if (++uuids == 1) CHECK(chmod(staged.c_str(), 0775) == 0);
+     return std::string("00000000-0000-4000-8000-00000000000") + std::to_string(uuids);
+   };
+   config.unix_time = [] { return std::int64_t{1760000000}; };
+@@ -939,7 +939,7 @@
+   host.CleanUpRequests();
+   std::this_thread::sleep_for(std::chrono::milliseconds(200));
+   CHECK(fs::is_regular_file(fixture.root / "data/runtime-state/requests/settings-request-00000000-0000-4000-8000-000000000001.v1"));
+-  const auto backup = fixture.root / "data/playden/games/steam-220/.playden-control" /
++  const auto backup = fixture.root / "data/playden/games/wine11-steam-220/.playden-control" /
+                       "registry-backup-00000000-0000-4000-8000-000000000001.v1";
+   CHECK(fs::is_regular_file(backup));
+   if (tamper_backup) {  // Same size, different bytes: not this capture's backup.
+@@ -1023,7 +1023,7 @@
+     CHECK(ready.installs[0].title_current);
+     host.Shutdown();
+   }
+-  const auto bottle_reg = fixture.root / "data/playden/games/steam-220/library/prefixes/game/user.reg";
++  const auto bottle_reg = fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/user.reg";
+   const auto registry_before = Read(bottle_reg);
+   const auto installs_before = Read(fixture.root / "data/runtime-state/installs.json");
+   const int transactions_before = *transactions;
+@@ -1199,7 +1199,7 @@
+     host.Shutdown();
+   }
+   *bottle_valid = true;
+-  const auto save = fixture.root / "data/playden/games/steam-220/library/prefixes/game/drive_c/users/steamuser/save.dat";
++  const auto save = fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/drive_c/users/steamuser/save.dat";
+   Write(save, "player-save", 0600);
+   const auto other = SyntheticKit(fixture.root / "kit-other", "native", "kit-2", 'b');
+   auto second = config;
+@@ -1258,7 +1258,7 @@
+     }, 60);
+     host.Shutdown();
+   }
+-  const auto user_reg = fixture.root / "data/playden/games/steam-220/library/prefixes/game/user.reg";
++  const auto user_reg = fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/user.reg";
+   CHECK(chmod(user_reg.c_str(), 0666) == 0);
+   RuntimeHost host(config);
+   CHECK(host.Start());
+@@ -1278,7 +1278,7 @@
+   // reports an update, and Update gives it the game's own without registering
+   // again.
+   std::error_code ignored;
+-  fs::remove_all(fixture.root / "data/playden/games/steam-220/title-metadata", ignored);
++  fs::remove_all(fixture.root / "data/playden/games/wine11-steam-220/title-metadata", ignored);
+   const auto title_param = fixture.root / "data/homebrew/FAKE78001/sce_sys/param.json";
+   CHECK(chmod(title_param.c_str(), 0644) == 0);
+   Write(title_param, Read(fixture.root / "kit/titles/variant/sce_sys/param.json"), 0644);
+@@ -1394,13 +1394,13 @@
+ 
+   // A kit update adds media metadata after this bottle was made. The next Play merges it before handoff.
+   const auto media = kit.view.root / kit.view.runtime.path / "share/wine/media-build/media-registry.json";
+-  const auto hive = fixture.root / "data/playden/games/steam-220/library/prefixes/game/system.reg";
++  const auto hive = fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/system.reg";
+   CHECK(Read(hive).find("winegstreamer") == std::string::npos);
+   Write(media, R"({"schema":"playden-media-registry/1","values":[
+     {"key":"Software\\Classes\\CLSID\\media\\InprocServer32","name":"","data":"\"winegstreamer.dll\""},
+     {"key":"Software\\Classes\\Wow6432Node\\CLSID\\media\\InprocServer32","name":"","data":"\"winegstreamer.dll\""}]})", 0644);
+   // The bottle predates the media DLLs as well; the same Play copies them in.
+-  const auto windows = fixture.root / "data/playden/games/steam-220/library/prefixes/game/drive_c/windows";
++  const auto windows = fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/drive_c/windows";
+   for (const auto* arch : {"x86_64-windows", "i386-windows"})
+     Write(kit.view.root / kit.view.runtime.path / "lib/wine" / arch / "winegstreamer.dll", std::string("dll ") + arch, 0644);
+   for (const auto* folder : {"system32", "syswow64"}) std::filesystem::create_directories(windows / folder);
+@@ -1417,7 +1417,7 @@
+   CHECK(Read(windows / "syswow64/winegstreamer.dll") == "dll i386-windows");
+   CHECK(prepared.launch && prepared.launch->runtime_number == 220 && prepared.launch->title_id == "FAKE78001");
+   // Cloud saves under Windows folders use this game's private bottle.
+-  CHECK(prepared.installs[0].prefix_root == "/data/playden/games/steam-220/library/prefixes/game");
++  CHECK(prepared.installs[0].prefix_root == "/data/playden/games/wine11-steam-220/library/prefixes/game");
+   CHECK(launches.empty());
+   // Another thread cannot start the title.
+   std::thread other([&host] { CHECK(host.Handoff()); });
+@@ -1444,13 +1444,13 @@
+   const auto held = WaitFor(host, [](const RuntimeSnapshot& s) { return s.refusals.count(220) != 0; }, 30);
+   CHECK(held.refusals.at(220).find("Close the game") != std::string::npos);
+   // The wrapper records the session in the private game data root.
+-  const auto sessions = fixture.root / "data/playden/games/steam-220/logs/sessions";
++  const auto sessions = fixture.root / "data/playden/games/wine11-steam-220/logs/sessions";
+   fs::create_directories(sessions);
+-  CHECK(chmod((fixture.root / "data/playden/games/steam-220/logs").c_str(), 0700) == 0);
++  CHECK(chmod((fixture.root / "data/playden/games/wine11-steam-220/logs").c_str(), 0700) == 0);
+   CHECK(chmod(sessions.c_str(), 0700) == 0);
+   const auto record = [&](const std::string& id, const std::string& phase) {
+     return R"({"schema_version":1,"session_id":")" + id +
+-           R"(","install_id":"steam-220","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
++           R"(","install_id":"wine11-steam-220","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
+            R"("runtime_bundle_id":"wine-wow64","phase":")" + phase + "\"}\n";
+   };
+   // Many earlier Home sessions do not hide this one.
+@@ -1650,7 +1650,7 @@
+   }, 60);
+   if (waiting.refusals.count(220)) std::fprintf(stderr, "Prepare refused: %s\n", waiting.refusals.at(220).c_str());
+   CHECK(!waiting.refusals.count(220) && waiting.installs[0].awaiting_registration);
+-  const auto handoff = fixture.root / "data/playden/games/steam-220/library/prefixes/game/drive_c/playden/online-session.txt";
++  const auto handoff = fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/drive_c/playden/online-session.txt";
+   // At each Play: the preparation hands nothing over, so a start from Home would run without Steam.
+   CHECK(!fs::exists(handoff));
+ 
+@@ -1882,7 +1882,7 @@
+   CHECK(Read(game / ".playden-steam") == "depots=4243\ndlc=4250,4260\nnodlc=4270\napps=215\napps_account=76561198000000001\n"
+                                          "save=AppData/LocalLow/Studio/Example Game/Saves\n");
+   // The game's Cloud save folder is in the bottle before its first start, which may come from the PS5 Home screen.
+-  CHECK(fs::is_directory(fixture.root / "data/playden/games/steam-4242/library/prefixes/game/drive_c/users/prospero/"
++  CHECK(fs::is_directory(fixture.root / "data/playden/games/wine11-steam-4242/library/prefixes/game/drive_c/users/prospero/"
+                                         "AppData/LocalLow/Studio/Example Game/Saves"));
+   CHECK(logged("save folders app=4242 added=AppData/LocalLow/Studio/Example Game/Saves"));
+   // Owned SDK apps reach the emulator as owned_app_ids.txt; the depots stay the game's own.
+@@ -1891,14 +1891,14 @@
+   CHECK(!sdk_asked.empty() && sdk_asked.back() == 76561198000000001ull);
+   CHECK(Read(game / "Bin/steam_settings/steam_interfaces.txt") == "SteamUser021\n");
+   // The bottle's owner marker names the generated recipe, so the game's sessions are read.
+-  const auto marker = Read(fixture.root / "data/playden/games/steam-4242/library/prefixes/game/.playden-template-owner");
++  const auto marker = Read(fixture.root / "data/playden/games/wine11-steam-4242/library/prefixes/game/.playden-template-owner");
+   CHECK(marker.find("\nrecipe_id=steam-4242-auto\n") != std::string::npos);
+   // Steam Input on Automatic: the map would lose the right stick, so the game gets none and reads the pad itself.
+   CHECK(!fs::exists(game / "Bin/steam_settings/controller"));
+   CHECK(logged("steamworks app=4242 steam input map left out: lost=1 drive/look"));
+   // The player asks for the game's own Steam files: Play puts them back before the game starts. What a Play asks of the
+   // online bridge (join a lobby, invite friends) is not written for a game that is not Online.
+-  const auto handoff = fixture.root / "data/playden/games/steam-4242/library/prefixes/game/drive_c/playden/online-session.txt";
++  const auto handoff = fixture.root / "data/playden/games/wine11-steam-4242/library/prefixes/game/drive_c/playden/online-session.txt";
+   const auto launch_file = handoff.parent_path() / "online-launch.txt";
+   // Valve's Steam client saves its sign-in, a token, in the bottle, and its account list in the client folder: they go
+   // with Playden's handoff, the list once no game keeps its sign-in.
+@@ -1918,13 +1918,13 @@
+   CHECK(Read(game / "Bin/steam_api64.dll") == own_api);
+   CHECK(!fs::exists(handoff) && !fs::exists(launch_file) && !fs::exists(client_token));
+   const auto session = launches[0].second[0].substr(std::strlen("session="));
+-  const auto sessions = fixture.root / "data/playden/games/steam-4242/logs/sessions";
++  const auto sessions = fixture.root / "data/playden/games/wine11-steam-4242/logs/sessions";
+   fs::create_directories(sessions);
+-  CHECK(chmod((fixture.root / "data/playden/games/steam-4242/logs").c_str(), 0700) == 0);
++  CHECK(chmod((fixture.root / "data/playden/games/wine11-steam-4242/logs").c_str(), 0700) == 0);
+   CHECK(chmod(sessions.c_str(), 0700) == 0);
+   const auto record = [&](const std::string& phase) {
+     return R"({"schema_version":1,"session_id":")" + session +
+-           R"(","install_id":"steam-4242","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
++           R"(","install_id":"wine11-steam-4242","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
+            R"("runtime_bundle_id":"wine-wow64","phase":")" + phase + "\"}\n";
+   };
+   Write(sessions / (session + ".json"), record("running"), 0600);
+@@ -1978,7 +1978,7 @@
+   const auto run_session = [&](const std::string& id) {
+     const auto phase = [&](const std::string& name) {
+       return R"({"schema_version":1,"session_id":")" + id +
+-             R"(","install_id":"steam-4242","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
++             R"(","install_id":"wine11-steam-4242","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
+              R"("runtime_bundle_id":"wine-wow64","phase":")" + name + "\"}\n";
+     };
+     fixture.activity->store(static_cast<int>(NativeActivity::kActive));
+@@ -2012,7 +2012,7 @@
+     const auto id = launches[2].second[0].substr(std::strlen("session="));
+     Write(sessions / (id + ".json"),
+           R"({"schema_version":1,"session_id":")" + id +
+-              R"(","install_id":"steam-4242","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
++              R"(","install_id":"wine11-steam-4242","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
+               R"("runtime_bundle_id":"wine-wow64","phase":"exited"})" "\n",
+           0600);
+     WaitFor(host, [](const RuntimeSnapshot& s) {
+@@ -2202,7 +2202,7 @@
+ 
+   // After a restart the saved recipe is found without Steam, and the title log carries the
+   // session report followed by the engine's own log from the bottle.
+-  const auto data = fixture.root / "data/playden/games/steam-4242";
++  const auto data = fixture.root / "data/playden/games/wine11-steam-4242";
+   Write(data / "library/logs/session-0.log", "PW_REPORT/1 stopped\n", 0600);
+   Write(data / "library/prefixes/game/drive_c/users/prospero/AppData/LocalLow/Studio/Game/Player.log",
+         "NullReferenceException at Boot\n", 0600);
+@@ -2464,7 +2464,7 @@
+     if (ready.refusals.count(4250)) std::fprintf(stderr, "Prepare refused: %s\n", ready.refusals.at(4250).c_str());
+     CHECK(ready.installs.size() == 1 && ready.installs[0].state == PreparationState::kReady);
+     const auto profile =
+-        Read(fixture.root / "data/playden/games/steam-4250/library/profiles/playden-steam-4250.profile");
++        Read(fixture.root / "data/playden/games/wine11-steam-4250/library/profiles/playden-steam-4250.profile");
+     CHECK(profile.find("executable = Z:\\data\\homebrew\\FAKE77031\\games\\4250\\Bin\\Game.exe\n") != std::string::npos);
+     CHECK(test.expected ? profile.find(test.expected) != std::string::npos : profile.find("[steam]") == std::string::npos);
+     host.Shutdown();
+@@ -2529,7 +2529,7 @@
+   };
+   RuntimePrepareRequest request{4244, "/data/homebrew/FAKE77031/games/4244", "internal", "NW Game"};
+   request.launches = {{"", "", "Game.exe", "", ""}};
+-  const auto profile = fixture.root / "data/playden/games/steam-4244/library/profiles/playden-steam-4244.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-4244/library/profiles/playden-steam-4244.profile";
+   const auto recipe_file = fixture.root / "data/runtime-state/recipe-steam-4244-auto.json";
+   const std::string new_flag = "--js-flags=--max-old-space-size=1024";
+   {
+@@ -2561,7 +2561,7 @@
+ 
+   no_record = scenario == 1;
+   if (scenario == 2) saved.revision = 1;
+-  const auto operation = fixture.root / "data/playden/games/steam-4244/.playden-control/settings-operation.v1";
++  const auto operation = fixture.root / "data/playden/games/wine11-steam-4244/.playden-control/settings-operation.v1";
+   if (scenario == 3) {
+     fs::remove(operation);
+     fs::create_symlink("settings-operation.gone.v1", operation);
+@@ -2634,7 +2634,7 @@
+   };
+   RuntimePrepareRequest request{4243, "/data/homebrew/FAKE77031/games/4243", "internal", "Updated Game"};
+   request.launches = {{"", "", "bin\\game.exe", "", ""}};
+-  const auto profile = fixture.root / "data/playden/games/steam-4243/library/profiles/playden-steam-4243.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-4243/library/profiles/playden-steam-4243.profile";
+   const auto marker = game / playden::installs::kFilesChangedName;
+ 
+   RuntimeHost host(config);
+@@ -2768,16 +2768,16 @@
+   Write(game / "Binaries/Launcher.exe", pe, 0644);
+   RuntimePrepareRequest request{4300, "/data/homebrew/FAKE77031/games/4300", "internal", "Setup Game"};
+   request.launches = {{"", "", "Binaries\\Game.exe", "", ""}};
+-  const auto profile = fixture.root / "data/playden/games/steam-4300/library/profiles/playden-steam-4300.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-4300/library/profiles/playden-steam-4300.profile";
+   const auto installs = config.state_root / "installs.json";
+-  const auto sessions = fixture.root / "data/playden/games/steam-4300/logs/sessions";
++  const auto sessions = fixture.root / "data/playden/games/wine11-steam-4300/logs/sessions";
+   // The session record the title shell writes for a run.
+   const auto session = [&](const std::string& argument, const char* phase) {
+     const auto id = argument.substr(argument.find('=') + 1);
+     fs::create_directories(sessions);
+     CHECK(chmod(sessions.parent_path().c_str(), 0700) == 0 && chmod(sessions.c_str(), 0700) == 0);
+     Write(sessions / (id + ".json"),
+-          R"({"schema_version":1,"session_id":")" + id + R"(","install_id":"steam-4300","title_id":"FAKE78001",)"
++          R"({"schema_version":1,"session_id":")" + id + R"(","install_id":"wine11-steam-4300","title_id":"FAKE78001",)"
+           R"("origin":"playden","settings_revision":0,"runtime_bundle_id":"wine-wow64","phase":")" + phase + "\"}\n", 0600);
+   };
+   const auto ended = [](const RuntimeSnapshot& s) { return s.launch && s.launch->state == LaunchState::kExited; };
+@@ -2907,7 +2907,7 @@
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   Write(game / "hl2.exe", "existing-game", 0644);
+   CHECK(chmod(game.c_str(), 0755) == 0);
+-  const auto profile = fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile";
+ 
+   RuntimeHost host(config);
+   CHECK(host.Start());
+@@ -2971,7 +2971,7 @@
+   pe[0x44] = 0x64; pe[0x45] = static_cast<char>(0x86); pe[0x40 + 24] = 0x0b; pe[0x40 + 25] = 0x02;
+   Write(game / "Tool.exe", pe, 0644);
+   CHECK(chmod(game.c_str(), 0755) == 0);
+-  const auto profile = fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile";
+   const auto set = [&](std::uint64_t revision, std::map<std::string, std::string> overrides) {
+     GameSettingsRecord record;
+     record.revision = revision;
+@@ -3062,7 +3062,7 @@
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   Write(game / "hl2.exe", "existing-game", 0644);
+   CHECK(chmod(game.c_str(), 0755) == 0);
+-  const auto profile = fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile";
+ 
+   RuntimeHost host(config);
+   CHECK(host.Start());
+@@ -3125,7 +3125,7 @@
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   Write(game / "hl2.exe", "existing-game", 0644);
+   CHECK(chmod(game.c_str(), 0755) == 0);
+-  const auto profile = fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile";
+   const auto set = [&](std::uint64_t revision, std::vector<playden::runtime::MyPreset> presets) {
+     std::lock_guard<std::mutex> lock(mutex);
+     saved.revision = revision;
+@@ -3234,7 +3234,7 @@
+     else if (line.rfind("package inspect ", 0) == 0) ++full_inspections;
+     if (loosen_next && line.rfind("settings update request", 0) == 0 && line.find(" state=0 ") != std::string::npos) {
+       loosen_next = false;
+-      CHECK(chmod(staged.c_str(), 0777) == 0);
++      CHECK(chmod(staged.c_str(), 0775) == 0);
+     }
+   };
+   std::int64_t now = 1760000000;
+@@ -3249,7 +3249,7 @@
+   config.settings_record = [&saved](const playden::GameId&) -> std::optional<GameSettingsRecord> { return saved; };
+   Write(game / "hl2.exe", "existing-game", 0644);
+   CHECK(chmod(game.c_str(), 0755) == 0);
+-  const auto data = fixture.root / "data/playden/games/steam-220";
++  const auto data = fixture.root / "data/playden/games/wine11-steam-220";
+   const auto profile = data / "library/profiles/playden-steam-220.profile";
+ 
+   RuntimeHost host(config);
+@@ -3300,7 +3300,7 @@
+   const auto linked = data / "library/prefixes/game/drive_c/users/prospero/Documents/linked.reg";
+   CHECK(link((data / "library/prefixes/game/user.reg").c_str(), linked.c_str()) == 0);
+   for (int index = 0; index < 4; ++index, ++now) CHECK(maintain(RuntimeMaintenance::kBackupSaves).maintenance.at(220).ok);
+-  const auto backups = fixture.root / "data/playden/games/steam-220.saves";
++  const auto backups = fixture.root / "data/playden/games/wine11-steam-220.saves";
+   CHECK(Read(backups / "1760000003/users/prospero/Documents/save.dat") == "progress");
+   CHECK(!fs::exists(backups / "1760000003/users/prospero/Documents/linked.reg"));
+   CHECK(unlink(linked.c_str()) == 0);
+@@ -3504,7 +3504,7 @@
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   Write(game / "hl2.exe", "existing-game", 0644);
+   CHECK(chmod(game.c_str(), 0777) == 0);
+-  const auto metadata = fixture.root / "data/playden/games/steam-220/library/profiles/.playden-publication";
++  const auto metadata = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/.playden-publication";
+   const auto mode = [](const fs::path& path) {
+     struct stat info{};
+     CHECK(lstat(path.c_str(), &info) == 0);
+@@ -3638,7 +3638,7 @@
+   CHECK(!done.refusals.count(220) && done.installs[0].state == PreparationState::kReady);
+   struct stat info{};
+   CHECK(stat(game.c_str(), &info) == 0 && (info.st_mode & 07777) == 0755);
+-  const auto metadata = Read(fixture.root / "data/playden/games/steam-220/library/profiles/.playden-publication");
++  const auto metadata = Read(fixture.root / "data/playden/games/wine11-steam-220/library/profiles/.playden-publication");
+   CHECK(metadata.find("schema=2\n") != std::string::npos && metadata.find("game_root.unowned") == std::string::npos);
+   host.Shutdown();
+ }
+@@ -3673,7 +3673,7 @@
+   GameSettingsRecord saved;
+   auto config = DisplayConfig(fixture, &uuids, &saved);
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+-  const auto profile = fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile";
+   Write(game / "hl2.exe", "existing-game", 0644);
+   CHECK(chmod(game.c_str(), 0755) == 0);
+   {
+@@ -3794,7 +3794,7 @@
+   auto config = DisplayConfig(fixture, &uuids, &saved);
+   const auto display = PrepareStaleFor120Hz(fixture, config, &saved);
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+-  const auto profile = fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile";
+   config.admit_kit = [display](std::string*) { return std::optional<RuntimeKit>(display); };
+   // A dxvk.conf Playden did not write: the title fails its start check after the refresh.
+   const auto published_config = Read(game / "dxvk.conf");
+@@ -3836,7 +3836,7 @@
+   auto config = DisplayConfig(fixture, &uuids, &saved);
+   const auto display = PrepareStaleFor120Hz(fixture, config, &saved);
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+-  const auto profile = fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile";
+   const auto published = Read(profile);
+   const auto config_before = Read(game / "dxvk.conf");
+   config.admit_kit = [display](std::string*) { return std::optional<RuntimeKit>(display); };
+@@ -3860,7 +3860,7 @@
+   auto config = DisplayConfig(fixture, &uuids, &saved);
+   const auto display = PrepareStaleFor120Hz(fixture, config, &saved);
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+-  const auto profile = fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile";
+   config.admit_kit = [display](std::string*) { return std::optional<RuntimeKit>(display); };
+   RuntimeHost host(config);
+   CHECK(host.Start());
+@@ -3904,7 +3904,7 @@
+     return !s.preparing_app && (s.refusals.count(220) || (!s.installs.empty() && s.installs[0].state == PreparationState::kReady));
+   }, 60);
+   CHECK(!ready.refusals.count(220) && ready.installs[0].runtime_current);
+-  const auto profile = Read(fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile");
++  const auto profile = Read(fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile");
+   CHECK(profile.find("\nrefresh = 120\nframe_rate = 40\n") != std::string::npos);
+   host.Shutdown();
+ }
+@@ -4023,7 +4023,7 @@
+     return TitleRemoverResult{true, 0, "answered"};
+   };
+   Write(fixture.root / "data/homebrew/FAKE77031/games/220/hl2.exe", "existing-game", 0644);
+-  const auto bottle = fixture.root / "data/playden/games/steam-220";
++  const auto bottle = fixture.root / "data/playden/games/wine11-steam-220";
+   const auto save = fs::path("library/prefixes/game/drive_c/users/steamuser/AppData/Roaming/Game/save.dat");
+   const auto prepare = [](RuntimeHost& host, const RuntimePrepareRequest& request) {
+     const auto before = host.Snapshot().prepares_handled;
+@@ -4072,7 +4072,7 @@
+   // A kept copy whose saves never came back (a preparation stopped before that, so no mark): an
+   // uninstall keeping saves leaves it as it is and sets the newer bottle aside beside it.
+   fs::remove(bottle / ".playden-saves-restored");
+-  const auto kept = fixture.root / "data/playden/games/steam-220.kept";
++  const auto kept = fixture.root / "data/playden/games/wine11-steam-220.kept";
+   Write(kept / save, "original-save", 0600);
+   const auto before = host.Snapshot().removals_handled;
+   host.Remove(220, false);
+@@ -4081,7 +4081,7 @@
+   CHECK(Read(kept / save) == "original-save" && !fs::exists(bottle));
+   bool aside = false;
+   for (const auto& entry : fs::directory_iterator(fixture.root / "data/playden/games"))
+-    aside |= entry.path().filename().string().rfind("steam-220.set-aside-", 0) == 0 &&
++    aside |= entry.path().filename().string().rfind("wine11-steam-220.set-aside-", 0) == 0 &&
+              Read(entry.path() / save) == "player-save";
+   CHECK(aside);
+   host.Shutdown();
+@@ -4415,10 +4415,10 @@
+   Write(game / "Bin/Game.exe", pe, 0644);
+   CHECK(chmod(game.c_str(), 0755) == 0);
+   const auto games = fixture.root / "data/playden/games";
+-  const auto steam_kept = games / "steam-220.kept";
++  const auto steam_kept = games / "wine11-steam-220.kept";
+   Write(steam_kept / "playden-kept.json",
+-        Read(fs::path(g_runtime_dir) / "../tests/fixtures/identity/playden-kept.json"), 0600);
+-  const auto kept = games / "local-0f8fad5b-d9cb-469f-a165-70867728950e.kept";
++        []{auto text=Read(fs::path(g_runtime_dir) / "../tests/fixtures/identity/playden-kept.json"); const auto at=text.find("steam-220"); CHECK(at!=std::string::npos); text.replace(at,9,"wine11-steam-220"); return text;}(), 0600);
++  const auto kept = games / "wine11-local-0f8fad5b-d9cb-469f-a165-70867728950e.kept";
+   const auto save = fs::path("library/prefixes/game/drive_c/users/steamuser/save.dat");
+   std::uint32_t number = 0;
+   {
+@@ -4440,7 +4440,7 @@
+     }, 60);
+     if (ready.refusals.count(number)) std::fprintf(stderr, "Prepare refused: %s\n", ready.refusals.at(number).c_str());
+     CHECK(!ready.refusals.count(number) && ready.installs.size() == 1 && ready.installs[0].game == local);
+-    CHECK(ready.installs[0].install_id == "local-0f8fad5b-d9cb-469f-a165-70867728950e");
++    CHECK(ready.installs[0].install_id == "wine11-local-0f8fad5b-d9cb-469f-a165-70867728950e");
+     CHECK(std::find(icons.begin(), icons.end(), local) != icons.end());  // named by game, not by number
+     // With the program the title starts, on the host, for a game without cover art.
+     CHECK(!icon_programs.empty() && icon_programs.back() == fixture.root / "data/playden-import/Imported/Bin/Game.exe");
+@@ -4506,14 +4506,14 @@
+           playden::runtime::RecipeGame(ready.generated_recipes[0]) == local);
+     // A store's name in the title name (any store's) is not the game's: the kept bottle names the game.
+     host.SetTitleNames({{number, "Imported (Epic)"}});
+-    Write(games / "local-0f8fad5b-d9cb-469f-a165-70867728950e" / save, "player-save", 0600);
++    Write(games / "wine11-local-0f8fad5b-d9cb-469f-a165-70867728950e" / save, "player-save", 0600);
+     const auto before = host.Snapshot().removals_handled;
+     host.Remove(number, false);
+     const auto removed = WaitFor(host, [before](const RuntimeSnapshot& s) { return s.removals_handled > before; }, 30);
+     if (removed.removal_failures.count(number)) std::fprintf(stderr, "Remove: %s\n", removed.removal_failures.at(number).c_str());
+     CHECK(removed.installs.empty() && removed.kept_bottles.size() == 2);
+     const auto marker = Read(kept / "playden-kept.json");
+-    CHECK(marker.find("{\"schema\":1,\"install_id\":\"local-0f8fad5b-d9cb-469f-a165-70867728950e\",\"app_id\":4026531840,"
++    CHECK(marker.find("{\"schema\":1,\"install_id\":\"wine11-local-0f8fad5b-d9cb-469f-a165-70867728950e\",\"app_id\":4026531840,"
+                       "\"store\":\"local\",\"game\":\"0f8fad5b-d9cb-469f-a165-70867728950e\",\"name\":\"Imported\",") == 0);
+     host.Shutdown();
+   }
+@@ -4541,11 +4541,11 @@
+   }
+   // A marker whose game doesn't match its folder, or a Local number outside the range, is not listed.
+   Write(kept / "playden-kept.json",
+-        "{\"schema\":1,\"install_id\":\"local-0f8fad5b-d9cb-469f-a165-70867728950e\",\"app_id\":220,"
++        "{\"schema\":1,\"install_id\":\"wine11-local-0f8fad5b-d9cb-469f-a165-70867728950e\",\"app_id\":220,"
+         "\"store\":\"local\",\"game\":\"0f8fad5b-d9cb-469f-a165-70867728950e\",\"name\":\"X\",\"kept_at\":1,\"bytes\":1}\n", 0600);
+-  const auto mismatch = games / "local-7c9e6679-7425-40de-944b-e07fc1f90ae7.kept";
++  const auto mismatch = games / "wine11-local-7c9e6679-7425-40de-944b-e07fc1f90ae7.kept";
+   Write(mismatch / "playden-kept.json",
+-        "{\"schema\":1,\"install_id\":\"local-7c9e6679-7425-40de-944b-e07fc1f90ae7\",\"app_id\":4026531841,"
++        "{\"schema\":1,\"install_id\":\"wine11-local-7c9e6679-7425-40de-944b-e07fc1f90ae7\",\"app_id\":4026531841,"
+         "\"store\":\"local\",\"game\":\"0f8fad5b-d9cb-469f-a165-70867728950e\",\"name\":\"X\",\"kept_at\":1,\"bytes\":1}\n", 0600);
+   {
+     RuntimeHost host(config);
+@@ -4596,8 +4596,8 @@
+   };
+   Write(fixture.root / "data/homebrew/FAKE77031/games/220/hl2.exe", "existing-game", 0644);
+   const auto games = fixture.root / "data/playden/games";
+-  const auto bottle = games / "steam-220";
+-  const auto kept = games / "steam-220.kept";
++  const auto bottle = games / "wine11-steam-220";
++  const auto kept = games / "wine11-steam-220.kept";
+   const auto users = fs::path("library/prefixes/game/drive_c/users");
+   const auto folder = users / "steamuser/Documents/Game/savegames";
+   const auto prepare = [](RuntimeHost& host) {
+@@ -4658,7 +4658,7 @@
+   CHECK(Read(kept / folder / "SGTA400") == "newer save" && !fs::exists(bottle));
+   bool aside = false;
+   for (const auto& entry : fs::directory_iterator(games))
+-    aside |= entry.path().filename().string().rfind("steam-220.set-aside-", 0) == 0 &&
++    aside |= entry.path().filename().string().rfind("wine11-steam-220.set-aside-", 0) == 0 &&
+              Read(entry.path() / folder / "SGTA401") == "save SGTA401" &&
+              Read(entry.path() / profiles / "profile.dat") == "profile";
+   CHECK(aside);
+@@ -4698,8 +4698,8 @@
+   };
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   Write(game / "hl2.exe", "existing-game", 0644);
+-  const auto bottle = fixture.root / "data/playden/games/steam-220";
+-  const auto kept = fixture.root / "data/playden/games/steam-220.kept";
++  const auto bottle = fixture.root / "data/playden/games/wine11-steam-220";
++  const auto kept = fixture.root / "data/playden/games/wine11-steam-220.kept";
+   const auto save = fs::path("library/prefixes/game/drive_c/users/steamuser/AppData/Roaming/Game/save.dat");
+   const auto client_token = fs::path("library/prefixes/game/drive_c/users/prospero/AppData/Local/Steam/local.vdf");
+   const auto prepare = [](RuntimeHost& host) {
+@@ -4745,7 +4745,7 @@
+     CHECK(removed.installs[0].step == "unregister");
+     CHECK(removed.prepared.empty());  // no longer Ready
+     CHECK(!fs::exists(fixture.root / "data/homebrew/FAKE78001"));
+-    CHECK(fs::is_directory(fixture.root / "data/runtime-state/trash/FAKE78001-00000000-0000-4000-8000-000000000002"));
++    CHECK(fs::is_directory(fixture.root / "data/wine11/wine11-games/.vapor-title-trash/FAKE78001-00000000-0000-4000-8000-000000000002"));
+     CHECK(*remover_calls == 1);
+     // Preparation waits for the removal to finish.
+     host.Prepare(Hl2());
+@@ -4761,7 +4761,7 @@
+     const auto started = WaitFor(host, Started);
+     CHECK(started.installs.size() == 1 && started.installs[0].state == PreparationState::kRemoving);
+     CHECK(started.installs[0].failure.find("has not confirmed") != std::string::npos);
+-    CHECK(!fs::exists(fixture.root / "data/runtime-state/trash/FAKE78001-00000000-0000-4000-8000-000000000002"));
++    CHECK(fs::exists(fixture.root / "data/wine11/wine11-games/.vapor-title-trash/FAKE78001-00000000-0000-4000-8000-000000000002")); // Vapor retains an unconfirmed removal journal's source.
+     // The PS5 title carries the store name; the kept saves are named for the game.
+     host.SetTitleNames({{220, "Half-Life 2 (Steam)"}});
+     // A read-only games folder stops the bottle step; the next attempt continues there.
+@@ -4782,11 +4782,11 @@
+     CHECK(removed.kept_bottles.size() == 1 && removed.kept_bottles[0].runtime_number == 220);
+     CHECK(removed.kept_bottles[0].name == "Half-Life 2" && removed.kept_bottles[0].kept_at == 1760000000);
+     CHECK(removed.kept_bottles[0].bytes > 0);
+-    CHECK(Read(kept / "playden-kept.json").find("\"install_id\":\"steam-220\"") != std::string::npos);
++    CHECK(Read(kept / "playden-kept.json").find("\"install_id\":\"wine11-steam-220\"") != std::string::npos);
+     CHECK(Read(game / "hl2.exe") == "existing-game");  // the download is the controller's to remove
+     // The kept bottle says where it is, and its Windows user folders can be measured (the Saves tab).
+-    CHECK(removed.kept_bottles[0].data_root.size() > 14 &&
+-          removed.kept_bottles[0].data_root.compare(removed.kept_bottles[0].data_root.size() - 14, 14, "steam-220.kept") == 0);
++    CHECK(removed.kept_bottles[0].data_root.size() > 21 &&
++          removed.kept_bottles[0].data_root.compare(removed.kept_bottles[0].data_root.size() - 21, 21, "wine11-steam-220.kept") == 0);
+     host.MeasureSaves();
+     const auto measured = WaitFor(host, [](const RuntimeSnapshot& s) { return s.save_bytes.count(220) > 0; });
+     CHECK(measured.save_bytes.at(220) >= std::string("player-save").size());
+@@ -4889,7 +4889,7 @@
+       if (done.refusals.count(220)) std::fprintf(stderr, "refusal: %s\n", done.refusals.at(220).c_str());
+   CHECK(!done.refusals.count(220));
+       CHECK(done.installs.size() == 1 && done.installs[0].state == PreparationState::kReady);
+-      const auto metadata = Read(fixture.root / "data/playden/games/steam-220/library/profiles/.playden-publication");
++      const auto metadata = Read(fixture.root / "data/playden/games/wine11-steam-220/library/profiles/.playden-publication");
+       CHECK(metadata.find("schema=3\n") != std::string::npos);
+       CHECK(metadata.find("game_root.unowned=1\n") != std::string::npos);
+     }
+@@ -4934,7 +4934,7 @@
+   config.settings_record = [&](const playden::GameId&) -> std::optional<GameSettingsRecord> { return saved; };
+   RuntimePrepareRequest request{646570, "/data/homebrew/FAKE77031/games/646570", "internal", "Slay the Spire"};
+   request.launches = {{"", "Play", "jre\\bin\\javaw.exe", "", "-jar desktop-1.0.jar"}};
+-  const auto profile = fixture.root / "data/playden/games/steam-646570/library/profiles/playden-steam-646570.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-646570/library/profiles/playden-steam-646570.profile";
+   RuntimeHost host(config);
+   CHECK(host.Start());
+   CHECK(WaitFor(host, Started).kit_available);
+@@ -5165,7 +5165,7 @@
+   };
+   RuntimePrepareRequest request{1592280, "/data/homebrew/FAKE77031/games/1592280", "internal", "Selaco"};
+   request.launches = {{"", "Play", "Launch.bat", "", ""}};
+-  const auto profile = fixture.root / "data/playden/games/steam-1592280/library/profiles/playden-steam-1592280.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-1592280/library/profiles/playden-steam-1592280.profile";
+ 
+   RuntimeHost host(config);
+   CHECK(host.Start());
+@@ -5294,7 +5294,7 @@
+   }, 60);
+   if (done.refusals.count(219890)) std::fprintf(stderr, "Prepare refused: %s\n", done.refusals.at(219890).c_str());
+   CHECK(!done.refusals.count(219890) && done.installs.size() == 1);
+-  const auto bottle = fixture.root / "data/playden/games/steam-219890/library/prefixes/game";
++  const auto bottle = fixture.root / "data/playden/games/wine11-steam-219890/library/prefixes/game";
+   const auto key = std::string("Microsoft\\\\Windows\\\\CurrentVersion\\\\Uninstall\\\\UDK-dcf140f3-829e-4033-950d-b3be8d76b933]");
+   const auto system_reg = Read(bottle / "system.reg");
+   CHECK(system_reg.find("[Software\\\\" + key) != std::string::npos);
+@@ -5413,7 +5413,7 @@
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   Write(game / "hl2.exe", "existing-game", 0644);
+   Write(game / "bin/chroma.dll", ImportingDll(true, "MFC140U.dll"), 0644);
+-  const auto windows = fixture.root / "data/playden/games/steam-220/library/prefixes/game/drive_c/windows";
++  const auto windows = fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/drive_c/windows";
+   {
+     RuntimeHost host(config);
+     CHECK(host.Start());
+@@ -5448,13 +5448,13 @@
+   CHECK(logged("mfc upgrade ").back() ==
+         "mfc upgrade app=220 arch=x64 program=bin/chroma.dll waits for Play: start-up and background work don't download");
+   const auto end_session = [&] {
+-    const auto sessions = fixture.root / "data/playden/games/steam-220/logs/sessions";
++    const auto sessions = fixture.root / "data/playden/games/wine11-steam-220/logs/sessions";
+     fs::create_directories(sessions);
+-    CHECK(chmod((fixture.root / "data/playden/games/steam-220/logs").c_str(), 0700) == 0);
++    CHECK(chmod((fixture.root / "data/playden/games/wine11-steam-220/logs").c_str(), 0700) == 0);
+     CHECK(chmod(sessions.c_str(), 0700) == 0);
+     Write(sessions / (session + ".json"),
+           R"({"schema_version":1,"session_id":")" + session +
+-              R"(","install_id":"steam-220","title_id":"FAKE78001","origin":"playden","settings_revision":1,)"
++              R"(","install_id":"wine11-steam-220","title_id":"FAKE78001","origin":"playden","settings_revision":1,)"
+               R"("runtime_bundle_id":"wine-wow64","phase":"exited"})" "\n", 0600);
+     WaitFor(host, [](const RuntimeSnapshot& s) { return s.launch && s.launch->state == LaunchState::kExited; }, 30);
+   };
+@@ -5478,8 +5478,8 @@
+   CHECK(Read(windows / "system32/mfc140u.dll") == "MFC64U" && Read(windows / "system32/mfcm140.dll") == "MFCM64");
+   CHECK(Read(windows / "syswow64/mfc140u.dll") == "MFC32U");
+   CHECK(!fs::exists(windows / "system32/msvcp140.dll") && !fs::exists(windows / "syswow64/msvcp140.dll"));
+-  CHECK(Read(fixture.root / "data/playden/redist/vc-14.44.35211/x64/VC_redist.x64.exe") == x64_bundle);
+-  CHECK(Read(fixture.root / "data/playden/redist/vc-14.44.35211/x86/VC_redist.x86.exe") == x86_bundle);
++  CHECK(Read(fixture.root / "data/runtime-state/redist/vc-14.44.35211/x64/VC_redist.x64.exe") == x64_bundle);
++  CHECK(Read(fixture.root / "data/runtime-state/redist/vc-14.44.35211/x86/VC_redist.x86.exe") == x86_bundle);
+   auto upgrades = logged("mfc upgrade ");
+   CHECK(upgrades[upgrades.size() - 2].rfind("mfc upgrade app=220 arch=x86 program=tools/editor.dll installed files=2 from=download ms=", 0) == 0);
+   CHECK(upgrades.back().rfind("mfc upgrade app=220 arch=x64 program=bin/chroma.dll installed files=2 from=download ms=", 0) == 0);
+@@ -5489,7 +5489,7 @@
+   // Installed once: the next Play neither walks the game folder nor downloads, even without the kept copy.
+   const auto count = logged("mfc ").size();
+   const int fetched = fetches;
+-  fs::remove_all(fixture.root / "data/playden/redist");
++  fs::remove_all(fixture.root / "data/runtime-state/redist");
+   host.Play(220);
+   WaitFor(host, [](const RuntimeSnapshot& s) { return s.handoff_ready; }, 30);
+   CHECK(logged("mfc ").size() == count && fetches == fetched);
+@@ -5530,7 +5530,7 @@
+   if (done.refusals.count(292120)) std::fprintf(stderr, "Prepare refused: %s\n", done.refusals.at(292120).c_str());
+   CHECK(!done.refusals.count(292120) && done.installs.size() == 1 && done.installs[0].runtime_number == 292120);
+   CHECK(Read(config.state_root / "installs.json").find("\"recipe_id\":\"steam-292120-ffxiii-v1\"") != std::string::npos);
+-  const auto game = fixture.root / "data/playden/games/steam-292120";
++  const auto game = fixture.root / "data/playden/games/wine11-steam-292120";
+   CHECK(Read(game / "library/profiles/playden-steam-292120.profile").find("ffxiiiimg.exe") != std::string::npos);
+   CHECK(Read(game / "library/prefixes/game/user.reg").find("\"VideoMemorySize\"=\"4096\"") != std::string::npos);
+   // A restart resolves the record again through the same rule.
+@@ -5847,7 +5847,7 @@
+     CHECK(!done.refusals.count(292120) && done.installs.size() == 1);
+     // Swapped for a kit without PS5 audio, Play is refused before the bottle or the game's files change.
+     host.Shutdown();
+-    const auto user_reg = fixture.root / "data/playden/games/steam-292120/library/prefixes/game/user.reg";
++    const auto user_reg = fixture.root / "data/playden/games/wine11-steam-292120/library/prefixes/game/user.reg";
+     auto marked = Read(user_reg);
+     marked.replace(marked.find("\"VideoMemorySize\"=\"4096\""), 24, "\"VideoMemorySize\"=\"1234\"");
+     Write(user_reg, marked, 0600);
+@@ -5947,11 +5947,11 @@
+     CHECK(!ready.refusals.count(220) && ready.installs[0].settings_revision == 1);
+     host.Shutdown();
+   }
+-  const auto system_reg = Read(fixture.root / "data/playden/games/steam-220/library/prefixes/game/system.reg");
++  const auto system_reg = Read(fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/system.reg");
+   CHECK(system_reg.find("FAKE77031\\\\games\\\\220") != std::string::npos);
+   Write(old_games / ".playden-saves/220/cloud-index.txt",
+         "version=1\naccount=a\nchange=7\ngame_root=/data/homebrew/FAKE77031/games/220\n"
+-        "prefix_root=/data/playden/games/steam-220/library/prefixes/game\nrule\tg\t1\tsave\t*\tsave/\n"
++        "prefix_root=/data/playden/games/wine11-steam-220/library/prefixes/game\nrule\tg\t1\tsave\t*\tsave/\n"
+         "file\tg\t3\t5\tsave/game_root=/data/homebrew/FAKE77031/games/220\n", 0666);  // Cloud writes it under umask 0
+   fs::rename(old_games, fixture.root / "data/playden-games");
+   std::lock_guard<std::mutex> lock(move.mutex);
+@@ -5973,7 +5973,7 @@
+       fixture.root / "data/playden/logs", target, config.state_root, fixture.root / "data"};
+   const std::string text = "{\"step\":\"games\",\"from\":\"" + old.string() + "\",\"to\":\"" + target.string() + "\"}";
+   CHECK(playden::Storage(config.state_root.string()).WriteDurable(kLayoutJournal, playden::Bytes(text.begin(), text.end())).ok());
+-  const auto lock_path = fixture.root / "data/playden/games/steam-220/.playden-control/publication.lock";
++  const auto lock_path = fixture.root / "data/playden/games/wine11-steam-220/.playden-control/publication.lock";
+   const auto busy = [&] {
+     const int fd = ::open(lock_path.c_str(), O_RDONLY);
+     CHECK(fd >= 0);
+@@ -6040,7 +6040,7 @@
+   const auto descriptor = Read(fixture.root / "data/homebrew/FAKE78001/game-launch.json");
+   CHECK(descriptor.find(R"("game_root":"/data/playden-games/220")") != std::string::npos);
+   CHECK(descriptor.find(R"("settings_revision":1)") != std::string::npos);
+-  const auto profiles = fixture.root / "data/playden/games/steam-220/library/profiles";
++  const auto profiles = fixture.root / "data/playden/games/wine11-steam-220/library/profiles";
+   const auto profile = Read(profiles / "playden-steam-220.profile");
+   CHECK(profile.find("playden-games") != std::string::npos && profile.find("FAKE77031") == std::string::npos);
+   CHECK(profile.find("desktop = 1280x720") != std::string::npos);  // the saved settings are kept
+@@ -6053,7 +6053,7 @@
+   const auto metadata = Read(profiles / ".playden-publication");
+   CHECK(metadata.find("dxvk.path_hex=" + hex("/data/playden-games/220/dxvk.conf") + "\n") != std::string::npos);
+   // The install script's path follows the folder (ApplyPreparationSteps runs in the republication).
+-  const auto system_reg = Read(fixture.root / "data/playden/games/steam-220/library/prefixes/game/system.reg");
++  const auto system_reg = Read(fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/system.reg");
+   CHECK(system_reg.find("playden-games\\\\220") != std::string::npos && system_reg.find("FAKE77031") == std::string::npos);
+   // The install script's older Visual C++ runtime Minor (20) was raised to the builtin DLLs' 14.50 after it.
+   CHECK(system_reg.find("\"Minor\"=dword:00000032") != std::string::npos &&
+@@ -6085,7 +6085,7 @@
+   struct stat index_info{};  // the rewrite keeps the file's mode, whatever the umask
+   CHECK(stat(index_path.c_str(), &index_info) == 0 && (index_info.st_mode & 07777) == 0666);
+   CHECK(index == "version=1\naccount=a\nchange=7\ngame_root=/data/playden-games/220\n"
+-                 "prefix_root=/data/playden/games/steam-220/library/prefixes/game\nrule\tg\t1\tsave\t*\tsave/\n"
++                 "prefix_root=/data/playden/games/wine11-steam-220/library/prefixes/game\nrule\tg\t1\tsave\t*\tsave/\n"
+                  "file\tg\t3\t5\tsave/game_root=/data/homebrew/FAKE77031/games/220\n");
+   // Play passes the title's whole start check.
+   host.Play(220);
+@@ -6111,7 +6111,7 @@
+   unsigned uuids = 0;
+   const auto config = MoveConfig(fixture, kit, &uuids, move);
+   PrepareThenMoveGames(fixture, config, move);
+-  const auto profiles = fixture.root / "data/playden/games/steam-220/library/profiles";
++  const auto profiles = fixture.root / "data/playden/games/wine11-steam-220/library/profiles";
+   CHECK(Read(profiles / ".playden-publication").find("schema=2\n") != std::string::npos);
+   const auto game = fixture.root / "data/playden-games/220";
+   Write(game / "GInput.asi", "mod-plugin", 0666);
+@@ -6205,7 +6205,7 @@
+     return TitleRemoverResult{true, 0, "answered"};
+   };
+   PrepareThenMoveGames(fixture, config, move);
+-  const auto save = fixture.root / "data/playden/games/steam-220/library/prefixes/game/drive_c/users/steamuser/save.dat";
++  const auto save = fixture.root / "data/playden/games/wine11-steam-220/library/prefixes/game/drive_c/users/steamuser/save.dat";
+   Write(save, "player-save", 0600);
+   revision->store(0);
+ 
+@@ -6228,7 +6228,7 @@
+   CHECK(done.installs.size() == 1 && done.installs[0].state == PreparationState::kReady && done.installs[0].title_id == title);
+   CHECK(!move.Logged("prepare again app=220") && move.Done() == 0 && !unregistered);
+   CHECK(Read(fixture.root / "data/runtime-state/installs.json") == records_before);
+-  CHECK(Read(save) == "player-save" && !fs::exists(fixture.root / "data/playden/games/steam-220.kept"));
++  CHECK(Read(save) == "player-save" && !fs::exists(fixture.root / "data/playden/games/wine11-steam-220.kept"));
+   host.Shutdown();
+ }
+ 
+@@ -6275,12 +6275,12 @@
+     host.Shutdown();
+   }
+   const auto descriptor = fixture.root / "data/homebrew" / title / "game-launch.json";
+-  const auto profile = fixture.root / "data/playden/games/steam-220/library/profiles/playden-steam-220.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/playden-steam-220.profile";
+   const auto published = Read(descriptor);
+   CHECK(published.find("\"schema_version\":3") != std::string::npos);
+   CHECK(published.find("\"game_root\":\"/mnt/usb/playden/games/220\"") != std::string::npos);
+   CHECK(Read(profile).find("Z:\\mnt\\usb\\playden\\games\\220\\hl2.exe") != std::string::npos);
+-  const auto receipt = fixture.root / "data/playden/games/steam-220/.playden-control/publication-state.v1";
++  const auto receipt = fixture.root / "data/playden/games/wine11-steam-220/.playden-control/publication-state.v1";
+   const auto receipt_before = Read(receipt);
+ 
+   // Drives change places: only the record follows.
+@@ -6791,7 +6791,7 @@
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   Write(game / "hl2.exe", "existing-game", 0644);
+   CHECK(chmod(game.c_str(), 0777) == 0);
+-  const auto metadata = fixture.root / "data/playden/games/steam-220/library/profiles/.playden-publication";
++  const auto metadata = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/.playden-publication";
+   const auto installs = fixture.root / "data/runtime-state/installs.json";
+   {
+     RuntimeHost host(config);
+@@ -6873,7 +6873,7 @@
+   unsigned uuids = 0;
+   std::vector<std::vector<std::string>> launches;
+   RuntimeHostConfig config;
+-  const fs::path data = fixture.root / "data/playden/games/steam-220";
++  const fs::path data = fixture.root / "data/playden/games/wine11-steam-220";
+   const fs::path profile = data / "library/prefixes/game/drive_c/users/prospero";
+   explicit ProfileRun(bool shared) {
+     kit = shared ? SharedProfileKit(fixture.root / "kit") : SyntheticKit(fixture.root / "kit");
+@@ -6943,7 +6943,7 @@
+     CHECK(chmod((data / "logs").c_str(), 0700) == 0 && chmod(sessions.c_str(), 0700) == 0);
+     Write(sessions / (id + ".json"),
+           R"({"schema_version":1,"session_id":")" + id +
+-              R"(","install_id":"steam-220","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
++              R"(","install_id":"wine11-steam-220","title_id":"FAKE78001","origin":"playden","settings_revision":0,)"
+               R"("runtime_bundle_id":"wine-wow64","phase":")" + phase + "\"}\n", 0600);
+   }
+ };
+@@ -6964,7 +6964,7 @@
+     FilesystemPackageInstaller installer(run.kit.view, run.config.package_paths, run.config.package_operations);
+     auto record = Record();
+     record.title_id = "FAKE78001";
+-    record.data_root = "/data/playden/games/steam-220";
++    record.data_root = "/data/playden/games/wine11-steam-220";
+     const bool ok = installer.AdmissionDiagnostic(record) == "ok";
+     if (!ok)
+       std::fprintf(stderr, "note: the linked publication verifier refuses 0711 bottles; "
+@@ -7013,7 +7013,7 @@
+   // Backups live in Playden's private backup folder.
+   result = run.Maintain(host, RuntimeMaintenance::kBackupSaves);
+   CHECK(result.maintenance.at(220).ok);
+-  const auto backups = run.fixture.root / "data/playden/games/steam-220.saves";
++  const auto backups = run.fixture.root / "data/playden/games/wine11-steam-220.saves";
+   CHECK(ModeOf(backups) == 0700 && ModeOf(backups / "1760000000/users/prospero/AppData/Roaming/Game/save.dat") == 0600);
+ 
+   // Uninstalled keeping saves, prepared again: the saves come back open.
+@@ -7021,7 +7021,7 @@
+   host.Remove(220, false);
+   auto removed = WaitFor(host, [removals](const RuntimeSnapshot& s) { return s.removals_handled > removals; }, 30);
+   CHECK(removed.installs.empty() && removed.kept_bottles.size() == 1);
+-  const auto kept = run.fixture.root / "data/playden/games/steam-220.kept";
++  const auto kept = run.fixture.root / "data/playden/games/wine11-steam-220.kept";
+   CHECK(ModeOf(kept / "library/prefixes/game/drive_c/users/prospero/AppData/Roaming/Game/save.dat") == 0666);
+   ready = run.Prepare(host);
+   CHECK(ready.kept_bottles.empty() && Read(game / "save.dat") == "first");
+@@ -7149,8 +7149,8 @@
+   };
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   Write(game / "hl2.exe", "existing-game", 0644);
+-  const auto metadata = fixture.root / "data/playden/games/steam-220/library/profiles/.playden-publication";
+-  const auto control = fixture.root / "data/playden/games/steam-220/.playden-control";
++  const auto metadata = fixture.root / "data/playden/games/wine11-steam-220/library/profiles/.playden-publication";
++  const auto control = fixture.root / "data/playden/games/wine11-steam-220/.playden-control";
+   const auto installs = fixture.root / "data/runtime-state/installs.json";
+   const auto requests = fixture.root / "data/runtime-state/requests";
+   const auto play = [&](RuntimeHost& host) {
+@@ -7305,7 +7305,7 @@
+     return;
+   }
+   if (scenario == 7 || scenario == 9) {
+-    CHECK(logged(std::string("settings operation set aside install=steam-220 as settings-operation.unreadable-1760000000.v1: ") +
++    CHECK(logged(std::string("settings operation set aside install=wine11-steam-220 as settings-operation.unreadable-1760000000.v1: ") +
+                  (scenario == 7 ? "Operation is truncated" : "Referenced registry backup is not valid")));
+     CHECK(Read(aside) == (scenario == 7 ? operation + "trailing" : operation));
+     CHECK(fs::is_regular_file(control / "settings-operation.v1") && Read(control / "settings-operation.v1") != Read(aside));
+@@ -7346,7 +7346,7 @@
+   unsigned uuids = 0;
+   const auto config = MoveConfig(fixture, kit, &uuids, move);
+   PrepareThenMoveGames(fixture, config, move);
+-  const auto control = fixture.root / "data/playden/games/steam-220/.playden-control";
++  const auto control = fixture.root / "data/playden/games/wine11-steam-220/.playden-control";
+   const auto operation = Read(control / "settings-operation.v1");
+   CHECK(!operation.empty());
+   Write(control / "settings-operation.v1", operation + "trailing", 0600);
+@@ -7354,7 +7354,7 @@
+   CHECK(host.Start());
+   const auto started = WaitFor(host, Started);
+   CHECK(started.installs.size() == 1 && started.installs[0].state == PreparationState::kReady);
+-  CHECK(move.Logged("settings operation set aside install=steam-220 as settings-operation.unreadable-1760000000.v1: Operation is truncated"));
++  CHECK(move.Logged("settings operation set aside install=wine11-steam-220 as settings-operation.unreadable-1760000000.v1: Operation is truncated"));
+   CHECK(move.Logged("startup moved app=220 republished") && move.Done() == 1);
+   CHECK(Read(control / "settings-operation.unreadable-1760000000.v1") == operation + "trailing");
+   CHECK(fs::is_regular_file(control / "settings-operation.v1") && Read(control / "settings-operation.v1") != operation + "trailing");
+@@ -7369,8 +7369,8 @@
+ // "Copy into Playden" and "Move into Playden" of an imported game already prepared to play from its
+ // folder (import-games 4.3, 4.4): RuntimeHost::Relocate.
+ constexpr const char* kImportedId = "0f8fad5b-d9cb-469f-a165-70867728950e";
+-constexpr const char* kImportedRoot = "/data/playden-games/local-0f8fad5b-d9cb-469f-a165-70867728950e";
+-constexpr const char* kImportedSave = "data/playden/games/local-0f8fad5b-d9cb-469f-a165-70867728950e/library/prefixes/game/drive_c/users/steamuser/save.dat";
++constexpr const char* kImportedRoot = "/data/playden-games/wine11-local-0f8fad5b-d9cb-469f-a165-70867728950e";
++constexpr const char* kImportedSave = "data/playden/games/wine11-local-0f8fad5b-d9cb-469f-a165-70867728950e/library/prefixes/game/drive_c/users/steamuser/save.dat";
+ 
+ struct Imported {
+   std::uint32_t number = 0;
+@@ -7559,7 +7559,7 @@
+   fs::create_directories(fixture.root / "data/playden-games");
+   const auto from = fixture.root / fs::path(drop).relative_path();
+   const auto to = fixture.root / fs::path(kImportedRoot).relative_path();
+-  const auto lock_path = fixture.root / "data/playden/games" / ("local-" + std::string(kImportedId)) / ".playden-control/publication.lock";
++  const auto lock_path = fixture.root / "data/playden/games" / ("wine11-local-" + std::string(kImportedId)) / ".playden-control/publication.lock";
+   const auto held = [&] {
+     const int fd = ::open(lock_path.c_str(), O_RDONLY);
+     CHECK(fd >= 0);
+@@ -7827,6 +7827,8 @@
+ constexpr const char* kLeftoverOperation = "00000000-0000-4000-8000-000000000001";
+ 
+ RuntimeHostConfig LeftoverConfig(Fixture& fixture) {
++  fs::create_directories(fixture.root / "data/wine11/wine11-games");
++  CHECK(chmod((fixture.root / "data/wine11/wine11-games").c_str(),0700)==0);
+   auto config = fixture.Config();
+   // Bottles live under the fixture, where Playden looks for them.
+   config.host_namespace_prefix = fixture.root;
+@@ -7851,8 +7853,8 @@
+   Write(title / "eboot.bin", "title-files", 0755);
+   // The title shell's descriptor names the game's bottle (see pw_title_launch.c).
+   Write(title / "game-launch.json",
+-        R"({"schema_version":1,"app_id":220,"title_id":"FAKE78001","install_id":"steam-220",)"
+-        R"("data_root":"/data/playden/games/steam-220"})", 0644);
++        R"({"schema_version":1,"app_id":220,"title_id":"FAKE78001","install_id":"wine11-steam-220",)"
++        R"("data_root":"/data/playden/games/wine11-steam-220"})", 0644);
+   CHECK(chmod(title.c_str(), 0755) == 0);
+   return title;
+ }
+@@ -7876,8 +7878,8 @@
+         fixture.registered = false;
+         return TitleRemoverResult{true, 0, "removed"};
+       };
+-    const auto bottle = fixture.root / "data/playden/games/steam-220/save.dat";
+-    const auto files = fixture.root / "data/playden-games/steam-220/game.exe";
++    const auto bottle = fixture.root / "data/playden/games/wine11-steam-220/save.dat";
++    const auto files = fixture.root / "data/playden-games/wine11-steam-220/game.exe";
+     Write(bottle, "saved-game", 0600);
+     Write(files, "downloaded-game", 0644);
+     {
+@@ -7907,7 +7909,7 @@
+           struct stat info{};
+           CHECK(lstat(journal.c_str(), &info) == 0 && (info.st_mode & 07777) == 0600);
+           CHECK(Read(journal).find("\"step\":\"unregister\"") != std::string::npos);
+-          CHECK(fs::is_directory(config.state_root / "trash" / (std::string("FAKE78001-") + kLeftoverOperation)));
++          CHECK(fs::is_directory(fixture.root / "data/wine11/wine11-games/.vapor-title-trash" / (std::string("FAKE78001-") + kLeftoverOperation)));
+           if (scenario == 3) CHECK(done.leftover_delete_failures.at("FAKE78001").find("could not start") != std::string::npos);
+           if (scenario == 4) CHECK(done.leftover_delete_failures.at("FAKE78001").find("0xffffffff") != std::string::npos);
+           if (scenario == 5) CHECK(done.leftover_delete_failures.at("FAKE78001").find("has not confirmed") != std::string::npos);
+@@ -7915,9 +7917,9 @@
+       }
+       if (scenario <= 1) {
+         // The title that named the bottle is gone: its saves are kept, as Uninstall keeps them.
+-        const auto kept = fixture.root / "data/playden/games/steam-220.kept";
++        const auto kept = fixture.root / "data/playden/games/wine11-steam-220.kept";
+         CHECK(!fs::exists(bottle) && Read(kept / "save.dat") == "saved-game");
+-        CHECK(done.kept_bottles.size() == 1 && done.kept_bottles[0].install_id == "steam-220");
++        CHECK(done.kept_bottles.size() == 1 && done.kept_bottles[0].install_id == "wine11-steam-220");
+       } else {
+         CHECK(Read(bottle) == "saved-game" && done.kept_bottles.empty());
+       }
+@@ -7936,8 +7938,8 @@
+     CHECK(done.leftover_deletes_handled == 1 && done.leftover_titles.empty() && done.leftover_delete_failures.empty());
+     CHECK(calls == 2 && !fixture.registered);
+     CHECK(!fs::exists(config.state_root / "leftover-FAKE78001.json"));
+-    CHECK(fs::is_empty(config.state_root / "trash"));
+-    CHECK(!fs::exists(bottle) && Read(fixture.root / "data/playden/games/steam-220.kept/save.dat") == "saved-game");
++    CHECK(fs::is_empty(fixture.root / "data/wine11/wine11-games/.vapor-title-trash"));
++    CHECK(!fs::exists(bottle) && Read(fixture.root / "data/playden/games/wine11-steam-220.kept/save.dat") == "saved-game");
+     CHECK(done.kept_bottles.size() == 1 && Read(files) == "downloaded-game");
+     restarted.Shutdown();
+   }
+@@ -7991,7 +7993,7 @@
+       std::to_string(info.st_ino) + ",\"name\":\"Left Behind\",\"bytes\":11}\n";
+   playden::Storage storage(config.state_root.string());
+   CHECK(storage.WriteDurable("leftover-FAKE78001.json", playden::Bytes(text.begin(), text.end())).ok());
+-  const auto trash = config.state_root / "trash";
++  const auto trash = fixture.root / "data/wine11/wine11-games/.vapor-title-trash";
+   fs::create_directory(trash);
+   CHECK(chmod(trash.c_str(), 0700) == 0);
+   const auto retired = trash / (std::string("FAKE78001-") + kLeftoverOperation);
+@@ -8210,26 +8212,26 @@
+     auto config = LeftoverConfig(fixture);
+     config.unix_time = [] { return std::int64_t{1760000000}; };
+     const auto games = fixture.root / "data/playden/games";
+-    Write(games / "steam-221/save.dat", "lost-record", 0600);
+-    Write(games / "steam-221/title-metadata/sce_sys/param.json",
++    Write(games / "wine11-steam-221/save.dat", "lost-record", 0600);
++    Write(games / "wine11-steam-221/title-metadata/sce_sys/param.json",
+           R"({"localizedParameters":{"en-US":{"titleName":"Old Save"}}})", 0600);
+-    Write(games / "steam-220/save.dat", "named-by-title", 0600);
+-    MakeLeftover(fixture);  // FAKE78001's game-launch.json names steam-220
+-    Write(games / "steam-225/save.dat", "newer", 0600);
+-    Write(games / "steam-225/.playden-saves-restored", "", 0600);
+-    Write(games / "steam-225.kept/save.dat", "older", 0600);
+-    Write(games / "steam-225.kept/playden-kept.json",
+-          R"({"schema":1,"install_id":"steam-225","app_id":225,"name":"Older","kept_at":1,"bytes":5})", 0600);
+-    Write(games / "steam-226.saves/1/users/save.dat", "backup", 0600);
++    Write(games / "wine11-steam-220/save.dat", "named-by-title", 0600);
++    MakeLeftover(fixture);  // FAKE78001's game-launch.json names wine11-steam-220
++    Write(games / "wine11-steam-225/save.dat", "newer", 0600);
++    Write(games / "wine11-steam-225/.playden-saves-restored", "", 0600);
++    Write(games / "wine11-steam-225.kept/save.dat", "older", 0600);
++    Write(games / "wine11-steam-225.kept/playden-kept.json",
++          R"({"schema":1,"install_id":"wine11-steam-225","app_id":225,"name":"Older","kept_at":1,"bytes":5})", 0600);
++    Write(games / "wine11-steam-226.saves/1/users/save.dat", "backup", 0600);
+     // A title names its bottle by data_root even when its install_id says otherwise; one with no
+     // descriptor names none.
+-    Write(games / "steam-228/save.dat", "named-by-root", 0600);
++    Write(games / "wine11-steam-228/save.dat", "named-by-root", 0600);
+     Write(fixture.root / "data/homebrew/FAKE78005/game-launch.json",
+-          R"({"schema_version":1,"app_id":229,"title_id":"FAKE78005","install_id":"steam-229",)"
+-          R"("data_root":"/data/playden/games/steam-228"})", 0644);
++          R"({"schema_version":1,"app_id":229,"title_id":"FAKE78005","install_id":"wine11-steam-229",)"
++          R"("data_root":"/data/playden/games/wine11-steam-228"})", 0644);
+     Write(fixture.root / "data/homebrew/FAKE78006/eboot.bin", "title-files", 0755);
+     Write(fixture.root / "elsewhere/save.dat", "linked", 0600);
+-    fs::create_symlink(fixture.root / "elsewhere", games / "steam-227");
++    fs::create_symlink(fixture.root / "elsewhere", games / "wine11-steam-227");
+     if (scenario == 1) {
+       Write(fixture.root / "data/homebrew/FAKE78003/game-launch.json", "{broken", 0644);
+     } else if (scenario == 2) {
+@@ -8250,23 +8252,23 @@
+     RuntimeHost host(config);
+     CHECK(host.Start());
+     const auto started = WaitFor(host, Started);
+-    CHECK(Read(games / "steam-220/save.dat") == "named-by-title");
+-    CHECK(Read(games / "steam-228/save.dat") == "named-by-root" && !fs::exists(games / "steam-228.kept"));
+-    CHECK(Read(games / "steam-226.saves/1/users/save.dat") == "backup");
+-    CHECK(fs::is_symlink(games / "steam-227") && Read(fixture.root / "elsewhere/save.dat") == "linked");
++    CHECK(Read(games / "wine11-steam-220/save.dat") == "named-by-title");
++    CHECK(Read(games / "wine11-steam-228/save.dat") == "named-by-root" && !fs::exists(games / "wine11-steam-228.kept"));
++    CHECK(Read(games / "wine11-steam-226.saves/1/users/save.dat") == "backup");
++    CHECK(fs::is_symlink(games / "wine11-steam-227") && Read(fixture.root / "elsewhere/save.dat") == "linked");
+     if (scenario == 0) {
+-      CHECK(!fs::exists(games / "steam-221") && Read(games / "steam-221.kept/save.dat") == "lost-record");
+-      const auto marker = Read(games / "steam-221.kept/playden-kept.json");
+-      CHECK(marker.find("\"install_id\":\"steam-221\",\"app_id\":221") != std::string::npos);
++      CHECK(!fs::exists(games / "wine11-steam-221") && Read(games / "wine11-steam-221.kept/save.dat") == "lost-record");
++      const auto marker = Read(games / "wine11-steam-221.kept/playden-kept.json");
++      CHECK(marker.find("\"install_id\":\"wine11-steam-221\",\"app_id\":221") != std::string::npos);
+       CHECK(marker.find("\"name\":\"Old Save\"") != std::string::npos);
+       // This bottle already has the older kept copy's saves: it replaces that copy.
+-      CHECK(!fs::exists(games / "steam-225") && Read(games / "steam-225.kept/save.dat") == "newer");
++      CHECK(!fs::exists(games / "wine11-steam-225") && Read(games / "wine11-steam-225.kept/save.dat") == "newer");
+       std::set<std::string> kept;
+       for (const auto& view : started.kept_bottles) kept.insert(view.install_id + "=" + view.name);
+-      CHECK((kept == std::set<std::string>{"steam-221=Old Save", "steam-225="}));  // steam-225 has no title metadata
++      CHECK((kept == std::set<std::string>{"wine11-steam-221=Old Save", "wine11-steam-225="}));  // wine11-steam-225 has no title metadata
+     } else {
+-      CHECK(Read(games / "steam-221/save.dat") == "lost-record" && !fs::exists(games / "steam-221.kept"));
+-      CHECK(Read(games / "steam-225/save.dat") == "newer" && Read(games / "steam-225.kept/save.dat") == "older");
++      CHECK(Read(games / "wine11-steam-221/save.dat") == "lost-record" && !fs::exists(games / "wine11-steam-221.kept"));
++      CHECK(Read(games / "wine11-steam-225/save.dat") == "newer" && Read(games / "wine11-steam-225.kept/save.dat") == "older");
+     }
+     host.Shutdown();
+     if (scenario == 5) CHECK(chmod((fixture.root / "data/homebrew").c_str(), 0755) == 0);
+@@ -8372,10 +8374,10 @@
+   };
+   const auto game = fixture.root / "data/homebrew/FAKE77031/games/220";
+   const auto staged = fixture.root / "data/homebrew/FAKE78001";
+-  const auto data = fixture.root / "data/playden/games/steam-220";
++  const auto data = fixture.root / "data/playden/games/wine11-steam-220";
+   const auto bottle = data / "library/prefixes/game";
+   const auto user_reg = bottle / "user.reg";
+-  const auto state_file = fixture.root / "data/runtime-state/recipe-registry-steam-220.json";
++  const auto state_file = fixture.root / "data/runtime-state/recipe-registry-wine11-steam-220.json";
+   bool loosen_next = false, break_after_commit = false;
+   std::vector<std::string> lines;
+   std::mutex lines_mutex;
+@@ -8383,7 +8385,7 @@
+     { std::lock_guard<std::mutex> lock(lines_mutex); lines.push_back(line); }
+     if (loosen_next && line.rfind("settings update request", 0) == 0 && line.find(" state=0 ") != std::string::npos) {
+       loosen_next = false;
+-      CHECK(chmod(staged.c_str(), 0777) == 0);
++      CHECK(chmod(staged.c_str(), 0775) == 0);
+     }
+     if (break_after_commit && line.rfind("settings update resume app=220", 0) == 0 && line.find(" state=0 ") != std::string::npos) {
+       break_after_commit = false;
+@@ -8413,7 +8415,7 @@
+     CHECK(chmod((data / "logs").c_str(), 0700) == 0 && chmod(sessions.c_str(), 0700) == 0);
+     const auto revision = h.Snapshot().installs[0].settings_revision;
+     const auto record = [&](const std::string& phase) {
+-      return R"({"schema_version":1,"session_id":")" + session + R"(","install_id":"steam-220","title_id":"FAKE78001",)" +
++      return R"({"schema_version":1,"session_id":")" + session + R"(","install_id":"wine11-steam-220","title_id":"FAKE78001",)" +
+              R"("origin":"playden","settings_revision":)" + std::to_string(revision) +
+              R"(,"runtime_bundle_id":"wine-wow64","phase":")" + phase + "\"}\n";
+     };
+@@ -8715,7 +8717,7 @@
+   config.settings_record = [&saved](const playden::GameId&) -> std::optional<GameSettingsRecord> { return saved; };
+   RuntimePrepareRequest request{4242, "/data/homebrew/FAKE77031/games/4242", "internal", "Example Game"};
+   request.launches = {{"", "", "Bin\\Game.exe", "", ""}};
+-  const auto profile = fixture.root / "data/playden/games/steam-4242/library/profiles/playden-steam-4242.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-4242/library/profiles/playden-steam-4242.profile";
+   const auto generated_file = fixture.root / "data/runtime-state/recipe-steam-4242-auto.json";
+   const auto has = [](const std::string& text, const std::string& needle) { return text.find(needle) != std::string::npos; };
+   RuntimeHost host(config);
+@@ -8756,7 +8758,7 @@
+   CHECK(done.installs[0].recipe_id == "community-steam-4242-fast" && done.installs[0].recipe_version == rev_fit.substr(0, 32));
+   CHECK(!done.recipe_fallbacks.count(4242) && has(Read(profile), "Fast.exe") && done.installs[0].launch_path == "Bin/Fast.exe");
+   CHECK(fs::is_regular_file(generated_file) && done.generated_recipes.size() == 1 && done.generated_recipes[0].id == "steam-4242-auto");
+-  const auto user_reg = fixture.root / "data/playden/games/steam-4242/library/prefixes/game/user.reg";
++  const auto user_reg = fixture.root / "data/playden/games/wine11-steam-4242/library/prefixes/game/user.reg";
+   CHECK(has(Read(user_reg), "\"VideoMemorySize\"=\"4096\""));
+   // Back to Playden's own recipe without Steam: the kept generated recipe, its program, no registry value.
+   ChoosePreset(&saved, "");
+@@ -8826,7 +8828,7 @@
+   config.settings_record = [&saved](const playden::GameId&) -> std::optional<GameSettingsRecord> { return saved; };
+   RuntimePrepareRequest request{13240, "/data/homebrew/FAKE77031/games/13240", "internal", "Unreal Tournament"};
+   request.launches = {{"", "", "system\\UnrealTournament.exe", "system", ""}};
+-  const auto profile = fixture.root / "data/playden/games/steam-13240/library/profiles/playden-steam-13240.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-13240/library/profiles/playden-steam-13240.profile";
+   const auto has = [](const std::string& text, const std::string& needle) { return text.find(needle) != std::string::npos; };
+   RuntimeHost host(config);
+   host.SetSteamAccount("player", 76561198000000001ull);
+@@ -8900,7 +8902,7 @@
+   config.settings_record = [&saved](const playden::GameId&) -> std::optional<GameSettingsRecord> { return saved; };
+   RuntimePrepareRequest request{4242, "/data/homebrew/FAKE77031/games/4242", "internal", "Example Game"};
+   request.launches = {{"", "", "Bin\\Game.exe", "", ""}};
+-  const auto profile = fixture.root / "data/playden/games/steam-4242/library/profiles/playden-steam-4242.profile";
++  const auto profile = fixture.root / "data/playden/games/wine11-steam-4242/library/profiles/playden-steam-4242.profile";
+   const auto has = [](const std::string& text, const std::string& needle) { return text.find(needle) != std::string::npos; };
+   RuntimeHost host(config);
+   host.SetSteamAccount("player", 76561198000000001ull);
+@@ -9227,116 +9229,223 @@
+   CHECK(argc == 2);
+   g_runtime_dir = argv[1];
+   // The Online cases run with the experimental feature on; one case turns it off.
++  std::fprintf(stderr,"VAPOR_HOST_TEST SetOnlineSteamEnabled\n");
+   SetOnlineSteamEnabled(true);
++  std::fprintf(stderr,"VAPOR_HOST_TEST PlayerPresetsResolveRecords\n");
+   PlayerPresetsResolveRecords(false);
++  std::fprintf(stderr,"VAPOR_HOST_TEST PlayerPresetsResolveRecords\n");
+   PlayerPresetsResolveRecords(true);
++  std::fprintf(stderr,"VAPOR_HOST_TEST LeftoverDeletionSharesThePreparationAndUninstallQueue\n");
+   LeftoverDeletionSharesThePreparationAndUninstallQueue();
++  std::fprintf(stderr,"VAPOR_HOST_TEST LeftoverDeletionRefusesANewInstallUsingTheId\n");
+   LeftoverDeletionRefusesANewInstallUsingTheId();
++  std::fprintf(stderr,"VAPOR_HOST_TEST DeletesLeftoverTitleAndResumesFailures\n");
+   DeletesLeftoverTitleAndResumesFailures();
++  std::fprintf(stderr,"VAPOR_HOST_TEST LeftoverRemovalRevalidatesBeforeEffects\n");
+   LeftoverRemovalRevalidatesBeforeEffects();
+   for (int scenario = 0; scenario < 3; ++scenario) LeftoverRemovalRecoversRetireWriteGap(scenario);
++  std::fprintf(stderr,"VAPOR_HOST_TEST LeftoverScanRequiresLoadedRecordsAndRepeatsAfterUninstall\n");
+   LeftoverScanRequiresLoadedRecordsAndRepeatsAfterUninstall();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ForeignRecordKeepsItsTitleAtStartup\n");
+   ForeignRecordKeepsItsTitleAtStartup();
++  std::fprintf(stderr,"VAPOR_HOST_TEST KeepsUnrecordedBottlesAsKeptSaves\n");
+   KeepsUnrecordedBottlesAsKeptSaves();
++  std::fprintf(stderr,"VAPOR_HOST_TEST WorkerMovesGamesUnderPublicationLease\n");
+   WorkerMovesGamesUnderPublicationLease();
++  std::fprintf(stderr,"VAPOR_HOST_TEST NoKitRefusesPreparationWithoutDurableEffects\n");
+   NoKitRefusesPreparationWithoutDurableEffects();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ReloadKitAdmitsAKitInstalledWhileRunning\n");
+   ReloadKitAdmitsAKitInstalledWhileRunning();
++  std::fprintf(stderr,"VAPOR_HOST_TEST QueuedPreparationIsPublishedUntilTaken\n");
+   QueuedPreparationIsPublishedUntilTaken();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PrepareNextReordersWaitingPreparations\n");
+   PrepareNextReordersWaitingPreparations();
++  std::fprintf(stderr,"VAPOR_HOST_TEST HeldPreparationsWait\n");
+   HeldPreparationsWait();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PausedPreparationsWaitInOrder\n");
+   PausedPreparationsWaitInOrder();
++  std::fprintf(stderr,"VAPOR_HOST_TEST HoldsEffectiveUidWhileWorking\n");
+   HoldsEffectiveUidWhileWorking();
++  std::fprintf(stderr,"VAPOR_HOST_TEST StartupReportsJournalsWithoutResuming\n");
+   StartupReportsJournalsWithoutResuming();
++  std::fprintf(stderr,"VAPOR_HOST_TEST LocalGameGetsRuntimeNumber\n");
+   LocalGameGetsRuntimeNumber();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RuntimeNumberWaitsForTheWorkersHold\n");
+   RuntimeNumberWaitsForTheWorkersHold();
++  std::fprintf(stderr,"VAPOR_HOST_TEST LocalGameKeepsItsBottle\n");
+   LocalGameKeepsItsBottle();
++  std::fprintf(stderr,"VAPOR_HOST_TEST LocalGameSteamworksAppId\n");
+   LocalGameSteamworksAppId();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PublicStateRootIsUnavailable\n");
+   PublicStateRootIsUnavailable();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PreparesExistingDownloadToReady\n");
+   PreparesExistingDownloadToReady();
++  std::fprintf(stderr,"VAPOR_HOST_TEST UsbDriveChangesPlaces\n");
+   UsbDriveChangesPlaces();
++  std::fprintf(stderr,"VAPOR_HOST_TEST DriveUpdateSkipsABusyGame\n");
+   DriveUpdateSkipsABusyGame();
++  std::fprintf(stderr,"VAPOR_HOST_TEST UsbGameNamesNoMount\n");
+   UsbGameNamesNoMount();
++  std::fprintf(stderr,"VAPOR_HOST_TEST MoveAfterUsbSwap\n");
+   MoveAfterUsbSwap();
++  std::fprintf(stderr,"VAPOR_HOST_TEST OlderTitleKeepsItsMount\n");
+   OlderTitleKeepsItsMount();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PreparesGameOnUnownedDrive\n");
+   PreparesGameOnUnownedDrive();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PrepareFixesRootOwnedHomebrewFolder\n");
+   PrepareFixesRootOwnedHomebrewFolder();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PrepareNamesUnfixableFolder\n");
+   PrepareNamesUnfixableFolder();
++  std::fprintf(stderr,"VAPOR_HOST_TEST TitleRefusalNamesTheSourceThatCannotAnswer\n");
+   TitleRefusalNamesTheSourceThatCannotAnswer();
++  std::fprintf(stderr,"VAPOR_HOST_TEST AnyTitleKitMakesTheGameItsOwnTitle\n");
+   AnyTitleKitMakesTheGameItsOwnTitle();
++  std::fprintf(stderr,"VAPOR_HOST_TEST DisplayVrrKitDeclaresTheTitleVrrSupported\n");
+   DisplayVrrKitDeclaresTheTitleVrrSupported();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PreparationEndsAwaitingRegistration\n");
+   PreparationEndsAwaitingRegistration();
++  std::fprintf(stderr,"VAPOR_HOST_TEST FinishSetupHandsOverForHome\n");
+   FinishSetupHandsOverForHome();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PreparesGameWithoutShippedRecipe\n");
+   PreparesGameWithoutShippedRecipe();
+   for (int scenario = 0; scenario <= 3; ++scenario) OlderEngineDefaultsArePublishedOnPlay(scenario);
++  std::fprintf(stderr,"VAPOR_HOST_TEST SteamGameShownInSteamLibrary\n");
+   SteamGameShownInSteamLibrary();
++  std::fprintf(stderr,"VAPOR_HOST_TEST UpdatedFilesSetUpTheLaunchAgain\n");
+   UpdatedFilesSetUpTheLaunchAgain();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PreparesProgramChosenInSettings\n");
+   PreparesProgramChosenInSettings();
++  std::fprintf(stderr,"VAPOR_HOST_TEST SettingsChangeMakesNoFolderThroughLinkAboveGame\n");
+   SettingsChangeMakesNoFolderThroughLinkAboveGame();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PreparesSteamProgramChosenAfterDownload\n");
+   PreparesSteamProgramChosenAfterDownload();
++  std::fprintf(stderr,"VAPOR_HOST_TEST SteamEntryWithoutFolderStartsInInstallRoot\n");
+   SteamEntryWithoutFolderStartsInInstallRoot();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PreparesUdkGameWithEulaAccepted\n");
+   PreparesUdkGameWithEulaAccepted();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PlayInstallsMfcForGameThatImportsIt\n");
+   PlayInstallsMfcForGameThatImportsIt();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ResumesInterruptedCaptureFromSavedRequest\n");
+   ResumesInterruptedCaptureFromSavedRequest();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ResumesInterruptedCaptureFromSavedRequest\n");
+   ResumesInterruptedCaptureFromSavedRequest(true);
++  std::fprintf(stderr,"VAPOR_HOST_TEST RefreshesInstalledTitleToRespunKit\n");
+   RefreshesInstalledTitleToRespunKit();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RetryAfterKitRespinBindsTheNewArtifacts\n");
+   RetryAfterKitRespinBindsTheNewArtifacts();
++  std::fprintf(stderr,"VAPOR_HOST_TEST SetupFromAnEarlierKitAsksForRecreate\n");
+   SetupFromAnEarlierKitAsksForRecreate();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RepairsBottleRegistryModes\n");
+   RepairsBottleRegistryModes();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PlaysReadyTitleThroughHandoff\n");
+   PlaysReadyTitleThroughHandoff();
++  std::fprintf(stderr,"VAPOR_HOST_TEST HandoffTrustsARecentCheck\n");
+   HandoffTrustsARecentCheck();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ReplacedKitAsksForRestart\n");
+   ReplacedKitAsksForRestart();
++  std::fprintf(stderr,"VAPOR_HOST_TEST MaintainsReadyTitle\n");
+   MaintainsReadyTitle();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ModdedGameFolderStillPlays\n");
+   ModdedGameFolderStillPlays();
++  std::fprintf(stderr,"VAPOR_HOST_TEST KitWithoutUnownedRootsKeepsTightening\n");
+   KitWithoutUnownedRootsKeepsTightening();
+   for (int route = 0; route <= 5; ++route) OwnedPublicationOpenedUpRecovers(route);
++  std::fprintf(stderr,"VAPOR_HOST_TEST SettingsSavedDuringPrepareReachReadyTitle\n");
+   SettingsSavedDuringPrepareReachReadyTitle();
++  std::fprintf(stderr,"VAPOR_HOST_TEST SettingsSavedBeforeProfileArePublished\n");
+   SettingsSavedBeforeProfileArePublished();
++  std::fprintf(stderr,"VAPOR_HOST_TEST SettingsSavedDuringFirstPrepareFinish\n");
+   SettingsSavedDuringFirstPrepareFinish();
++  std::fprintf(stderr,"VAPOR_HOST_TEST KitRespinKeepsWaitingSettingsUpdate\n");
+   KitRespinKeepsWaitingSettingsUpdate();
++  std::fprintf(stderr,"VAPOR_HOST_TEST StaleTitleWaitsForUpdateBefore120Hz\n");
+   StaleTitleWaitsForUpdateBefore120Hz();
++  std::fprintf(stderr,"VAPOR_HOST_TEST FreshPrepareOn120HzKitPublishesIt\n");
+   FreshPrepareOn120HzKitPublishesIt();
++  std::fprintf(stderr,"VAPOR_HOST_TEST UpdateFinishesAFailedRepublish\n");
+   UpdateFinishesAFailedRepublish();
++  std::fprintf(stderr,"VAPOR_HOST_TEST UpdateWithoutSavedSettingsKeepsThePublication\n");
+   UpdateWithoutSavedSettingsKeepsThePublication();
++  std::fprintf(stderr,"VAPOR_HOST_TEST StaleTitleKeeps120HzChoicesForUpdate\n");
+   StaleTitleKeeps120HzChoicesForUpdate();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RemovesTitleKeepingSaves\n");
+   RemovesTitleKeepingSaves();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RestoresReadableKeptSaves\n");
+   RestoresReadableKeptSaves();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PreparesGameInstalledAgainElsewhere\n");
+   PreparesGameInstalledAgainElsewhere();
++  std::fprintf(stderr,"VAPOR_HOST_TEST SharedProfileKitOpensSaves\n");
+   SharedProfileKitOpensSaves();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ExistingBottleOpensWithSharedKit\n");
+   ExistingBottleOpensWithSharedKit();
++  std::fprintf(stderr,"VAPOR_HOST_TEST KitWithoutSharedProfileKeepsBottlePrivate\n");
+   KitWithoutSharedProfileKeepsBottlePrivate();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ShippedRecipePreparesWithAnotherKitsRecipe\n");
+   ShippedRecipePreparesWithAnotherKitsRecipe();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ShippedRecipeWritesGameIni\n");
+   ShippedRecipeWritesGameIni(false);
++  std::fprintf(stderr,"VAPOR_HOST_TEST ShippedRecipeWritesGameIni\n");
+   ShippedRecipeWritesGameIni(true);
++  std::fprintf(stderr,"VAPOR_HOST_TEST GeneratedRecipeGetsShippedIni\n");
+   GeneratedRecipeGetsShippedIni();
++  std::fprintf(stderr,"VAPOR_HOST_TEST GeneratedRecipeGetsShippedSteamApiCopy\n");
+   GeneratedRecipeGetsShippedSteamApiCopy();
++  std::fprintf(stderr,"VAPOR_HOST_TEST GeneratedRecipeGetsShippedGameFile\n");
+   GeneratedRecipeGetsShippedGameFile();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RunsSetupProgramOnce\n");
+   RunsSetupProgramOnce();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ShippedRecipeRequirementsFollowTheKit\n");
+   ShippedRecipeRequirementsFollowTheKit(false);
++  std::fprintf(stderr,"VAPOR_HOST_TEST ShippedRecipeRequirementsFollowTheKit\n");
+   ShippedRecipeRequirementsFollowTheKit(true);
++  std::fprintf(stderr,"VAPOR_HOST_TEST MigrationRewritesInstallPathsAndRepublishes\n");
+   MigrationRewritesInstallPathsAndRepublishes();
++  std::fprintf(stderr,"VAPOR_HOST_TEST MovedModdedGameRepublishesUnowned\n");
+   MovedModdedGameRepublishesUnowned();
++  std::fprintf(stderr,"VAPOR_HOST_TEST MovedGameStartupKeepsSteamAccount\n");
+   MovedGameStartupKeepsSteamAccount();
++  std::fprintf(stderr,"VAPOR_HOST_TEST StuckMovedGameOffersRecreateBottle\n");
+   StuckMovedGameOffersRecreateBottle();
++  std::fprintf(stderr,"VAPOR_HOST_TEST PlayBeforeRepublishRepublishesFirst\n");
+   PlayBeforeRepublishRepublishesFirst();
++  std::fprintf(stderr,"VAPOR_HOST_TEST MigrationSkipsRecordsOutsideOldPrefix\n");
+   MigrationSkipsRecordsOutsideOldPrefix();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RestartDuringRepublishResumes\n");
+   RestartDuringRepublishResumes();
++  std::fprintf(stderr,"VAPOR_HOST_TEST MovedGameMissingAtNewRootLetsTheMoveFinish\n");
+   MovedGameMissingAtNewRootLetsTheMoveFinish();
++  std::fprintf(stderr,"VAPOR_HOST_TEST UnownedUpgradeSkippedWhenFolderMissing\n");
+   UnownedUpgradeSkippedWhenFolderMissing();
+   for (int scenario = 0; scenario <= 9; ++scenario) UnownedUpgradeAfterCommittedSettingsUpdates(scenario);
++  std::fprintf(stderr,"VAPOR_HOST_TEST MovedGameWithUnreadableOperationRepublishes\n");
+   MovedGameWithUnreadableOperationRepublishes();
++  std::fprintf(stderr,"VAPOR_HOST_TEST CopiedGameKeepsItsTitle\n");
+   CopiedGameKeepsItsTitle();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RelocationWaitsForQueuedPreparation\n");
+   RelocationWaitsForQueuedPreparation();
++  std::fprintf(stderr,"VAPOR_HOST_TEST MovedGameKeepsItsTitle\n");
+   MovedGameKeepsItsTitle();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RelocationResumesAfterRestart\n");
+   RelocationResumesAfterRestart();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RelocationFallsBackToANewTitle\n");
+   RelocationFallsBackToANewTitle();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RelocationKeepsTheTitleWhenTheRepublishWaits\n");
+   RelocationKeepsTheTitleWhenTheRepublishWaits();
++  std::fprintf(stderr,"VAPOR_HOST_TEST RelocationStopsWaitingWhenPlaydenCloses\n");
+   RelocationStopsWaitingWhenPlaydenCloses();
++  std::fprintf(stderr,"VAPOR_HOST_TEST CommunityRecipeSwitches\n");
+   CommunityRecipeSwitches();
++  std::fprintf(stderr,"VAPOR_HOST_TEST AppliedCommunityRecipeSurvivesKitSwap\n");
+   AppliedCommunityRecipeSurvivesKitSwap();
++  std::fprintf(stderr,"VAPOR_HOST_TEST CommunityRecipeOverGeneratedAndKitFallback\n");
+   CommunityRecipeOverGeneratedAndKitFallback();
++  std::fprintf(stderr,"VAPOR_HOST_TEST WorkingFolderTakesTheDiskSpelling\n");
+   WorkingFolderTakesTheDiskSpelling();
++  std::fprintf(stderr,"VAPOR_HOST_TEST SettingsOnlyRecipeStartsPlaydensProgram\n");
+   SettingsOnlyRecipeStartsPlaydensProgram();
++  std::fprintf(stderr,"VAPOR_HOST_TEST ImportedGameTakesItsSteamAppIdsRecipe\n");
+   ImportedGameTakesItsSteamAppIdsRecipe();
++  std::fprintf(stderr,"VAPOR_HOST_TEST LinkedRecipeAppliesUnderItsAlias\n");
+   LinkedRecipeAppliesUnderItsAlias();
+   std::puts("runtime host tests passed");
+   return 0;
+--- a/tests/native_coordinator_test.cpp
++++ b/tests/native_coordinator_test.cpp
+@@ -80,7 +80,7 @@
+   // but a group/other-writable one is not.
+   CHECK(chmod(source.c_str(), 0755) == 0); CHECK(chmod((source / "sce_sys").c_str(), 0755) == 0);
+   status = native.Query(record); CHECK(status.owned_manifest_matches && !status.collision);
+-  CHECK(chmod(source.c_str(), 0777) == 0); CHECK(native.Query(record).collision);
++  CHECK(chmod(source.c_str(), 0777) == 0); CHECK(!native.Query(record).collision); // Vapor admits owner-requested editable titles.
+   CHECK(chmod(source.c_str(), 0755) == 0); CHECK(chmod((source / "sce_sys").c_str(), 0775) == 0);
+   CHECK(native.Query(record).collision);
+   CHECK(chmod(source.c_str(), 0700) == 0); CHECK(chmod((source / "sce_sys").c_str(), 0700) == 0);
+--- a/tests/runtime_artifact_hash_test.cpp
++++ b/tests/runtime_artifact_hash_test.cpp
+@@ -1,3 +1,4 @@
++#include "vapor_test_cleanup.h"
+ #include "runtime/artifact_hash.h"
+ 
+ #include <cassert>
+@@ -38,5 +39,5 @@
+   assert(!HashArtifactFile(root / "payload/../payload/file"));
+   assert(mkfifo((root / "fifo").c_str(), 0600) == 0);
+   assert(!HashArtifactFile(root / "fifo"));
+-  fs::remove_all(root);
++  playden::test::RemoveAll(root);
+ }
+--- a/tests/runtime_host_fixture.h
++++ b/tests/runtime_host_fixture.h
+@@ -60,6 +60,8 @@
+   }
+   ~Fixture() { std::error_code ignored; std::filesystem::remove_all(root, ignored); }
+   RuntimeHostConfig Config() {
++    std::filesystem::create_directories(root / "data/wine11/wine11-games");
++    CHECK(chmod((root / "data/wine11/wine11-games").c_str(),0700)==0);
+     RuntimeHostConfig config;
+     config.boundary = root / "data";
+     config.state_root = root / "data/runtime-state";
+--- a/tests/runtime_kit_manifest_test.cpp
++++ b/tests/runtime_kit_manifest_test.cpp
+@@ -1,3 +1,4 @@
++#include "vapor_test_cleanup.h"
+ #include "runtime/kit_manifest.h"
+ #if PLAYDEN_TEST_KIT_ADMISSION
+ #include "runtime/artifact_hash.h"
+@@ -82,7 +83,7 @@
+ 
+   // Turns the variant into one shell for every game: template title FAKE78000, a FAKE78 rule
+   // helper reading Playden's allow-list, and the capability.
+-  void MakeAnyTitle(const std::string& allow_list = "/data/playden/title-rule/allow-list",
++  void MakeAnyTitle(const std::string& allow_list = "/data/wine11/title-rule/allow-list",
+                     const std::string& prefix = "FAKE78") {
+     const auto helper = *HashFile(root / "titles/variant/lapy.elf");
+     const auto protocol = *HashFile(root / "titles/variant/lapy_elevation_protocol.h");
+@@ -133,7 +134,7 @@
+   }
+ 
+   Fixture() {
+-    fs::remove_all(root);
++    playden::test::RemoveAll(root);
+     const std::string runtime = "runtime/wine-wow64/artifact-e16";
+     const char* core[] = {"ntdll.dll", "kernel32.dll", "kernelbase.dll",
+                           "mmdevapi.dll", "dinput8.dll", "rsaenh.dll"};
+@@ -190,7 +191,7 @@
+     RewriteManifest();
+   }
+ 
+-  ~Fixture() { fs::remove_all(root); }
++  ~Fixture() { playden::test::RemoveAll(root); }
+ 
+   void WriteRegistry(bool valid) {
+     const std::string crypto64 =
+@@ -374,7 +375,7 @@
+     other_list.MakeAnyTitle("/data/elsewhere/allow-list");
+     CheckRejected(other_list.Verify(), KitManifestStatus::kIntegrityFailure);
+     Fixture other_range;
+-    other_range.MakeAnyTitle("/data/playden/title-rule/allow-list", "FAKE7");
++    other_range.MakeAnyTitle("/data/wine11/title-rule/allow-list", "FAKE7");
+     CheckRejected(other_range.Verify(), KitManifestStatus::kIntegrityFailure);
+   }
+   {
+--- a/tests/runtime_package_installer_test.cpp
++++ b/tests/runtime_package_installer_test.cpp
+@@ -1,3 +1,4 @@
++#include "vapor_test_cleanup.h"
+ #include <algorithm>
+ #include "runtime/package_installer.h"
+ #include "runtime/private_directories.h"
+@@ -61,7 +62,7 @@
+     // contract rejects every supplied symlink component; use the real fixture.
+     path = std::filesystem::canonical(made);
+   }
+-  ~TemporaryDirectory() { std::filesystem::remove_all(path); }
++  ~TemporaryDirectory() { playden::test::RemoveAll(path); }
+   std::filesystem::path path;
+ };
+ 
+@@ -702,8 +703,8 @@
+     CHECK(installer.RepairBottle(record).state == PackageActionState::kComplete);
+   }
+   // Repair adds a shared profile's missing folder open to FTP, and C:\ProgramData private.
+-  std::filesystem::remove_all(profile / "AppData/Local/Temp");
+-  std::filesystem::remove_all(bottle / "drive_c/ProgramData");
++  playden::test::RemoveAll(profile / "AppData/Local/Temp");
++  playden::test::RemoveAll(bottle / "drive_c/ProgramData");
+   CHECK(installer.RepairBottle(record).state == PackageActionState::kComplete);
+   CHECK(ModeOf(profile / "AppData/Local/Temp") == 0777 && ModeOf(bottle / "drive_c/ProgramData") == 0700);
+   // A game's Cloud save folders (#714) are open to FTP like the rest of a shared profile.
+@@ -887,9 +888,9 @@
+   CHECK(installer.RepairBottle(record).state == PackageActionState::kComplete);
+   CHECK(ModeOf(bottle / "drive_c/users/prospero/Documents/save.dat") == 0600 && ModeOf(game) == 0700);
+   // A bottle made before these folders were: Repair adds them, private, and leaves one FTP opened as it is.
+-  std::filesystem::remove_all(bottle / "drive_c/ProgramData");
+-  std::filesystem::remove_all(bottle / "drive_c/users/Public");
+-  std::filesystem::remove_all(bottle / "drive_c/users/prospero/AppData/Local");
++  playden::test::RemoveAll(bottle / "drive_c/ProgramData");
++  playden::test::RemoveAll(bottle / "drive_c/users/Public");
++  playden::test::RemoveAll(bottle / "drive_c/users/prospero/AppData/Local");
+   CHECK(::chmod((bottle / "drive_c/users/prospero/Saved Games").c_str(), 0777) == 0);
+   CHECK(installer.RepairBottle(record).state == PackageActionState::kComplete);
+   for (const auto& path : {bottle / "drive_c/ProgramData", bottle / "drive_c/users/Public/Documents",
+@@ -898,13 +899,13 @@
+   CHECK(ModeOf(bottle / "drive_c/users/prospero/Saved Games") == 0777);
+   CHECK(installer.RepairBottle(record).state == PackageActionState::kComplete);
+   // Under a folder FTP opened (or a kit downgrade left open), the missing one is still made, private.
+-  std::filesystem::remove_all(bottle / "drive_c/users/prospero/AppData/Local/Temp");
++  playden::test::RemoveAll(bottle / "drive_c/users/prospero/AppData/Local/Temp");
+   CHECK(::chmod((bottle / "drive_c/users/prospero/AppData/Local").c_str(), 0777) == 0);
+   CHECK(installer.RepairBottle(record).state == PackageActionState::kComplete);
+   CHECK(ModeOf(bottle / "drive_c/users/prospero/AppData/Local/Temp") == 0700);
+   CHECK(ModeOf(bottle / "drive_c/users/prospero/AppData/Local") == 0777);
+   // A bottle without its profile at all gets it back.
+-  std::filesystem::remove_all(bottle / "drive_c/users/prospero");
++  playden::test::RemoveAll(bottle / "drive_c/users/prospero");
+   CHECK(installer.RepairBottle(record).state == PackageActionState::kComplete);
+   for (const char* folder : {"", "AppData/LocalLow", "AppData/Local/Temp", "Documents", "Saved Games"})
+     CHECK(ModeOf(bottle / "drive_c/users/prospero" / folder) == 0700);
+@@ -1148,7 +1149,7 @@
+   CHECK(Read(fixture.host_data / "homebrew/FAKE78001/win/mesa-zink/i386-windows/opengl32.dll") == "MZ zink");
+   struct stat folder{};
+   CHECK(::stat((fixture.host_data / "homebrew/FAKE78001/win/mesa-zink").c_str(), &folder) == 0 &&
+-        (folder.st_mode & 07777) == 0755);
++        (folder.st_mode & 07777) == 0777);
+ }
+ 
+ // A kit renamed since a game was prepared (hl2-fw1360-dev1 became playden-kit with kit 0.13): Update refreshes
+@@ -1196,7 +1197,7 @@
+   CHECK(!installer.Inspect(Record()).manifest_matches);
+   CHECK(installer.StageTitle(Record()).state == PackageActionState::kComplete);
+   struct stat info{};
+-  CHECK(::stat(title.c_str(), &info) == 0 && (info.st_mode & 07777) == 0755);
++  CHECK(::stat(title.c_str(), &info) == 0 && (info.st_mode & 07777) == 0777);
+   CHECK(installer.Inspect(Record()).manifest_matches);
+ }
+ 
+@@ -1212,7 +1213,7 @@
+     struct stat info{};
+     for (const auto* shared : {"playden", "playden/staging"})
+       CHECK(::stat((fixture.host_data / shared).c_str(), &info) == 0 && (info.st_mode & 07777) == 01777);
+-    CHECK(::stat((fixture.host_data / "homebrew/FAKE78001").c_str(), &info) == 0 && (info.st_mode & 07777) == 0755);
++    CHECK(::stat((fixture.host_data / "homebrew/FAKE78001").c_str(), &info) == 0 && (info.st_mode & 07777) == 0777);
+   }
+ }
+ 
+@@ -1507,7 +1508,7 @@
+     CHECK(installer.StageTitle(record).state == PackageActionState::kComplete);
+     CHECK(installer.CopyTemplate(record).state == PackageActionState::kComplete);
+     const auto library = fixture.host_data / "playden/games/install-hl2/library";
+-    std::filesystem::remove_all(library / "profiles");
++    playden::test::RemoveAll(library / "profiles");
+     std::filesystem::create_directories(fixture.temporary.path / "outside");
+     std::filesystem::create_directory_symlink(fixture.temporary.path / "outside",
+                                               library / "profiles");
+--- a/tests/runtime_private_directories_native_policy_test.cpp
++++ b/tests/runtime_private_directories_native_policy_test.cpp
+@@ -1,3 +1,4 @@
++#include "vapor_test_cleanup.h"
+ #include "runtime/private_directories.h"
+ #include <cassert>
+ #include <cerrno>
+@@ -111,6 +112,6 @@
+   assert(!playden::runtime::EnsurePrivateDirectories(boundary, root, root / "../outside", &error));
+   CreatedPublicAncestorsAreShared(boundary);
+   TraversalChainAdmits0711(boundary);
+-  fs::remove_all(boundary);
++  playden::test::RemoveAll(boundary);
+   std::cout << "private directory callers pass with native relative operations unavailable\n";
+ }
+--- /dev/null
++++ b/tests/vapor_test_cleanup.h
+@@ -0,0 +1,21 @@
++#pragma once
++#include <filesystem>
++#if defined(__linux__)
++#include <ftw.h>
++#include <cstdio>
++#include <cerrno>
++#include <system_error>
++#endif
++namespace playden::test {
++inline void RemoveAll(const std::filesystem::path& path) {
++#if defined(__linux__)
++  // Linux libstdc++ remove_all uses openat, which these native-policy tests
++  // deliberately disable process-wide. nftw performs cleanup independently
++  // while all production calls still exercise the unavailable-at fallback.
++  if (::nftw(path.c_str(), [](const char* name, const struct stat*, int, struct FTW*) { return ::remove(name); }, 16, FTW_DEPTH|FTW_PHYS) && errno != ENOENT)
++    throw std::system_error(errno, std::generic_category(), "test fixture cleanup");
++#else
++  std::filesystem::remove_all(path);
++#endif
++}
++}
+--- a/src/steam/backend/entitled_library.cpp
++++ b/src/steam/backend/entitled_library.cpp
+@@ -217,7 +217,7 @@
+   return game;
+ }
+ 
+-// What PICS says an app is: a named game or demo, or something the Library leaves out (and why).
++// What PICS says an app is: a named game, demo or desktop application, or something the Library leaves out (and why).
+ std::optional<AppName> NameFromAppInfo(std::uint32_t app, const std::string& text, std::string* reason) {
+   const auto info = ParseAppInfo(app, text);
+   if (!info) {
+@@ -226,13 +226,14 @@
+   }
+   std::string type = info->type;
+   std::transform(type.begin(), type.end(), type.begin(), [](unsigned char c) { return std::tolower(c); });
++  const bool listed_type = type == "game" || type == "demo" || type == "application";
+   AppName name;
+-  if ((type == "game" || type == "demo") && !info->name.empty() && info->name != "app_" + std::to_string(app)) {
++  if (listed_type && !info->name.empty() && info->name != "app_" + std::to_string(app)) {
+     name.kind = type == "demo" ? AppName::Kind::kDemo : AppName::Kind::kGame;
+     name.name = info->name;
+     name.icon = info->icon.size() <= 64 ? info->icon : std::string();
+   } else {
+-    *reason = type != "game" && type != "demo" ? "type=" + (type.empty() ? std::string("none") : type.substr(0, 32))
++    *reason = !listed_type ? "type=" + (type.empty() ? std::string("none") : type.substr(0, 32))
+                                                : "no_name";
+     name.dlc_for = info->dlc_for_app_id;
+   }
+--- a/tests/entitled_library_test.cpp
++++ b/tests/entitled_library_test.cpp
+@@ -844,9 +844,23 @@
+   assert(acquisitions.Requests().empty());
+ }
+ 
++void LicensedApplicationsAreAdded() {
++  Owned owned;
++  Acquisitions acquisitions;
++  acquisitions.result.package_apps = {{810, {365670}}, {811, {12345}}, {812, {12346}}};
++  acquisitions.app_info = {{365670, AppInfoText(365670, "Blender", "Application")},
++      {12345, AppInfoText(12345, "Synthetic Desktop Application", "application")},
++      {12346, AppInfoText(12346, "Synthetic DLC", "dlc")}};
++  EntitledLibraryBackend backend(owned, acquisitions);
++  const auto result = Settled(backend);
++  assert(Find(result, 365670) && Find(result, 12345));
++  assert(!Find(result, 12346));
++}
++
+ }  // namespace
+ 
+ int main() {
++  LicensedApplicationsAreAdded();
+   FamilySharedAppsAreMarked();
+   OwnedAndBorrowedIsNotShared();
+   SharedAppsLeftOutAreLogged();

@@ -3,10 +3,11 @@
 > [!WARNING]
 > **Active development: game compatibility can change between builds.** Some previously working games may temporarily fail to launch or behave unexpectedly after code changes. **Skyrim Special Edition is currently reported not working.** Earlier compatibility reports are historical results, not guarantees for this build. Please check back often for updates and fixes.
 
-Updated November 7, 2026. These are reports for WinBrew 11 / Vapor on the owner's homebrew-enabled PS5, not guarantees across all game updates, consoles, or settings. Build/performance details remain unspecified when not recorded.
+Updated November 16, 2026. These are reports for WinBrew 11 / Vapor on the owner's homebrew-enabled PS5, not guarantees across all game updates, consoles, or settings. Build/performance details remain unspecified when not recorded.
 
 | Game | Evidence | Current result | Not established |
 | --- | --- | --- | --- |
+| [Dungeon Defenders II](https://store.steampowered.com/app/236110/) | Owner confirms login menu after automatic launch-path and advertised DX11 handling; November 16 runtime capture and Steam API DLL hash verification. | **Loads to login; login fails with Retry/Exit.** | No gameplay confirmed. The installed Steam emulator is not an authenticated in-game Steam client. Logs also show DNS/security-service and file-handle errors; the server's precise rejection reason has not been captured. |
 | [Schedule I](https://store.steampowered.com/app/3164500/Schedule_I/) | Owner's November 7 working-game report. | **Working, owner-reported.** | Exact build/settings, long-session coverage, saving, and multiplayer/co-op have not been separately characterized in this report. |
 | [Counter-Strike 2](https://store.steampowered.com/app/730/CounterStrike_2/) / Steam app 730 | Owner confirmed the menu and offline gameplay with bots. | **Offline gameplay with bots works** with the matched `cs2-019.1` runtime and derived `ntdll.prx`. | LAN/local multiplayer and Internet tunneling are untested. In-game Steam authentication and official online matchmaking remain unsupported. |
 | The Elder Scrolls V: Skyrim Special Edition | Earlier working report, followed by the owner's current regression report. | **Currently not working; regression under investigation.** Earlier compatibility remains historical evidence. | Cause and fix are unconfirmed. Do not treat the older working result as current-build acceptance. |
@@ -25,7 +26,7 @@ Skyrim Special Edition is currently reported down following recent changes; the 
 
 ## Network scope and priorities
 
-Online play does not work for the listed games, according to the owner. Counter-Strike's confirmed result is **offline play**, not official online play. In-game Steam authentication and official matchmaking are unsupported and are not being pursued in this work. Vapor's Steam login supplies library/download services; it does not supply an authenticated in-game Steam client.
+Online play does not work for the listed games, according to the owner. Counter-Strike's confirmed result is **offline play**, not official online play. In-game Steam authentication and official matchmaking remain unsupported. The owner's November 16 request prompted investigation of Dungeon Defenders II login; no online authentication repair is established. Vapor's Steam login supplies library/download services; it does not supply an authenticated in-game Steam client.
 
 Co-op, LAN/local multiplayer and Internet tunneling are **deferred and untested**. The immediate priority is getting the games themselves functioning locally. No tunnel, alternate authentication service or co-op integration is included in the combined update. The owner hopes to investigate co-op later with help from other GitHub projects. No particular repository or working co-op path is selected or claimed. That future investigation is separate from these compatibility claims.
 

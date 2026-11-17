@@ -4,12 +4,28 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <functional>
 namespace ww {
 // Interface owned by the platform. Rendering never reads credentials or private URLs.
 enum class SteamAccount { signed_out, signing_in, approval, online, offline, signing_out, failed };
 enum class SteamLibrary { empty, loading, ready, failed };
 enum class SteamInstallState { unknown, not_installed, queued, running, paused, failed, installed, unavailable };
 enum class SteamGameActivity { idle, preparing, registration_required, starting, playing };
+enum class BackendUpdatePhase { idle, checking, current, upstream_available, available, downloading, staged, failed };
+struct BackendUpdateStatus {
+  BackendUpdatePhase phase = BackendUpdatePhase::idle;
+  std::string installed_backend, latest_upstream, available_package, message;
+  std::uint64_t done = 0, total = 0;
+  bool rollback_available = false;
+};
+class BackendUpdateProvider {
+ public:
+  virtual ~BackendUpdateProvider() = default;
+  virtual BackendUpdateStatus Snapshot() const = 0;
+  virtual bool Check() = 0;
+  virtual bool Install() = 0;
+  virtual std::function<bool()> RestartAction(bool rollback) = 0;
+};
 struct SteamStatus {
   SteamAccount account = SteamAccount::signed_out;
   SteamLibrary library = SteamLibrary::empty;
@@ -29,6 +45,10 @@ struct SteamGame {
   bool can_reinstall = false;
   char management_reason[128]{};
   SteamGameActivity activity = SteamGameActivity::idle;
+  bool preparation_progress_known = false;
+  float preparation_progress = 0;  // current copy/step, never an overall ETA
+  std::uint64_t preparation_elapsed_seconds = 0;
+  char preparation_step[96]{};
   bool has_playtime = false, has_last_played = false;
   std::uint64_t playtime_minutes = 0, last_played_unix_seconds = 0;
   bool has_install_bytes = false, has_download_bytes = false;
@@ -101,6 +121,12 @@ class SteamUi {
   virtual void cancel() = 0;
   virtual void sign_out() = 0;
   virtual void refresh() = 0;
+  virtual BackendUpdateStatus backend_update_status() const { return {}; }
+  virtual bool check_backend_updates() { return false; }
+  virtual bool install_backend_update() { return false; }
+  // The returned action owns the staged updater and runs only after every
+  // account/download/runtime worker has stopped. No rendering-time app swap.
+  virtual std::function<bool()> backend_restart_action(bool rollback = false) { return {}; }
   virtual bool download(std::size_t, SteamDownload&) const { return false; }
   virtual bool install(std::uint32_t) { return false; }
   virtual bool remove_or_reinstall(std::uint32_t, bool) { return false; }

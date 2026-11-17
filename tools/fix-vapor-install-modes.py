@@ -10,7 +10,9 @@ from pathlib import PurePosixPath
 
 APP = '/data/homebrew/PPSA77382'
 KIT = '/data/wine11/kits/playden-kit'
-APP_PIN = ('9f03dc34fe9eae07d47678af40a2d7f434c8a327b1f4c33aac1bfb1518b5869a',
+APP_PIN = ('2d622b3e7d5faeec562c47b5e5eea9c881537549c1bf92f3480309d763a1a904',
+           'b5151741dbb906a01ca7ecf29a29a8d0b8d505d617aa746786f76525acbb0104',
+           '9f03dc34fe9eae07d47678af40a2d7f434c8a327b1f4c33aac1bfb1518b5869a',
            'f777e27496f316748ab17dda286a36a99c579d14407e6cfbb96f7df7451daefb',
            '9ee6608da3b66738f65cfdcc60c27744a0c537fa7773b83a0aee7101a3bda8d4',
            '933305eb4f6e1e2edb034bc92cbb6dfbc48136fb3ac0665ddefd9756382379be',
@@ -18,7 +20,8 @@ APP_PIN = ('9f03dc34fe9eae07d47678af40a2d7f434c8a327b1f4c33aac1bfb1518b5869a',
            'e245bfab1cc296be9e586bac86bd61160073b6ba99c22faf84da71c2ea203f12',
            '462020117c5fba9ce83b1a48b187183c5409b1a7c9ef56aaf4c3de49d3d2f5d2',
            '8f83086ba79a152c6926140828c45e361c8cc57e2894dac5a19c9e3c03d2b4a8')
-KIT_PIN = '1cd63397e5c560fddbc0f3b8baea3bf87ace1e0ba997a46ee0ed4acf4dac8dfc'
+KIT_PIN = ('1cd63397e5c560fddbc0f3b8baea3bf87ace1e0ba997a46ee0ed4acf4dac8dfc',
+           'ef0af8cb8a39ff5c6327d795873705ac79be4fc4109855181839bbbec06a3432')
 RUNTIME_PIN = 'd7cf3ed3221f8e8a7eb571522363efc21a5540699b6b20b3226cf30012732259'
 PREFIX = 'runtime/compatibility/steam-730-cs2-v1/'
 BLENDER_PREFIX = 'runtime/compatibility/steam-365670-blender-v1/'

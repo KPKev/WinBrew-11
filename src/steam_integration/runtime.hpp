@@ -11,6 +11,10 @@ namespace ww { class SteamUi; }
 namespace playden::platform { class ManagedDirectory; class ManagedFileLock; }
 namespace playden::homebrew { class RuntimeHost; }
 namespace ww::steam_integration {
+class BackendUpdates;
+// Runs startup recovery before any account, download or runtime worker exists.
+std::shared_ptr<BackendUpdates> CreateNativeBackendUpdates(const std::string& verified_ca_bundle,
+    std::function<void(const std::string&)> log = {});
 class Controller;
 class ReadyLaunch;
 class Preparation;
@@ -29,6 +33,7 @@ class Runtime {
   Runtime& operator=(const Runtime&) = delete;
   Controller& controller();
   ww::SteamUi& ui();
+  void AttachBackendUpdates(std::shared_ptr<BackendUpdates>);
   // The application owns the configured RuntimeHost, cloud gate and coordinator;
   // all must outlive Runtime. Attach only on the application thread.
   bool AttachReadyLaunch(ReadyLaunch*);

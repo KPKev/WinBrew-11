@@ -3,6 +3,7 @@
 #include "steam/service.h"
 #include "library/service.h"
 #include <cstdint>
+#include <atomic>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,7 @@ class Controller {
   void SignOut();
   void Refresh();
   void Tick();
+  bool DownloadsReady() const { return downloads_ready_.load(); }
   const View& view() const { return view_; }
  private:
   void ResetLibrary();
@@ -42,6 +44,8 @@ class Controller {
   playden::steam::SteamService& auth_;
   playden::LibraryService& library_;
   View view_;
+  std::atomic<bool> downloads_ready_{false};
+  std::uint64_t last_library_request_ = 0;
   std::uint64_t auth_request_ = 0, account_id_ = 0, generation_ = 0,
                 library_request_ = 0;
 };

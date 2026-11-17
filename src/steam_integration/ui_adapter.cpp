@@ -14,6 +14,24 @@ extern "C" { [[gnu::used]] int wine11_cancel_guard_adapter_enabled = 1; }
 #include <cstring>
 namespace ww::steam_integration {
 UiAdapter::UiAdapter(Controller& controller) : controller_(controller) {}
+bool UiAdapter::backend_maintenance_idle() const {
+  return !pending_play_ && !download_maintenance_ && !(downloads_ && downloads_->Busy()) &&
+      !(preparation_ && preparation_->Busy()) && !(launch_ && launch_->Busy()) &&
+      !(cloud_preflight_ && cloud_preflight_->Busy());
+}
+BackendUpdateStatus UiAdapter::backend_update_status() const {
+  if (backend_updates_) return backend_updates_->Snapshot();
+  BackendUpdateStatus out; out.message = "Backend update service is unavailable in this build."; return out;
+}
+bool UiAdapter::check_backend_updates() { return backend_updates_ && backend_updates_->Check(); }
+bool UiAdapter::install_backend_update() {
+  if (!backend_maintenance_idle()) { message_ = "Wait for games and downloads to finish before updating."; return false; }
+  return backend_updates_ && backend_updates_->Install();
+}
+std::function<bool()> UiAdapter::backend_restart_action(bool rollback) {
+  if (!backend_maintenance_idle()) { message_ = "Wait for games and downloads to finish before restarting."; return {}; }
+  return backend_updates_ ? backend_updates_->RestartAction(rollback) : std::function<bool()>{};
+}
 bool UiAdapter::attach_downloads(DownloadCoordinator* downloads) {
   if (download_maintenance_) return false;
   if (downloads_ && downloads_ != downloads && pending_play_) return false;
@@ -353,6 +371,21 @@ bool UiAdapter::game(std::size_t index, SteamGame& out) const {
     if (state == ReadyLaunchState::running) out.activity = SteamGameActivity::playing;
     else if (state == ReadyLaunchState::waiting || state == ReadyLaunchState::handoff) out.activity = SteamGameActivity::starting;
   }
+  if (out.activity == SteamGameActivity::preparing) {
+    const bool active = preparation_ && preparation_->Busy() && preparation_->app() == *app;
+    if (active) {
+      const auto& progress = preparation_->view();
+      out.preparation_progress_known = progress.progress.has_value();
+      out.preparation_progress = progress.progress.value_or(0);
+      out.preparation_elapsed_seconds = progress.elapsed_seconds;
+      std::snprintf(out.preparation_step, sizeof(out.preparation_step), "%s",
+                    progress.step.empty() ? "Starting setup" : progress.step.c_str());
+    } else {
+      out.preparation_elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - pending_play_started_).count();
+      std::snprintf(out.preparation_step, sizeof(out.preparation_step), "%s",
+                    waiting_details_ ? "Reading game details" : "Checking launch requirements");
+    }
+  }
 #if defined(WINE11_EXPERIMENT_UNINSTALL)
   out.can_manage_install = uninstall_ && downloads_ && out.install == SteamInstallState::installed &&
       out.activity == SteamGameActivity::idle && downloads_->MaintenanceReady() && !download_maintenance_ && owns(*app) &&
@@ -557,7 +590,7 @@ bool UiAdapter::play(std::uint32_t app) {
       for (const auto& owned : controller_.view().games)
         if (owned.id == game.id) { request.title_name = owned.title; break; }
       const auto account = controller_.view().account_id, generation = controller_.view().account_generation;
-      pending_play_ = app; pending_root_ = game.root; pending_account_ = account; pending_generation_ = generation;
+      pending_play_ = app; pending_play_started_ = std::chrono::steady_clock::now(); pending_root_ = game.root; pending_account_ = account; pending_generation_ = generation;
       if (launch_details_) {
         if (!launch_details_->Request(std::move(request), account, generation)) { pending_play_ = 0; return false; }
         waiting_details_ = true;

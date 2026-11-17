@@ -12,7 +12,11 @@ sdk = Path(os.environ.get('PS5_PAYLOAD_SDK', root / 'vendor/playden-source/deps/
 build = root / 'build/recycle-helper'
 build.mkdir(parents=True, exist_ok=True)
 env = os.environ.copy()
-env.pop('LLVM_CONFIG', None)
+# Native builds supply the pinned LLVM explicitly; preserve that toolchain.
+if not env.get('LLVM_CONFIG'):
+    candidate = Path.home()/'.cache/wine11-llvm-18.1.8/root/usr'
+    env['LLVM_CONFIG'] = str(candidate/'lib/llvm-18/bin/llvm-config')
+    env['LD_LIBRARY_PATH'] = str(candidate/'lib/x86_64-linux-gnu')+':'+str(candidate/'lib/llvm-18/lib')
 subprocess.run([sys.executable, 'tools/prepare_vapor_file_shims.py', str(build/'file-shims.c')], cwd=root, env=env, check=True)
 subprocess.run([str(sdk/'bin/prospero-clang'), '-c', str(build/'file-shims.c'), '-o', str(build/'file-shims.o')], cwd=root, env=env, check=True)
 elf = build/'recycle-helper.elf'

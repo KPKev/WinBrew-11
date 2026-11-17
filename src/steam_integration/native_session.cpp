@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "native_session.hpp"
+#include "backend_api.hpp"
 #include "native_paths.hpp"
 #include "runtime.hpp"
 #include "native_game_runtime.hpp"
@@ -16,6 +17,7 @@
 #include <atomic>
 #endif
 #include <utility>
+#include <cstdio>
 
 namespace ww::steam_integration {
 class NativeSession::Impl {
@@ -35,6 +37,13 @@ NativeSession::NativeSession(std::unique_ptr<Impl> impl) : impl_(std::move(impl)
 NativeSession::~NativeSession() = default;
 std::unique_ptr<NativeSession> NativeSession::Create(const char* root, int anchor, const char* ca, int game_data_anchor) {
   if (!ca || !*ca) return {};
+  const auto trace = [path = std::string(root ? root : "") + "/vapor-startup.log"](const std::string& stage) {
+    if (auto* file = std::fopen(path.c_str(), "a")) {
+      std::fprintf(file, "%s\n", stage.c_str());
+      std::fclose(file);
+    }
+  };
+  trace("session paths entering");
   bool downloads_ready = game_data_anchor != -2;
   auto paths = game_data_anchor == -2 ? std::optional<NativePaths>{} : PrepareNativePaths(root, anchor, game_data_anchor);
   if (!paths && game_data_anchor != -1) {
@@ -46,12 +55,23 @@ std::unique_ptr<NativeSession> NativeSession::Create(const char* root, int ancho
   if (!paths) return {};
   const auto persist = HasSavedSteamSession(*paths);
   if (!persist) return {};
+#if defined(WINE11_DEDICATED_HOST)
+  trace("updater startup entering before account/download workers");
+  auto updates = CreateNativeBackendUpdates(ca, trace);
+  trace("updater startup returned");
+#endif
+  trace("account services entering");
   auto impl = std::make_unique<Impl>(std::move(*paths), ca, *persist);
+  trace("download services entering");
   if (downloads_ready && !impl->runtime.EnableDownloads(std::move(impl->paths.games)
 #if defined(WINE11_CANCEL_CLEANUP_OVERLAY) || defined(WINE11_EXPERIMENT_UNINSTALL)
       , impl->paths.state, impl->paths.state_lease
 #endif
   )) return {};
+#if defined(WINE11_DEDICATED_HOST)
+  impl->runtime.AttachBackendUpdates(std::move(updates));
+#endif
+  trace("session ready");
   return std::unique_ptr<NativeSession>(new NativeSession(std::move(impl)));
 }
 ww::SteamUi& NativeSession::ui() { return impl_->runtime.ui(); }
@@ -102,7 +122,11 @@ std::optional<playden::homebrew::RuntimeHostConfig> NativeSession::GameHostConfi
   if (config) {
     // RuntimeHost invokes this while preparing title metadata on its worker.
     // Use only the selected game's canonical Steam cover and a verified CA.
-    config->title_icon = [trust = impl_->ca_bundle](const playden::GameId& game) -> std::optional<std::string> {
+    config->title_icon = [trust = impl_->ca_bundle](const playden::GameId& game
+#if WW_PLAYDEN_BACKEND_011
+        , const std::filesystem::path&, const std::filesystem::path&
+#endif
+        ) -> std::optional<std::string> {
       const auto app = game.steam_app();
       if (!app) return std::nullopt;
       playden::homebrew::HttpArtworkBackend backend(trust);

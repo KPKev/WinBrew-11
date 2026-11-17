@@ -152,6 +152,14 @@ void Shell::sync_steam_selection() {
 }
 void Shell::tick() {
   if (steam) {
+    const auto update = steam->backend_update_status();
+    if (update.phase != BackendUpdatePhase::staged) backend_update_seen_stage = false;
+    else if (!backend_update_seen_stage && !dialog) {
+      backend_update_seen_stage = true;
+      backend_updates_modal = true; dialog = true; focus = 4003; message[0] = 0;
+    }
+  }
+  if (steam) {
     steam->tick();
     sync_steam_selection();
     const auto state = steam->status();
@@ -347,6 +355,19 @@ void Shell::activate(int id) {
       if(!file_purge.begin()){
         dialog=true;focus=60;std::snprintf(message,sizeof(message),"The Recycle Bin changed or could not be emptied. Nothing was deleted. Please review it and try again.");
       }else focus=807;
+    }
+    return;
+  }
+  if (dialog && backend_updates_modal) {
+    if (id == 60) { backend_updates_modal = false; dialog = false; }
+    else if (id == 4001 && steam) steam->check_backend_updates();
+    else if (id == 4002 && steam) {
+      if (!steam->install_backend_update()) std::snprintf(message, sizeof(message), "Wait for games and downloads to finish, then try again.");
+    } else if ((id == 4003 || id == 4004) && steam) {
+      if (files_busy()) { std::snprintf(message, sizeof(message), "Wait for the file operation to finish before restarting."); return; }
+      auto action = steam->backend_restart_action(id == 4004);
+      if (action) { backend_update_action = std::move(action); backend_updates_modal = false; dialog = false; }
+      else std::snprintf(message, sizeof(message), "Wait for games and downloads to finish before restarting.");
     }
     return;
   }
@@ -670,6 +691,8 @@ void Shell::activate(int id) {
     const auto app = steam_rendered_rows[id - 1000];
     const int index = find_steam_game(steam, app);
     if (index >= 0) { steam_selection = index; steam_selected_app = app; }
+  } else if (id == 4000 && steam && file_games) {
+    backend_updates_modal = true; dialog = true; focus = 60; message[0] = 0;
   } else if (id == 965) {
     library_downloads = false; steam_panel = false;
   } else if (id == 966) {
@@ -982,7 +1005,7 @@ void Shell::key(Key k) {
     if(file_drag_active||file_drag_pending){file_drag_active=file_drag_pending=false;file_drag_items.clear();pad_touch_drag_locked=false;return;}
     if (dialog) {
       if(recycle_confirmation){recycle_confirmation=false;file_purge.cancel();}
-      dialog = false; steam_setup_confirmation_app = 0; steam_manage_confirmation_app = 0;
+      dialog = false; backend_updates_modal = false; steam_setup_confirmation_app = 0; steam_manage_confirmation_app = 0;
     }
     else if (files_busy()) {
       file_action(807);
@@ -1060,7 +1083,7 @@ void Shell::key(Key k) {
   }
   for (int i = 0; i < count; i++) {
     int id = hits[i].id;
-    if (dialog           ? (id != 60 && !((steam_setup_confirmation_app || steam_manage_confirmation_app || recycle_confirmation) && id == 61))
+    if (dialog           ? (id != 60 && !(backend_updates_modal && id >= 4001 && id <= 4004) && !((steam_setup_confirmation_app || steam_manage_confirmation_app || recycle_confirmation) && id == 61))
         : files_busy() ? id != 807
         : file_rename_prompt ? !(id==2176||id==2177||id==2178||(touch_keyboard&&id>=200&&id<=248))
         : file_properties ? id != 806
@@ -1467,7 +1490,7 @@ void Shell::pointer(int x, int y, bool down, bool held, bool doubleclick) {
       int id = hits[i].id;
       if (context && id == 89) return;
       if (context && id != 89 && !((id >= 1400 && id <= 1431) || (desktop_context_target && (id==801||id==802||id==809||id==812||id==814||id==815)))) return;
-      if (dialog && id != 60 && !((steam_setup_confirmation_app || steam_manage_confirmation_app || recycle_confirmation) && id == 61))
+      if (dialog && id != 60 && !(backend_updates_modal && id >= 4001 && id <= 4004) && !((steam_setup_confirmation_app || steam_manage_confirmation_app || recycle_confirmation) && id == 61))
         return;
       if (!dialog && files_busy() && id != 807) return;
       if (!dialog && file_rename_prompt && !(id==2176||id==2177||id==2178||(touch_keyboard&&id>=200&&id<=248)))return;

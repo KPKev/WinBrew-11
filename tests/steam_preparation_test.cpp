@@ -28,6 +28,17 @@ int main() {
   bool wrong_thread = true; std::thread t([&] { wrong_thread = prep.Request(request, 42, 3); }); t.join();
   assert(!wrong_thread && host.calls == 0);
   assert(prep.Request(request, 42, 3) && prep.Busy() && host.calls == 1);
+  host.snapshot->work_progress = 0.8f;  // unrelated work must not leak into a queued game
+  prep.Tick(42, 3);
+  assert(!prep.view().progress && prep.view().step == "Queued for setup");
+  host.snapshot->preparing_app = 440;
+  host.snapshot->work_progress = 0.25f;
+  prep.Tick(42, 3);
+  assert(prep.view().progress == 0.25f);
+  host.snapshot->work_progress.reset();
+  prep.Tick(42, 3);
+  assert(!prep.view().progress);  // do not retain a completed copy's percentage for the next phase
+  host.snapshot->preparing_app.reset();
   prep.Tick(43, 4); assert(prep.Busy());
   host.snapshot->queued_prepares.clear(); ++host.snapshot->prepares_handled;
   RuntimeInstallView installed; installed.game = GameId::Steam(440); installed.runtime_number = 440;
@@ -94,9 +105,8 @@ int main() {
   recovery_host.snapshot->installs[0].state = runtime::PreparationState::kReady;
   recovery_host.snapshot->installs[0].admission = "ok";
   assert(recovery.Request(request, 42, 3) && recovery_host.calls == 2);
-  // Older CS2/Blender Ready records can remain valid while their newly
-  // selected runtime still needs refreshing. It must reach the real host.
-  for (const auto app : {730u, 365670u}) {
+  // Every old Ready record must reach the host after a backend kit update.
+  for (const auto app : {440u, 730u, 236110u, 365670u}) {
     Host cs2; cs2.expected_app = app;
     cs2.snapshot->status = RuntimeHostStatus::kReady;
     cs2.snapshot->kit_available = true; cs2.snapshot->installs_known = true;

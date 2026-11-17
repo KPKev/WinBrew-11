@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "../src/steam_integration/controller.hpp"
+#include "../src/steam_integration/backend_api.hpp"
 #include "../src/steam_integration/ui_adapter.hpp"
 #include <cassert>
 #include <chrono>
@@ -56,6 +57,23 @@ struct Auth : steam::AuthBackend {
   }
 };
 struct Library : steam::LibraryBackend {
+#if WW_PLAYDEN_BACKEND_011
+  std::mutex late_mutex;
+  std::vector<GameSummary> late;
+  std::function<void()> notify;
+  void SetLateGamesCallback(std::function<void()> callback) override {
+    std::lock_guard lock(late_mutex); notify = std::move(callback);
+  }
+  std::vector<GameSummary> TakeLateGames(std::uint64_t account) override {
+    assert(account == 42); std::lock_guard lock(late_mutex); return std::exchange(late, {});
+  }
+  void AddLate() {
+    std::function<void()> callback;
+    { std::lock_guard lock(late_mutex); GameSummary app; app.id = GameId::Steam(777);
+      app.title = "Synthetic Application"; late.push_back(std::move(app)); callback = notify; }
+    assert(callback); callback();
+  }
+#endif
   steam::LibraryResult Fetch(const StoredSession& session, const std::atomic<bool>&) override {
     assert(session.steam_id == 42);
     GameSummary game; game.id = GameId::Steam(440); game.title = "Example game";
@@ -72,12 +90,23 @@ int main() {
   Sessions sessions; Auth backend; Library library_backend;
   steam::SteamService auth(backend, sessions); LibraryService library(library_backend, sessions);
   ww::steam_integration::Controller controller(auth, library);
+  assert(!controller.DownloadsReady());
   controller.SignInQr();
+  assert(!controller.DownloadsReady());
   wait(controller, [&]{ return controller.view().library == ww::steam_integration::LibraryState::ready; });
   assert(controller.view().account == ww::steam_integration::AccountState::online);
   assert(controller.view().account_name == "Player");
   assert(controller.view().games.size() == 1 && controller.view().games[0].id.steam_app() == 440);
+  assert(controller.DownloadsReady());
+#if WW_PLAYDEN_BACKEND_011
+  library_backend.AddLate();
+  wait(controller, [&]{ return controller.view().games.size() == 2; });
+  assert(controller.view().games[1].id.steam_app() == 777);
+  controller.Refresh();
+  wait(controller, [&]{ return controller.view().library == ww::steam_integration::LibraryState::ready; });
+#endif
   controller.SignOut();
+  assert(!controller.DownloadsReady());
   assert(controller.view().games.empty());
   wait(controller, [&]{ return controller.view().account == ww::steam_integration::AccountState::signed_out; });
   assert(!sessions.Load().value());

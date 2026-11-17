@@ -40,11 +40,29 @@ game_tick = '''  if (steam_game) {
 replace_once('  shell.tick();', (game_tick if game_host else '  if (steam_bridge) steam_bridge->Tick();') + '\n  shell.tick();')
 if game_host:
     replace_once('  shell.tick();', '''  shell.tick();
-  if (shell.steam_finish_setup_requested) {
+  if (shell.steam) {
+    const auto status = shell.steam->status();
+    static int last_account = -1, last_library = -1;
+    static std::size_t last_count = static_cast<std::size_t>(-1);
+    if (last_account != static_cast<int>(status.account) || last_library != static_cast<int>(status.library) || last_count != status.game_count) {
+      log("Steam UI account state", static_cast<uint32_t>(status.account));
+      log("Steam UI library state", static_cast<uint32_t>(status.library));
+      log("Steam UI library entries", static_cast<uint32_t>(status.game_count));
+      last_account = static_cast<int>(status.account);
+      last_library = static_cast<int>(status.library);
+      last_count = status.game_count;
+    }
+  }
+  if (shell.backend_update_action || shell.steam_finish_setup_requested) {
+    auto apply_update = std::move(shell.backend_update_action);
     shell.steam_finish_setup_requested = false;
     // Stop Steam's workers before asking the console to end the title.
     // Returning from main or calling exit() is not supported in this context.
     steam_game.reset();
+    if (apply_update && !apply_update()) {
+      shell.result(false, 1, "The update could not finish. Close WinBrew from PS5 Home and reopen it to recover.");
+      return;
+    }
     native_input::close();
     if (audio >= 0) { sceAudioOutClose(audio); audio = -1; shell.audio_available = false; }
     const int status = sceSystemServiceLoadExec("exit", nullptr);

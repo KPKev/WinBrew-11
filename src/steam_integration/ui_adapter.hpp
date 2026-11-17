@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #pragma once
+#include <chrono>
 #include "../steam_ui.hpp"
 #include "controller.hpp"
 #include "downloads.hpp"
@@ -47,6 +48,11 @@ class UiAdapter final : public SteamUi {
   void cancel() override;
   void sign_out() override;
   void refresh() override;
+  void attach_backend_updates(std::shared_ptr<BackendUpdateProvider> updates) { backend_updates_ = std::move(updates); }
+  BackendUpdateStatus backend_update_status() const override;
+  bool check_backend_updates() override;
+  bool install_backend_update() override;
+  std::function<bool()> backend_restart_action(bool rollback = false) override;
   // Coordinator and its exclusive service must outlive this adapter.
   bool attach_downloads(DownloadCoordinator* downloads);
   // Only a successfully frozen coordinator can be detached for the
@@ -93,6 +99,8 @@ class UiAdapter final : public SteamUi {
   bool controls(std::uint32_t, SteamControls&) const override;
   bool set_controls(std::uint32_t, SteamControls) override;
  private:
+  bool backend_maintenance_idle() const;
+  std::shared_ptr<BackendUpdateProvider> backend_updates_;
   bool owns(std::uint32_t) const;
   bool cloud_choice_current(std::uint32_t) const;
   bool has_job(std::uint32_t) const;
@@ -125,6 +133,7 @@ class UiAdapter final : public SteamUi {
   bool resolving_cloud_ = false;
   std::uint32_t resolving_app_ = 0;
   std::uint32_t pending_play_ = 0;
+  std::chrono::steady_clock::time_point pending_play_started_{};
   std::uint64_t pending_account_ = 0, pending_generation_ = 0;
   std::string pending_root_;
   std::string message_;

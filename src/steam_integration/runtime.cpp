@@ -17,6 +17,12 @@ extern "C" { [[gnu::used]] int wine11_cancel_guard_runtime_enabled = 1; }
 #include "cloud_runtime.hpp"
 #include "remember_setting.hpp"
 #include "artwork.hpp"
+#include "backend_updates.hpp"
+#include "backend_api.hpp"
+#include "runtime/artifact_hash.h"
+#include "steam/install_volumes.h"
+#include "runtime/kit_admission.h"
+#include "runtime/kit_trust.h"
 #include "library/cache.h"
 #include "steam/backend/auth_client.h"
 #include "steam/backend/cm_client.h"
@@ -138,6 +144,11 @@ class Runtime::Impl {
     details_cm.SetSharedSession(shared);
     info_cm.SetSharedSession(shared);
     entitled.SetLicensedDepots(&licensed);
+#if WW_PLAYDEN_BACKEND_011
+    entitled.SetAppNameStorage(&storage);
+    // New PICS replies can contain hashes only; enable the verified HTTPS fallback.
+    entitled.SetFamilyDiagnostics(ca, {});
+#endif
     details_source.SetLicensedDepots(&licensed);
     info_source.SetLicensedDepots(&licensed);
     ui.attach_launch_details(&launch_details);
@@ -212,7 +223,7 @@ class Runtime::Impl {
                      )
         : directory(std::move(directory_arg)), lease(std::move(lease_arg)),
           sessions(parent.private_root, {}, &parent.vault), cm(MakeCm(parent)),
-          cdn(parent.ca_bundle), runner(sessions, *cm, cdn), guarded(directory, lease, ConfigureRunner(runner, parent.private_root), &traffic),
+          cdn(parent.ca_bundle), runner(sessions, *cm, cdn), guarded(directory, lease, ConfigureRunner(runner, parent.private_root), &traffic, [&parent] { return parent.controller.DownloadsReady(); }),
 #if defined(WINE11_CANCEL_CLEANUP_OVERLAY)
           recovery(state, state_lease), recovery_journal(state, state_lease, directory, lease),
           service({{playden::Store::kSteam, &guarded}}, {{"internal", "Console storage", directory.path().string(), true}},
@@ -263,6 +274,7 @@ class Runtime::Impl {
 #endif
   };
   std::string private_root, ca_bundle;
+  std::shared_ptr<BackendUpdates> backend_updates;
   playden::Storage storage;
   playden::SessionVault vault;
   playden::LocalSessionRepository auth_sessions, library_sessions, details_sessions, info_sessions;
@@ -297,6 +309,52 @@ class Runtime::Impl {
 Runtime::Runtime(std::string root, std::string ca, bool persist)
     : impl_(std::make_unique<Impl>(std::move(root), std::move(ca), persist)) {}
 Runtime::~Runtime() = default;
+std::shared_ptr<BackendUpdates> CreateNativeBackendUpdates(const std::string& ca_bundle,
+    std::function<void(const std::string&)> log) {
+  playden::update::UpdateConfig config;
+  config.latest_release_url = "https://api.github.com/repos/KPKev/WinBrew-11/releases/latest";
+  config.releases_page = "https://github.com/KPKev/WinBrew-11/releases";
+  config.title_id = "PPSA77382";
+  config.installed_root = "/data/homebrew/PPSA77382";
+  // Keep large staged packages on the same data volume as the app and kits.
+  config.work_root = "/data/wine11/self-update/PPSA77382";
+  config.kits_root = "/data/wine11/kits";
+  config.appmeta_root = "/user/appmeta/PPSA77382";
+  config.registered_app_root = "/user/app/PPSA77382";
+  const auto installed_version = InstalledVaporVersion(config.installed_root);
+  if (!installed_version) return {};
+  config.current = *installed_version;
+  config.fetch = [ca = ca_bundle](const playden::steam::HttpRequest& request, const std::atomic<bool>& cancel) {
+    playden::steam::HttpClient http(ca);
+    return http.Perform(request, cancel);
+  };
+  config.hash_file = [](const std::string& path) { return playden::runtime::HashArtifactFile(path); };
+  config.verify_kit = [](const std::string& path) -> std::optional<std::string> {
+    const auto result = playden::runtime::VerifyInstalledKit(path, playden::runtime::DevelopmentKitAdmission());
+    return result.status == playden::runtime::KitManifestStatus::kVerified
+        ? std::optional<std::string>(result.manifest_sha256) : std::nullopt;
+  };
+  config.log = log;
+  config.as_root = [log](const std::function<bool()>& work) {
+    if (log) log("update credentials entering");
+    const bool result = playden::ps5::WithRoot(work);
+    if (log) log("update credentials returned");
+    return result;
+  };
+  config.free_bytes = [](const std::string& path) -> std::optional<std::uint64_t> {
+    const auto space = playden::steam::QueryVolumeSpace(path, playden::steam::kConsoleSystemReserve);
+    return space ? std::optional<std::uint64_t>(space->free_bytes) : std::nullopt;
+  };
+  auto updates = std::make_shared<BackendUpdates>(std::move(config), WW_PLAYDEN_BACKEND_VERSION);
+  // UpdateService::Start may raise the process UID to recover/confirm a swap.
+  // The caller must run this before constructing account/download workers.
+  updates->Start();
+  return updates;
+}
+void Runtime::AttachBackendUpdates(std::shared_ptr<BackendUpdates> updates) {
+  impl_->backend_updates = std::move(updates);
+  impl_->ui.attach_backend_updates(impl_->backend_updates);
+}
 Controller& Runtime::controller() { return impl_->controller; }
 ww::SteamUi& Runtime::ui() { return impl_->ui; }
 bool Runtime::AttachReadyLaunch(ReadyLaunch* launch) { return impl_->ui.attach_ready_launch(launch); }

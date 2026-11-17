@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <chrono>
+#include <optional>
 namespace ww::steam_integration {
 class PreparationHost {
  public:
@@ -12,7 +14,13 @@ class PreparationHost {
   virtual void Prepare(playden::homebrew::RuntimePrepareRequest request) = 0;
 };
 enum class PreparationState { idle, waiting, awaiting_registration, ready, failed };
-struct PreparationView { PreparationState state = PreparationState::idle; std::string message; };
+struct PreparationView {
+  PreparationState state = PreparationState::idle;
+  std::string message;
+  std::string step;
+  std::optional<float> progress;
+  std::uint64_t elapsed_seconds = 0;
+};
 // Application-thread coordinator for a player-requested preparation. The
 // caller supplies a currently owned, installed game's identity and metadata.
 class Preparation {
@@ -32,6 +40,7 @@ class Preparation {
   std::uint64_t account_ = 0, generation_ = 0, before_ = 0;
   std::string root_;
   bool account_changed_ = false;
+  std::chrono::steady_clock::time_point started_{};
 };
 class PlaydenPreparationHost final : public PreparationHost {
  public:

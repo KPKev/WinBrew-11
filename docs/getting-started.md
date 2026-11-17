@@ -1,6 +1,6 @@
 # Install WinBrew 11 and Vapor
 
-Release: **blender-shared-files-v1**, November 16, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
+Release: **v1.18.0**, November 16, 2026. The application is **PPSA77382**, WinBrew 11. Older PPSA77381 instructions are archived.
 
 Start with a **PS5 that already has its jailbreak running**. This guide explains how to install the ready-made app. You do not need to compile code or install Windows. WinBrew 11 is the desktop; Vapor is the Steam library inside it.
 
@@ -32,12 +32,12 @@ Web File Manager starts looking for a free port at **8888** and can choose **888
 
 ## 1. Download the right files
 
-Download the **[blender-shared-files-v1 release assets](https://github.com/KPKev/WinBrew-11/releases/tag/blender-shared-files-v1)**. Keep the new app, checksum list and matching permission helper together. For a first installation, also download the unchanged [base kit](https://github.com/KPKev/WinBrew-11/releases/download/combined-blender-v1/Vapor-base-kit-0.13.zip). Keep these four files together:
+Download the **[v1.18.0 release assets](https://github.com/KPKev/WinBrew-11/releases/tag/v1.18.0)**. Keep the new app, checksum list and matching permission helper together. For both this upgrade and a first installation, download the matched **Vapor-backend-kit-0.28.zip** from this release. Keep these four files together:
 
 | File | What it is for |
 | --- | --- |
-| `WinBrew-11-Blender-Shared-Files-v1.zip` | The complete app, including the fixed CS2 and Blender runtimes. |
-| `Vapor-base-kit-0.13.zip` | The shared game runtime needed for a first installation. |
+| `WinBrew-11-v1.18.0.zip` | The complete app, including the fixed CS2 and Blender runtimes. |
+| `Vapor-backend-kit-0.28.zip` | The matched shared runtime required by this app, including upgrades from 0.13. |
 | `SHA256SUMS.txt` | Expected download fingerprints, used to check the files. |
 | `fix-vapor-install-modes.py` | Checks/restores file permissions after copying. |
 
@@ -50,8 +50,8 @@ A SHA-256 checksum is a file's fingerprint. Checking it catches incomplete or ch
 On Windows, open the download folder, right-click empty space, and choose **Open in Terminal**. In PowerShell run:
 
 ```powershell
-Get-FileHash .\WinBrew-11-Blender-Shared-Files-v1.zip -Algorithm SHA256
-Get-FileHash .\Vapor-base-kit-0.13.zip -Algorithm SHA256
+Get-FileHash .\WinBrew-11-v1.18.0.zip -Algorithm SHA256
+Get-FileHash .\Vapor-backend-kit-0.28.zip -Algorithm SHA256
 Get-FileHash .\fix-vapor-install-modes.py -Algorithm SHA256
 ```
 
@@ -61,13 +61,15 @@ On Linux, use `sha256sum FILENAME`; on macOS, use `shasum -a 256 FILENAME`. Repl
 
 ## 2. Extract both ZIPs on your computer
 
-1. Right-click `WinBrew-11-Blender-Shared-Files-v1.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
-2. Extract `Vapor-base-kit-0.13.zip` separately. Find the **playden-kit** folder.
+1. Right-click `WinBrew-11-v1.18.0.zip` and choose **Extract** or **Extract All**. Find the **PPSA77382** folder inside the extracted files.
+2. Extract `Vapor-backend-kit-0.28.zip` separately. Find the **playden-kit** folder.
 3. Check that `PPSA77382` contains `eboot.bin`, `manifest.json`, `sce_sys`, and `runtime`. Check that `playden-kit` contains `manifest.json` and its runtime files.
 
 Keep every file and subfolder, with their original names. Copying only `eboot.bin` is incomplete. Extracting on the computer avoids needing Web File Manager's separate archive-extraction helper.
 
 ## 3. Copy the folders to the PS5
+
+**Updating an older installation:** close WinBrew and its games first. Keep a paired backup of the existing app folder and base kit in a new backup directory outside `/data/homebrew`, then put the complete new app and matched kit at the paths below. Preserve `/data/wine11/wine11-games`, `/data/playden/games`, `/data/WinBrew` and the existing title's private account/settings storage. Do not replace an existing backup or delete game/save folders. Older versions lack Backend Updates, so this first upgrade is manual. Future compatible releases can use [Backend Updates](vapor-backend-updates.md).
 
 In Web File Manager on your computer:
 

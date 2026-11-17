@@ -375,6 +375,18 @@ void Shell::explorer_ui(Rect wr) {
     add({x + 175, y + 48, 130, 49}, 965);
     text(x + 192, y + 61, "LIBRARY", 1, library_downloads ? dim : white);
     if (!library_downloads) rect({x + 190, y + 95, 90, 3}, 0xffff9c19);
+    if (steam) {
+      const auto updates = steam->backend_update_status();
+      const bool available = updates.phase == BackendUpdatePhase::available || updates.phase == BackendUpdatePhase::staged;
+      const bool upstream_found = updates.phase == BackendUpdatePhase::upstream_available;
+      const Rect update_button{x + 310, y + 48, 235, 49};
+      if (focus == 4000 || hover == 4000) rect(update_button, 0xff3f3227);
+      add(update_button, 4000);
+      text(x + 322, y + 62, updates.phase == BackendUpdatePhase::staged ? "RESTART TO UPDATE" :
+          available ? "BACKEND UPDATE AVAILABLE" : upstream_found ? "PLAYDEN UPDATE FOUND" :
+          updates.phase == BackendUpdatePhase::checking ? "CHECKING BACKEND..." :
+          updates.phase == BackendUpdatePhase::failed ? "BACKEND CHECK FAILED" : "BACKEND UPDATES", 0, (available || upstream_found) ? kVaporStatusGold : dim);
+    }
     Rect footer{x + 1, y + wr.h - 48, wr.w - 2, 47};
     rect(footer, 0xff211a17);
     Rect downloads{x + (wr.w - 230) / 2, footer.y + 4, 230, 38};
@@ -809,6 +821,26 @@ void Shell::explorer_ui(Rect wr) {
             if (selected.app_id && game_inventory.entries[i].steam_app == selected.app_id) existing = true;
           if (selected.can_play) {
             Rect play{dx + 30, y + 351, 150, 54};
+            if (selected.activity == SteamGameActivity::preparing) {
+              char progress[192];
+              const auto seconds = selected.preparation_elapsed_seconds;
+              if (selected.preparation_progress_known)
+                std::snprintf(progress, sizeof(progress), "%s: %d%% - %llum %02llus elapsed",
+                    selected.preparation_step, int(selected.preparation_progress * 100),
+                    static_cast<unsigned long long>(seconds / 60), static_cast<unsigned long long>(seconds % 60));
+              else
+                std::snprintf(progress, sizeof(progress), "%s - %llum %02llus elapsed",
+                    selected.preparation_step, static_cast<unsigned long long>(seconds / 60),
+                    static_cast<unsigned long long>(seconds % 60));
+              text_fit(play.x, play.y - 29, std::max(150, dw - 75), progress, 0, kVaporStatusGold);
+              rect({play.x, play.y - 9, play.w, 3}, 0xff504238);
+              if (selected.preparation_progress_known)
+                rect({play.x, play.y - 9, std::max(0, std::min(play.w, int(play.w * selected.preparation_progress))), 3}, kVaporStatusGold);
+              else {
+                const int pulse = int((now_ms / 25) % 120);
+                rect({play.x + pulse, play.y - 9, 30, 3}, kVaporStatusGold);
+              }
+            }
             const auto feedback = vapor_play_feedback(selected.activity, now_ms);
             if (feedback.busy) {
               round({play.x - 5, play.y - 5, play.w + 10, play.h + 10}, 9, feedback.halo);
@@ -1359,7 +1391,7 @@ void Shell::file_drop(){
  for(int i=count-1;i>=0;--i)if(hits[i].r.has(mx,my)){
   int id=hits[i].id;
   if(id>=500&&id<580){int index=file_hit_index(id);if(index>=0&&files[index].directory)destination=file_entry_path(files[index]);}
-  else if(id>=2400&&id<2656){int index=id-2400;if(index<int(file_nav.size()))destination=file_nav[index].path;}
+  else if(id>=4000&&id<2656){int index=id-4000;if(index<int(file_nav.size()))destination=file_nav[index].path;}
   else if(id>=3000&&id<3016&&id-3000<int(file_drives.size()))destination=file_drives[id-3000].path;
   else if(id>=2200&&id<2208&&id-2200<int(file_tabs.size())){const auto&tab=file_tabs[id-2200];destination=tab.history[tab.position].path;}
   else if(file_content_bounds.has(mx,my))destination=file_path;
@@ -1418,7 +1450,7 @@ void Shell::file_browser_action(int id){
  if(id>=3000&&id<3016){int i=id-3000;if(i<int(file_drives.size())){const auto drive=file_drives[i];if(drive.location)file_location_open(drive.location);else file_open(drive.path.c_str());}return;}
  if(id>=2200&&id<2208){file_tab_switch(id-2200);return;}if(id==2210){file_tab_new();return;}if(id>=2220&&id<2228){file_tab_close(id-2220);return;}
  if(id>=2300&&id<2332){int i=id-2300;if(i<int(file_crumbs.size())){std::string path=file_crumbs[i];if(path.empty())file_location_open(420);else file_open(path.c_str());}return;}
- if(id>=2400&&id<2656){int i=id-2400;if(i<int(file_nav.size())){const auto nav=file_nav[i];if(nav.location)file_location_open(nav.location);else if(!nav.path.empty())file_open(nav.path.c_str());}return;}
+ if(id>=4000&&id<2656){int i=id-4000;if(i<int(file_nav.size())){const auto nav=file_nav[i];if(nav.location)file_location_open(nav.location);else if(!nav.path.empty())file_open(nav.path.c_str());}return;}
  if(id>=2700&&id<2956){int i=id-2700;if(i<int(file_nav.size())){const auto nav=file_nav[i];if(nav.location==420)file_pc_expanded=!file_pc_expanded;else if(nav.location==421)file_network_expanded=!file_network_expanded;else if(!nav.path.empty()){
   auto at=std::find(file_expanded.begin(),file_expanded.end(),nav.path);if(at!=file_expanded.end())file_expanded.erase(at);else {file_expanded.push_back(nav.path);FileBranch branch;branch.path=nav.path;fileops::list_folders(nav.path.c_str(),branch.children);file_branches.push_back(std::move(branch));}
  }}return;}
@@ -1542,7 +1574,7 @@ void Shell::file_browser_ui(Rect wr){
  file_nav_total=int(file_nav.size());int navvisible=file_nav_bounds.h/30;file_nav_scroll=std::max(0,std::min(std::max(0,file_nav_total-navvisible),file_nav_scroll));
  for(int row=0;row<navvisible&&row+file_nav_scroll<file_nav_total;++row){int index=row+file_nav_scroll;const auto&entry=file_nav[index];Rect r{x+4,y+150+row*30,232,29};
   if(entry.group){line(r.x+11,r.y+3,r.x+r.w-10,r.y+3,edge);small_text(r.x+16,r.y+10,entry.label.c_str(),muted(),6);continue;}
-  bool active=entry.path.empty()?(!file_path[0]&&entry.location==file_location):entry.path==file_path;int id=2400+index;add(r,id);if(active||hover==id||focus==id)rect(r,active?selected:over);
+  bool active=entry.path.empty()?(!file_path[0]&&entry.location==file_location):entry.path==file_path;int id=4000+index;add(r,id);if(active||hover==id||focus==id)rect(r,active?selected:over);
   int indent=entry.depth*13;if(entry.expandable){Rect disclosure{r.x+5+indent,r.y+1,20,27};add(disclosure,2700+index);int cx=disclosure.x+10,cy=disclosure.y+13;if(entry.expanded){line(cx-3,cy-2,cx,cy+1,muted());line(cx,cy+1,cx+3,cy-2,muted());}else{line(cx-2,cy-3,cx+1,cy,muted());line(cx+1,cy,cx-2,cy+3,muted());}}
   icon(r.x+27+indent,r.y+5,18,entry.kind);small_fit(r.x+53+indent,r.y+7,r.w-61-indent,entry.label.c_str(),ink());
  }

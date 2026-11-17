@@ -36,5 +36,11 @@
       "source/lapy_elevation_protocol.h": "bb02c4aa814eaba7a7a423a31b29ff41f786212c2953678cf29434e85fa0f869",
       "tools/build_owned_daemon.py": "fb00c1f3b732afc36be6ea8324b749cef40d99ae32ad604c508839744afdc6d1"
     }
+  },
+  "playden-backend": {
+    "url": "https://github.com/leolobato/playden-ps5.git",
+    "revision": "7d30aaa7dc3011561eae728badc133a6bcc7f73b",
+    "path": "vendor/playden-backend",
+    "role": "Vapor 0.11 backend; derive with tools/prepare-vapor-backend-source.py; legacy checkout supplies the preserved PS5 SDK"
   }
 }

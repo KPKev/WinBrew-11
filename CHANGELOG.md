@@ -1,5 +1,14 @@
 # Changelog
 
+## November 16, 2026 — v1.18.0: Vapor backend updates
+
+- Playden backend 0.11.0 and matched base kit 0.28, with the existing WinBrew interface and scoped compatibility runtimes.
+- Automatic startup and manual backend update checks, compatible app/runtime package installation, restart dialog and rollback.
+- Gold preparation step, percentage/bar and elapsed-time display; automatic older-title/runtime refresh on Play.
+- Saved-session/download startup ordering, late library updates and licensed application visibility, including Blender.
+- Generic executable-path and metadata DX11 launch fixes from the Dungeon Defenders II investigation; online login remains unverified.
+- Owner-confirmed library/controls, native updater fixtures and real-archive host update/rollback verification; see [release notes](docs/release-notes-next.md) and [verification](docs/vapor-backend-verification.json).
+
 ## November 16, 2026 — automatic Blender integration
 
 - Vapor includes Steam software applications and refreshes the active account's library correctly.

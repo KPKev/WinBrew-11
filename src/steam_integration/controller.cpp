@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 #include "controller.hpp"
+#include "backend_api.hpp"
 #include <utility>
 namespace ww::steam_integration {
 using playden::steam::SteamEventKind;
 Controller::Controller(playden::steam::SteamService& auth, playden::LibraryService& library)
     : auth_(auth), library_(library) {}
 void Controller::ResetLibrary() {
+  downloads_ready_ = false; last_library_request_ = 0;
   library_.Invalidate(++generation_);
   account_id_ = library_request_ = 0;
   view_ = View{};
@@ -41,7 +43,7 @@ void Controller::Refresh() {
   // Keep the visible library while the worker retries the saved sign-in.
   if (view_.account == AccountState::offline) {
     library_.Invalidate(generation_);
-    library_request_ = 0;
+    library_request_ = 0; last_library_request_ = 0;
     view_.account = AccountState::signing_in;
     view_.library = LibraryState::loading;
     auth_request_ = auth_.RestoreSession();
@@ -57,11 +59,14 @@ void Controller::LoadLibrary() {
   library_request_ = view_.account == AccountState::offline
       ? library_.LoadCached(account_id_, generation_)
       : library_.Refresh(account_id_, generation_);
+  last_library_request_ = library_request_;
   if (!library_request_) view_.library = LibraryState::failed;
 }
 void Controller::Tick() {
   for (const auto& event : auth_.Pump(64)) Process(event);
   for (auto& event : library_.Pump(64)) Process(event);
+  downloads_ready_ = (view_.account == AccountState::online || view_.account == AccountState::offline) &&
+      (view_.library == LibraryState::ready || (view_.library == LibraryState::failed && !view_.games.empty()));
 }
 void Controller::Process(const playden::steam::SteamEvent& e) {
   if (view_.account == AccountState::signing_out) {
@@ -100,12 +105,15 @@ void Controller::Process(const playden::steam::SteamEvent& e) {
   }
 }
 void Controller::Process(playden::LibraryEvent& e) {
-  if (!library_request_ || e.request_id != library_request_ ||
+  if (!last_library_request_ || e.request_id != last_library_request_ ||
       e.account_generation != generation_ || e.account_id != account_id_) return;
   switch (e.kind) {
     case playden::LibraryEventKind::kLoading: view_.library = LibraryState::loading; break;
     case playden::LibraryEventKind::kCached:
     case playden::LibraryEventKind::kComplete:
+#if WW_PLAYDEN_BACKEND_011
+    case playden::LibraryEventKind::kUpdated:
+#endif
       view_.games = std::move(e.games); view_.metadata_partial = e.metadata_partial;
       // A cached result is an interim view while the online request is running.
       view_.library = e.kind == playden::LibraryEventKind::kCached && view_.account == AccountState::online

@@ -2,7 +2,7 @@
 from pathlib import Path
 import hashlib,io,json,subprocess,urllib.request,zipfile
 r=Path(__file__).resolve().parents[1];lock=json.loads((r/'dependencies.json').read_text())
-for name in ['ps5-native-app-boilerplate','playden-lapy','selawik','playden-reference']:
+for name in ['ps5-native-app-boilerplate','playden-lapy','selawik','playden-reference','playden-backend']:
     dep=lock[name];p=r/dep['path']
     if not p.exists():
         subprocess.run(['git','-c','core.autocrlf=false','clone','--no-checkout',dep['url'],str(p)],check=True)
@@ -14,6 +14,7 @@ for name in ['ps5-native-app-boilerplate','playden-lapy','selawik','playden-refe
         subprocess.run(['git','-C',str(p),'config','core.autocrlf','false'],check=True)
         if name == 'playden-reference' and subprocess.check_output(['git','-C',str(p),'status','--porcelain','--untracked-files=no'],text=True).strip():
             raise RuntimeError('playden-reference: tracked source has local changes; inspect manually')
+subprocess.run(['git','-C',str(r/lock['playden-backend']['path']),'submodule','update','--init','third_party/prospero-win','third_party/prospero-foundation'],check=True)
 fontdir=r/'vendor/selawik/release'
 for name,expected in lock['playden-lapy']['source_sha256'].items():
     p=r/'vendor/playden-lapy'/name

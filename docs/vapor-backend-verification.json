@@ -1,0 +1,45 @@
+{
+  "release": "v1.18.0",
+  "app_title_id": "PPSA77382",
+  "app_version": "01.018.000",
+  "playden_version": "0.11.0",
+  "playden_source_revision": "7d30aaa7dc3011561eae728badc133a6bcc7f73b",
+  "runtime_kit": "0.28",
+  "eboot_sha256": "158936b05422289099d3c4c0123d80f7c7d22913e3cceb00d14ed2f43cfd2e6a",
+  "kit_manifest_sha256": "ef0af8cb8a39ff5c6327d795873705ac79be4fc4109855181839bbbec06a3432",
+  "app_manifest_sha256": "2d622b3e7d5faeec562c47b5e5eea9c881537549c1bf92f3480309d763a1a904",
+  "archive_sha256": {
+    "Vapor-backend-kit-0.28.zip": "9fad4678d8f9300610db78da13a078a86dfa9a7ca50703a98ad4dd99f51b3b9d",
+    "WinBrew-11-v1.18.0.zip": "d3cbc52f393439db95386e94701f33d849ac683ab3278b2398514fc522bdeb37"
+  },
+  "verified": {
+    "owner_ps5_firmware": "13.60",
+    "owner_visible_results": [
+      "Steam sign-in and library restored",
+      "Blender/application visibility and PLAY button",
+      "Paused download queue",
+      "INSTALL for intentionally uninstalled Dungeon Defenders II"
+    ],
+    "native_updater_fixtures": "stage/apply/restart/rollback passed",
+    "real_archive_host_transaction": "download ranges, checksums, stage, full app hashes, kit admission, apply, confirmation and rollback passed",
+    "regressions": [
+      "backend compatibility contract and installed-version parsing",
+      "preparation progress and generic title/runtime refresh",
+      "late library updates",
+      "licensed applications including Blender and synthetic application",
+      "download waits without blocking credentials, cancellation and readiness resume",
+      "release permission helper module modes",
+      "deterministic app/runtime packaging across different packaging times; upstream notices retained"
+    ]
+  },
+  "limits": [
+    "No broad game execution requalification after the backend migration.",
+    "Dungeon Defenders II online login and LAN/co-op unverified.",
+    "Prior Blender shared-file/recycle and CS2 offline reports are historical.",
+    "Other consoles/firmware and the live public GitHub download from PS5 have not been verified."
+  ],
+  "metadata_changes_after_console_check": [
+    "Release manifest metadata and corrected third-party notice; executable/runtime bytes unchanged"
+  ],
+  "source_patch_sha256": "92240a7435485fb797a1db6e2faac1a67cc44575d3284b0963a006c25a7eeb53"
+}
